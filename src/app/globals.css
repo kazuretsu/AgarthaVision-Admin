@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/*
+ * AgarthaVision Clinical Microscopy design tokens.
+ * Mirrors the Android client's palette (CIT-U maroon #8C1823 + gold #FFB81C)
+ * so the console and the medtech app read as one product.
+ * Raw hex values appear only in this file; components read the token names.
+ */
+:root {
+  --av-maroon: #8c1823;
+  --av-maroon-hover: #75141e;
+  --av-maroon-pressed: #5e1018;
+  --av-maroon-tint: #f9e8ea;
+  --av-maroon-tint-2: #fcf3f4;
+  --av-gold: #ffb81c;
+  --av-gold-tint: #fff4d6;
+  --av-gold-text: #7a5a00;
+
+  --av-white: #ffffff;
+  --av-off-white: #fafaf9;
+  --av-gray-50: #f5f5f4;
+  --av-gray-100: #e7e5e4;
+  --av-gray-200: #d6d3d1;
+  --av-gray-300: #a8a29e;
+  --av-gray-400: #8a847f;
+  --av-gray-500: #78716c;
+  --av-gray-700: #44403c;
+  --av-gray-900: #1c1917;
+
+  --av-red: #dc2626;
+  --av-red-tint: #fee2e2;
+  --av-green: #16a34a;
+  --av-green-tint: #dcfce7;
+  --av-amber: #d97706;
+  --av-amber-tint: #fef3c7;
+
+  --background: var(--av-off-white);
+  --foreground: var(--av-gray-900);
+  --surface: var(--av-white);
+  --border: var(--av-gray-100);
+  --muted: var(--av-gray-500);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border-hairline: var(--border);
+  --color-muted: var(--muted);
+
+  --color-maroon: var(--av-maroon);
+  --color-maroon-hover: var(--av-maroon-hover);
+  --color-maroon-tint: var(--av-maroon-tint);
+  --color-maroon-tint-2: var(--av-maroon-tint-2);
+  --color-gold: var(--av-gold);
+  --color-gold-tint: var(--av-gold-tint);
+  --color-gold-text: var(--av-gold-text);
+
+  --color-stone-hair: var(--av-gray-100);
+  --color-stone-line: var(--av-gray-200);
+  --color-stone-soft: var(--av-gray-300);
+  --color-stone-mid: var(--av-gray-500);
+  --color-stone-deep: var(--av-gray-700);
+  --color-stone-ink: var(--av-gray-900);
+
+  --color-danger: var(--av-red);
+  --color-danger-tint: var(--av-red-tint);
+  --color-ok: var(--av-green);
+  --color-ok-tint: var(--av-green-tint);
+  --color-warn: var(--av-amber);
+  --color-warn-tint: var(--av-amber-tint);
+
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 500;
+}
+
+/* Tabular numerals on every data field: IDs, EPG, confidence, timestamps. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Binomial nomenclature is always italic. */
+.binomial {
+  font-style: italic;
+}
