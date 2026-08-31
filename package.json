@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint . --fix && prettier --write .",
-    "clean": "rm -rf .next coverage node_modules/.cache"
+    "clean": "rm -rf .next coverage node_modules/.cache",
+    "prepare": "husky"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

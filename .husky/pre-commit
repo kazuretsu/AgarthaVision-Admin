@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+echo "🔍 [Husky] Running pre-commit checks..."
+
+# Auto-detect bun if missing (default install path is not always on PATH in GUI git clients)
+if ! command -v bun >/dev/null 2>&1; then
+  if [ -d "$HOME/.bun/bin" ]; then
+    export PATH="$HOME/.bun/bin:$PATH"
+  fi
+fi
+
+run_bun() {
+  if command -v bun >/dev/null 2>&1; then
+    bun "$@"
+  else
+    npm "$@"
+  fi
+}
+
+# 1. Run TypeScript type check
+echo "⏳ Checking TypeScript types..."
+run_bun run typecheck || {
+  echo "❌ [Husky] TypeScript type check failed! Commit cancelled."
+  exit 1
+}
+
+# 2. Run unit tests
+echo "⏳ Running unit tests..."
+run_bun run test || {
+  echo "❌ [Husky] Unit tests failed! Commit cancelled."
+  exit 1
+}
+
+# 3. Run full Next.js production build
+echo "⏳ Building Next.js production bundle..."
+run_bun run build || {
+  echo "❌ [Husky] Next.js build failed! Commit cancelled."
+  exit 1
+}
+
+# 4. Run eslint and prettier linting
+echo "⏳ Checking eslint & prettier linting..."
+run_bun run lint || {
+  echo "❌ [Husky] Linting check failed! Commit cancelled."
+  exit 1
+}
+
+echo "✅ [Husky] All pre-commit build and test checks passed!"

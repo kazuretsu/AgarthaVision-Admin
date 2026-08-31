@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+echo "📝 [Husky] Checking commit message format..."
+
+commit_msg_file="$1"
+subject=$(head -n 1 "$commit_msg_file")
+
+# Project convention: [type][ClickUp-ID][Lastname] Task title
+if ! echo "$subject" | grep -Eq '^\[[a-z]+\]\[[a-z0-9]+\]\[[A-Za-z]+\] .+'; then
+  echo "❌ [Husky] Commit message rejected! Commit cancelled."
+  echo ""
+  echo "   Expected format: [type][ClickUp-ID][Lastname] Task title"
+  echo "   Example:         [feat][86d43e3vu][Tabada] Add records table filters"
+  echo ""
+  echo "   type      lowercase letters only — feat fix refactor docs style test ci chore"
+  echo "   ClickUp-ID lowercase letters and digits only, no brackets or dashes"
+  echo "   Lastname  letters only, capitalised"
+  echo ""
+  echo "   Received: $subject"
+  exit 1
+fi
+
+echo "✅ [Husky] Commit message format accepted!"
