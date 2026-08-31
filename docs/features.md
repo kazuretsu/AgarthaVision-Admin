@@ -49,16 +49,51 @@ Pure logic, all of it unit-tested and none of it touching I/O:
 their error types. The database port is read-only by construction: it has no insert,
 update or delete verb, so no feature can mutate clinical data.
 
+### Provider registry and Supabase adapters
+
+`src/adapters/registry.ts` is the only module that names a concrete backend. `DB_PROVIDER`,
+`STORAGE_PROVIDER` and `AUTH_PROVIDER` select an implementation; an unrecognised value
+throws rather than falling back, so a typo cannot leave a deployment silently reading from
+the default. Adapters are imported lazily.
+
+The Supabase adapters implement all three ports. Database reads run through the visitor's
+own session so RLS decides visibility. Storage signs short-lived URLs with the service-role
+key — necessary because upstream Storage RLS has no admin exception yet.
+
+### Authentication and the admin gate
+
+Supabase Auth behind `AuthPort`. Identity comes from `getUser()`; the role comes from
+`profiles.role`, read server-side on every request, never from a token claim. The
+`(dashboard)` segment layout calls `requireAdmin()` once, so every page under it is guarded
+on creation. Route handlers repeat the check because they do not render inside the layout.
+`src/proxy.ts` refreshes tokens and is deliberately not the authorisation point.
+
+### Administrative dashboard
+
+Summary cards, a per-species EPG trend line chart with crosshair, tooltip, legend, direct
+labels and a table view, parasite distribution bars, the light/moderate/heavy intensity
+split on the reserved status palette, and average/highest/lowest EPG. Every aggregate
+counts human-validated records only.
+
+### Detailed records and export
+
+A filterable table of all processed samples showing AI EPG beside technologist-validated
+EPG, with filters held in the query string so a view is shareable and the export reuses the
+same query. Research-matrix export as CSV or JSON through a guarded route handler,
+validated-only by default with a separately labelled link for a working file.
+
 ## Not built yet, in this pass
 
 Tracked here so the gap is visible:
 
-- Supabase database and storage adapters, and the provider registry
-- Supabase Auth behind the auth port, with the `profiles.role` admin gate
-- Administrative dashboard: summary cards, EPG trend by species, parasite distribution,
-  EPG summary, severity split
-- Detailed records table with date-range and advanced filters, and the research-matrix
-  export in CSV and JSON
+- Nothing from this pass's scope remains. Deferred work is listed below.
+
+## Deferred by decision
+
+- **Better Auth + Drizzle.** Wanted, deferred to keep this pass shippable. Adding it means
+  a new adapter plus one branch in the registry.
+- **S3 storage adapter.** Same shape of change; the storage port is already the seam.
+- **Any second database adapter.** The port contract is the specification for one.
 
 ## Out of scope, decided
 

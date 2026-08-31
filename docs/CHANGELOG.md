@@ -2,6 +2,69 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [docs] Complete ICM system map with object, process, and effect cards
+
+Three object cards (domain model, ports, provider registry) and four process cards (EPG
+aggregation, research-matrix export, admin gate, signed image URL), each citing
+`path:line` into `src/`. The change-impact index names four non-obvious breaks: a route
+handler does not inherit the layout's gate; an admin can read every row and no image until
+the upstream Storage policy is applied; three `0002` renames bite silently; and what
+counts toward EPG is a cross-repo agreement with the Android client.
+
+Every citation in the cards was resolved against the file it names before this commit.
+
+## [feat] Add detailed records table with filters and research matrix export
+
+Filters live in the query string, so a view is shareable and the export reuses the page's
+exact query. Parsing is defensive: a blank field is absent rather than a filter for empty
+text, a non-numeric bound is dropped instead of becoming NaN, zero is a real bound, and
+undeclared enum values are discarded.
+
+The table shows AI EPG beside validated EPG — the gap between them is what this console
+exists to expose. Export runs in a route handler and repeats `requireAdmin()`, because a
+handler does not render inside the `(dashboard)` layout and inherits no gate. Exports are
+validated-only unless explicitly asked otherwise, and that link is labelled a working
+file rather than a report.
+
+## [feat] Build admin dashboard with summary cards and EPG trend chart
+
+Summary cards, per-species EPG trend, parasite distribution, intensity split and EPG
+statistics — all counting validated records only, via the domain functions, so the
+dashboard and an export cannot disagree about a period.
+
+The chart palette was validated rather than chosen by eye: it passes the lightness band,
+chroma floor, CVD separation and normal-vision floor, and warns that two slots fall under
+3:1 contrast. That warning is answered with a legend, direct labels and a table view, so
+identity never rests on color alone. Days with no validated sample are omitted from the
+trend rather than plotted as zero.
+
+## [feat] Add Supabase Auth behind auth port with admin role gate
+
+Identity from Supabase Auth, role from `profiles.role` read server-side on every request.
+`getUser()` over `getSession()`, because the latter only decodes a browser-settable
+cookie. A missing profile resolves to `medtech`, not admin. The gate sits in the
+`(dashboard)` layout so new pages are protected on creation. A medtech who signs in
+successfully is signed straight back out rather than left holding a usable cookie, and
+both failure modes return one message so the form cannot confirm real accounts.
+
+`src/proxy.ts` refreshes tokens using Next 16's proxy convention. Login state moved to its
+own module: a `"use server"` file may export only async functions.
+
+## [feat] Implement Supabase database and storage adapters
+
+Database reads run as the visitor, so RLS decides visibility; the adapter never elevates
+and adds no `user_id` predicate of its own. Only date and owner bounds are pushed to SQL —
+confidence, EPG and processing time are derived, so filtering them in the domain keeps one
+definition rather than restating the rules in a second language.
+
+Storage signs URLs with the service-role key. That is forced, not convenient: upstream
+`0003_storage_rls.sql` scopes bucket reads to the uploader's own folder with no admin
+exception, so an admin session cannot read another medtech's frames. The adapter
+authorises nothing itself and callers must pass the admin gate first.
+
+`registry.ts` is the only module naming a provider. Unknown values throw rather than
+falling back.
+
 ## [feat] Define domain model and provider port interfaces
 
 `src/domain/` now mirrors the upstream Postgres schema after migration `0008`, with

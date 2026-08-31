@@ -28,22 +28,38 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │   ├── CHANGELOG.md           What changed, newest first.
 │   ├── file-tree.md           This file.
 │   └── map/
-│       ├── objects/           One card per noun in the system.
-│       ├── processes/         One card per real movement of data.
-│       └── effects/CONTEXT.md Change-impact: touch X, open these cards.
+│       ├── objects/
+│       │   ├── domain-model.md        Entities and enums, mirrored from upstream migrations.
+│       │   ├── ports.md               The three interfaces and their error types.
+│       │   └── provider-registry.md   How a backend is selected, and why lazily.
+│       ├── processes/
+│       │   ├── epg-aggregation.md     Count → multiply → group. What counts, and why.
+│       │   ├── research-matrix-export.md  Filter → rows → CSV/JSON. The column contract.
+│       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
+│       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
+│       └── effects/CONTEXT.md         Change-impact: touch X, open these cards.
 └── src/
-    ├── app/                   Routes. Server components by default.
+    ├── proxy.ts               Session refresh (Next 16 convention). NOT the auth gate.
+    ├── app/
     │   ├── layout.tsx         Root shell and metadata.
     │   ├── globals.css        Design tokens. The only file holding raw hex.
-    │   └── page.tsx           Entry surface.
+    │   ├── page.tsx           Public entry surface.
+    │   ├── (auth)/login/      Sign-in form, server action, and its form state.
+    │   └── (dashboard)/       Everything behind requireAdmin().
+    │       ├── layout.tsx     The admin gate. Guards every page in this segment.
+    │       ├── dashboard/     Summary cards, EPG trend, distribution, severity.
+    │       └── records/       Filterable table, plus export/route.ts (gate repeated).
     ├── domain/                Entity types, enums, EPG and severity logic. No I/O.
     ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
-    │   └── supabase/          The one concrete implementation this pass.
-    ├── components/            Presentational components. Import ports, never adapters.
-    └── lib/                   Request-time env accessors and small shared helpers.
+    │   └── supabase/          client, env, database, storage, auth.
+    ├── components/            Presentational. Import ports, never adapters.
+    │   └── charts/            Inline SVG. No charting dependency.
+    └── lib/
+        ├── env.ts             Request-time accessors. Nothing throws at module load.
+        ├── palette.ts         Validated chart colors, with the validator's findings.
+        └── search-params.ts   Filter ⇄ query string, defensively parsed.
 ```
 
-Directories under `src/` that hold no committed file yet appear in this tree because they
-are the agreed destinations; they are filled in later commits of this pass.
+Every directory listed above holds committed files.
