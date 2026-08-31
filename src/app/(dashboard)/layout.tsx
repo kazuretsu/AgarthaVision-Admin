@@ -54,6 +54,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard" className="text-stone-deep hover:text-maroon">
               Dashboard
             </Link>
+            <Link href="/records" className="text-stone-deep hover:text-maroon">
+              Records
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-[12px] text-stone-mid">{user.fullName ?? user.email}</span>
