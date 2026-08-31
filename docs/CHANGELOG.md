@@ -2,6 +2,25 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Define domain model and provider port interfaces
+
+`src/domain/` now mirrors the upstream Postgres schema after migration `0008`, with
+per-field provenance comments. Added the pure logic the console reports on: EPG at the DOH
+multiplier of 24 counting `CONFIRMED` detections only, species-specific severity bands, the
+six fixed research-matrix columns with CSV and JSON serialisation, and the record filters.
+51 unit tests cover it; none needs a live Supabase.
+
+`src/ports/` defines `DatabasePort`, `StoragePort` and `AuthPort` with no vendor type in
+any signature. The database port exposes reads only — the read-mostly constraint is
+enforced by the absence of a mutation verb, not by a comment.
+
+Two judgement calls worth recording. First, `WRONG_CLASS` and `BOX_INCORRECT` detections
+are real eggs but do not count toward EPG, because the Android client's session reports
+count `CONFIRMED` only and the two surfaces must not disagree about the same smear.
+Second, Phase 1 has no per-sample validation-state column and `validation_records` is a
+Phase 2 ghost, so validation status is derived from `verified_at` and `needs_reannotation`;
+that derivation is documented on the enum.
+
 ## [ci] Configure Husky git hooks for typecheck, test, and build verification
 
 Ported the Android repo's hook discipline to the Next.js toolchain. `pre-commit` gates on

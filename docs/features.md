@@ -23,11 +23,36 @@ format. `lint-staged.config.js` and `commitlint.config.js` mirror the sibling re
 `SESSION_INIT.md` routes; `docs/` holds the shelf; `docs/map/` holds the object, process
 and effect cards.
 
+### Domain model
+
+`src/domain/` mirrors the AgarthaVision Postgres schema after migration `0008`, with
+per-field provenance comments naming the migration each column came from. Enums cover
+detection verdicts (canonical UPPERCASE, lenient parsing of the Android client's lowercase
+form), egg species (lenient, because `class_label` is free text upstream), report type,
+a console-derived validation status, and the EPG severity bands.
+
+Pure logic, all of it unit-tested and none of it touching I/O:
+
+- **EPG** — the DOH volumetric multiplier, the confirmed-only counting rule, per-species
+  EPG, the daily trend, the parasite distribution, the average / highest / lowest summary,
+  and the dashboard's headline counters.
+- **Severity** — species-specific light / moderate / heavy intensity bands, a per-sample
+  classification that takes the worst species burden on the frame, and the split.
+- **Research matrix** — the six SRS-fixed export columns, their formatting, and RFC 4180
+  CSV plus key-ordered JSON serialisation.
+- **Filters** — date range, sample ID substring, validation status, species, and the
+  confidence / EPG / processing-time ranges.
+
+### Port interfaces
+
+`src/ports/` holds three vendor-free interfaces — `db.ts`, `storage.ts`, `auth.ts` — plus
+their error types. The database port is read-only by construction: it has no insert,
+update or delete verb, so no feature can mutate clinical data.
+
 ## Not built yet, in this pass
 
-Tracked here so the gap is visible, and struck through as each lands:
+Tracked here so the gap is visible:
 
-- Domain model and port interfaces
 - Supabase database and storage adapters, and the provider registry
 - Supabase Auth behind the auth port, with the `profiles.role` admin gate
 - Administrative dashboard: summary cards, EPG trend by species, parasite distribution,
