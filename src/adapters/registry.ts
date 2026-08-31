@@ -1,4 +1,4 @@
-import type { DatabasePort, StoragePort } from "@/ports";
+import type { AuthPort, DatabasePort, StoragePort } from "@/ports";
 import { optionalEnv } from "@/lib/env";
 
 /**
@@ -77,6 +77,12 @@ export async function getStorage(): Promise<StoragePort> {
   }
 }
 
-// `getAuth()` lands with the auth adapter. `authProvider()` above is already
-// wired so the variable is validated from the first deployment rather than
-// silently ignored until the adapter exists.
+/** The auth port for this request. Server-side only. */
+export async function getAuth(): Promise<AuthPort> {
+  switch (authProvider()) {
+    case "supabase": {
+      const { createSupabaseAuth } = await import("./supabase/auth");
+      return createSupabaseAuth();
+    }
+  }
+}
