@@ -81,11 +81,27 @@ number each field came from.
 
 ### 8. Commit format
 
-Every commit subject is `[type][ClickUp-ID][Lastname] Task title`. Types: `feat fix
-refactor docs style test ci chore`. No trailers of any kind in the body.
+Every commit subject is `[type][ClickUp-ID][Lastname]: Task title` — note the colon
+before the title. Types: `feat enhancements fix security docs ui ux uiux refactor test ci
+chore`. No trailers of any kind in the body.
 
-**Enforced at:** `.husky/commit-msg` (regex `^\[[a-z]+\]\[[a-z0-9]+\]\[[A-Za-z]+\] .+`,
-with the expected format printed on rejection).
+**Enforced at:** `.husky/commit-msg`. Only the first line is checked, so bodies are
+free-form. Merge, revert, fixup and squash subjects are skipped because git writes those
+itself. A rejected commit prints the format, the type list with a gloss for each, and the
+subject that failed.
+
+**History predates the colon.** Every commit before this hook landed uses the older
+`[type][ClickUp-ID][Lastname] Task title` shape with no colon — the hook only sees new
+commits, so the log is mixed and that is expected, not drift.
+
+**Shared with the app repo.** This is the same format the AgarthaVision app repo enforces
+as its C9, so a contributor moving between the two repos writes one subject line, not two.
+
+**Caveat:** `commitlint.config.js` is still committed and still extends
+`@commitlint/config-conventional` with a scope enum — a _conventional-commit_ shape that
+contradicts the bracket format above and is wired to no hook. `lint-staged.config.js` is
+likewise unreferenced by any hook. Both are dead configuration; neither describes what
+actually runs.
 
 ### 9. Hooks are not optional
 

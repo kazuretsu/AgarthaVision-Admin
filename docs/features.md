@@ -14,7 +14,7 @@ ramp, tabular numerals on data fields and italic binomial species names.
 ### Commit and build discipline
 
 Husky hooks gate every commit on typecheck, tests, production build and lint, and every
-push on a full build. `commit-msg` enforces the `[type][ClickUp-ID][Lastname]` subject
+push on a full build. `commit-msg` enforces the `[type][ClickUp-ID][Lastname]:` subject
 format. `lint-staged.config.js` and `commitlint.config.js` mirror the sibling repo, with a
 `scope-enum` adapted to this repo's areas.
 

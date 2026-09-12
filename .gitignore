@@ -51,3 +51,8 @@ next-env.d.ts
 # editors
 .idea/
 .vscode/settings.json
+
+# local agent config — only the .example counterparts are tracked
+.mcp.json
+AGENTS.md
+.claude/

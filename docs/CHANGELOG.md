@@ -2,6 +2,20 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [ci] Align the commit-msg hook with the app repo and add agent config templates
+
+The subject format gains a colon — `[type][ClickUp-ID][Lastname]: Task title` — and the
+type list widens from eight to twelve (`enhancements security ui ux uiux` added, the never-used
+`style` dropped). Merge, revert, fixup and squash subjects are now skipped, because git writes
+those itself and the old regex rejected them. This is the AgarthaVision app repo's C9 hook
+verbatim, so one subject line works in both repos.
+
+Every type in this repo's history (`feat docs ci chore`) survives the change; only the colon
+is newly required, so existing commits stay valid history while new ones take the new shape.
+
+Also adds the `.mcp.json` / `AGENTS.md` local-config pattern: the real files are gitignored and
+the tracked `.mcp.example.json` and `AGENTS.example.md` are the templates to copy from.
+
 ## [docs] Complete ICM system map with object, process, and effect cards
 
 Three object cards (domain model, ports, provider registry) and four process cards (EPG

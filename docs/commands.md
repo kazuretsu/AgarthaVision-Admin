@@ -36,7 +36,7 @@ Installed by `prepare` (`husky`), which sets `core.hooksPath`.
 | Hook                | Runs                                                                                   |
 | ------------------- | -------------------------------------------------------------------------------------- |
 | `.husky/pre-commit` | ① typecheck ② test ③ build ④ lint. Any failure aborts the commit with a named message. |
-| `.husky/commit-msg` | Rejects a subject that is not `[type][ClickUp-ID][Lastname] Task title`.               |
+| `.husky/commit-msg` | Rejects a subject that is not `[type][ClickUp-ID][Lastname]: Task title`.              |
 | `.husky/pre-push`   | Full production build before anything reaches the remote.                              |
 
 Both hooks resolve their runner through `run_bun()`: Bun if it is on `PATH` (adding

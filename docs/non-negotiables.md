@@ -15,7 +15,7 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - Domain field names mirror the upstream Postgres schema. Do not invent columns.
 - `validation_records` is not implemented upstream. Do not build against it.
 - No migrations in this repo.
-- Commit subject: `[type][ClickUp-ID][Lastname] Task title`. No trailers.
+- Commit subject: `[type][ClickUp-ID][Lastname]: Task title`. No trailers.
 - Never commit a real secret, or a plausible-looking fake one.
 - Never bypass the hooks.
 - Change the doc card in the same commit as the behavior.

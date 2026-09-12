@@ -1,22 +1,44 @@
 #!/usr/bin/env sh
-echo "📝 [Husky] Checking commit message format..."
+# Enforces constraint 8 (docs/constraints.md): [type][ClickUp-ID][Lastname]: Task title
+#
+# Aligned with the AgarthaVision app repo's C9 hook. Two changes from the format this
+# repo used before: a colon after [Lastname], and a wider type list.
 
-commit_msg_file="$1"
-subject=$(head -n 1 "$commit_msg_file")
+commit_msg=$(head -n 1 "$1")
 
-# Project convention: [type][ClickUp-ID][Lastname] Task title
-if ! echo "$subject" | grep -Eq '^\[[a-z]+\]\[[a-z0-9]+\]\[[A-Za-z]+\] .+'; then
-  echo "❌ [Husky] Commit message rejected! Commit cancelled."
+# Ignore merge commits and reverts: git generates those messages itself.
+case "$commit_msg" in
+  "Merge "*|"Revert "*|"fixup!"*|"squash!"*) exit 0 ;;
+esac
+
+types="feat|enhancements|fix|security|docs|ui|ux|uiux|refactor|test|ci|chore"
+
+# [type][ClickUp-ID][Lastname]: Task title
+pattern="^\[($types)\]\[[A-Za-z0-9_-]+\]\[[A-Za-z0-9_-]+\]: .+"
+
+if ! printf '%s' "$commit_msg" | grep -E -q "$pattern"; then
+  echo "[Husky] Invalid commit message format."
+  echo "--------------------------------------------------------"
+  echo "  Required: [type][ClickUp-ID][Lastname]: Task title"
+  echo "  Example:  [feat][86d43e3vu][Tabada]: Add the records filter"
   echo ""
-  echo "   Expected format: [type][ClickUp-ID][Lastname] Task title"
-  echo "   Example:         [feat][86d43e3vu][Tabada] Add records table filters"
+  echo "  Types:"
+  echo "    feat          a new capability"
+  echo "    enhancements  an improvement to something that already ships"
+  echo "    fix           a defect repair"
+  echo "    security      a vulnerability or hardening change"
+  echo "    docs          documentation only"
+  echo "    ui            visual or layout change"
+  echo "    ux            interaction or flow change"
+  echo "    uiux          both, when the change is not cleanly one"
+  echo "    refactor      behaviour-preserving restructuring"
+  echo "    test          test coverage only"
+  echo "    ci            build, hooks, or pipeline"
+  echo "    chore         dependencies and housekeeping"
   echo ""
-  echo "   type      lowercase letters only — feat fix refactor docs style test ci chore"
-  echo "   ClickUp-ID lowercase letters and digits only, no brackets or dashes"
-  echo "   Lastname  letters only, capitalised"
-  echo ""
-  echo "   Received: $subject"
+  echo "  Yours:"
+  echo "    $commit_msg"
+  echo "--------------------------------------------------------"
+  echo "  Bypass for an emergency with: git commit --no-verify"
   exit 1
 fi
-
-echo "✅ [Husky] Commit message format accepted!"

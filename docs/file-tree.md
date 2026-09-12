@@ -7,10 +7,12 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 ├── SESSION_INIT.md            Router. Read once at session start. No content payload.
 ├── README.md                  Public-facing intro and quickstart.
 ├── .env.example               Variable names, empty values. The only tracked env file.
-├── .gitignore                 Ignores .env* with a single !.env.example exception.
+├── .gitignore                 Ignores .env*, .mcp.json, AGENTS.md, .claude/. Templates stay tracked.
+├── .mcp.example.json          MCP server template. Copy to .mcp.json and fill in the key.
+├── AGENTS.example.md          Per-developer rules template. Copy to AGENTS.md.
 ├── .husky/
 │   ├── pre-commit             ① typecheck ② test ③ build ④ lint. Each step exits 1 on failure.
-│   ├── commit-msg             Enforces [type][ClickUp-ID][Lastname] Task title.
+│   ├── commit-msg             Enforces [type][ClickUp-ID][Lastname]: Task title.
 │   └── pre-push               Full production build before push.
 ├── commitlint.config.js       Conventional config plus this repo's scope-enum.
 ├── lint-staged.config.js      **/*.{ts,tsx} → eslint --fix, prettier --write.
