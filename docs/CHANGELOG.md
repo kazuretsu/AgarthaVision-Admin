@@ -19,6 +19,20 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [feat] Dashboard counted per smear in LPF terms, matching the app and the map
+
+The dashboard showed an EPG trend and a WHO light/moderate/heavy split — both retracted for
+direct smear. It now counts smears: one session is one smear, examined once a live field
+was verified, positive when a live field carries a counted detection. That is the rule in
+`barangay_prevalence()`, so the dashboard and the map count the same thing. Cards: patients
+with a smear read, smears examined, positive smears and rate, fields verified. A weekly bar
+chart (inline SVG, with a table view) and species bars showing the share of positive smears
+carrying each species. A from/to period in Manila dates lives in the URL; a period over
+5,000 sessions says its figures are partial.
+
+The severity bands, the EPG trend, the distribution-by-egg and the EPG summary are deleted,
+with their tests. `epg.ts` keeps only what the export still needs.
+
 ## [fix] Records: super admins see patients de-identified
 
 A patient's name, sex and birthdate now reach only an organization admin of the patient's

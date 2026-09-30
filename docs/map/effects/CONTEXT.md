@@ -4,27 +4,28 @@ If you touch X, open these cards. This index is a catalog, not a waterfall: it n
 to look, and the card carries the reasoning. **If this table and a card disagree, the card
 is right and this table is stale.**
 
-| If you touch                                        | Open                                                                                    |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `src/ports/*`                                       | `../objects/ports.md` · `../../constraints.md` (#1, #4)                                 |
-| `src/adapters/registry.ts`                          | `../objects/provider-registry.md`                                                       |
-| `src/adapters/supabase/database.ts`                 | `../objects/domain-model.md` · `../objects/ports.md`                                    |
-| `src/adapters/supabase/storage.ts`                  | `../processes/signed-image-url.md`                                                      |
-| `src/adapters/supabase/auth.ts`                     | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
-| `src/domain/entities.ts`, `enums.ts`                | `../objects/domain-model.md` · `../../constraints.md` (#5, #7)                          |
-| `src/domain/clinical.ts`, `patients.ts`             | `../processes/lpf-session-summary.md` · `../../constraints.md` (#6)                     |
-| `src/domain/epg.ts`, `severity.ts`                  | `../processes/epg-aggregation.md` — dashboard and export only                           |
-| `src/domain/research-matrix.ts`                     | `../processes/research-matrix-export.md` — the column set is a contract                 |
-| `src/domain/filters.ts`, `src/lib/search-params.ts` | `../processes/research-matrix-export.md` — the export reuses the page's filter          |
-| `src/app/(dashboard)/layout.tsx`                    | `../processes/admin-gate.md`                                                            |
-| `src/domain/access.ts`, `src/lib/console-access.ts` | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
-| `src/components/shell/nav.ts`                       | `../processes/admin-gate.md` — `visibleTo` must match each page's `requirePageAccess`   |
-| Any new route handler                               | `../processes/admin-gate.md` — handlers do **not** inherit the layout's gate            |
-| `src/proxy.ts`                                      | `../processes/admin-gate.md` — refresh only, never the authorisation point              |
-| `src/lib/palette.ts`, anything charting             | `../../constraints.md` (#11) — re-run the palette validator                             |
-| `SESSION_INIT.md`                                   | `../../constraints.md` (#13)                                                            |
-| `.husky/*`, `package.json` scripts                  | `../../commands.md` · `../../constraints.md` (#9)                                       |
-| `.env.example`                                      | `../objects/provider-registry.md` · `../../stack.md` · `../../constraints.md` (#2, #12) |
+| If you touch                                           | Open                                                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `src/ports/*`                                          | `../objects/ports.md` · `../../constraints.md` (#1, #4)                                 |
+| `src/adapters/registry.ts`                             | `../objects/provider-registry.md`                                                       |
+| `src/adapters/supabase/database.ts`                    | `../objects/domain-model.md` · `../objects/ports.md`                                    |
+| `src/adapters/supabase/storage.ts`                     | `../processes/signed-image-url.md`                                                      |
+| `src/adapters/supabase/auth.ts`                        | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
+| `src/domain/entities.ts`, `enums.ts`                   | `../objects/domain-model.md` · `../../constraints.md` (#5, #7)                          |
+| `src/domain/clinical.ts`, `patients.ts`                | `../processes/lpf-session-summary.md` · `../../constraints.md` (#6)                     |
+| `src/domain/dashboard.ts`, `src/components/dashboard/` | `../processes/dashboard-figures.md`                                                     |
+| `src/domain/epg.ts`                                    | `../processes/epg-aggregation.md` — export only                                         |
+| `src/domain/research-matrix.ts`                        | `../processes/research-matrix-export.md` — the column set is a contract                 |
+| `src/domain/filters.ts`, `src/lib/search-params.ts`    | `../processes/research-matrix-export.md` — the export reuses the page's filter          |
+| `src/app/(dashboard)/layout.tsx`                       | `../processes/admin-gate.md`                                                            |
+| `src/domain/access.ts`, `src/lib/console-access.ts`    | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
+| `src/components/shell/nav.ts`                          | `../processes/admin-gate.md` — `visibleTo` must match each page's `requirePageAccess`   |
+| Any new route handler                                  | `../processes/admin-gate.md` — handlers do **not** inherit the layout's gate            |
+| `src/proxy.ts`                                         | `../processes/admin-gate.md` — refresh only, never the authorisation point              |
+| `src/lib/palette.ts`, anything charting                | `../../constraints.md` (#11) — re-run the palette validator                             |
+| `SESSION_INIT.md`                                      | `../../constraints.md` (#13)                                                            |
+| `.husky/*`, `package.json` scripts                     | `../../commands.md` · `../../constraints.md` (#9)                                       |
+| `.env.example`                                         | `../objects/provider-registry.md` · `../../stack.md` · `../../constraints.md` (#2, #12) |
 
 ## The non-obvious breaks
 

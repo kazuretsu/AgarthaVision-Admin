@@ -1,6 +1,5 @@
 import type { PatientDisclosure, PatientListItem, PatientRecord, Profile } from "@/domain";
-import type { SampleRecord } from "@/domain";
-import type { SampleRecordDetail, SessionRecord } from "@/domain";
+import type { SampleRecord, SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
 import type { RecordFilter } from "@/domain/filters";
 
 /**
@@ -40,6 +39,14 @@ export interface PatientQuery {
   limit?: number;
 }
 
+export interface SmearQuery {
+  /** Inclusive Manila calendar dates, `YYYY-MM-DD`, bounding `sessions.started_at`. */
+  startedFrom?: string;
+  startedTo?: string;
+  /** Hard cap on rows returned. Adapters must apply a sane default. */
+  limit?: number;
+}
+
 export interface DatabasePort {
   /** Patients, most recently registered first. */
   listPatients(query: PatientQuery): Promise<PatientListItem[]>;
@@ -55,6 +62,9 @@ export interface DatabasePort {
     sampleId: string,
     disclosure: PatientDisclosure,
   ): Promise<SampleRecordDetail | null>;
+
+  /** Every session in the period with its summary, for the dashboard. */
+  listSmears(query?: SmearQuery): Promise<SmearRecord[]>;
 
   /**
    * Every processed sample, composed into {@link SampleRecord}. Serves the

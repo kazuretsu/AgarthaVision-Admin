@@ -20,6 +20,7 @@ import type {
   SampleRecordDetail,
   Session,
   SessionRecord,
+  SmearRecord,
   SpeciesFinding,
 } from "@/domain";
 import {
@@ -27,6 +28,7 @@ import {
   type DatabasePort,
   type PatientQuery,
   type RecordQuery,
+  type SmearQuery,
 } from "@/ports/db";
 import { createRequestClient } from "./client";
 
@@ -126,6 +128,9 @@ interface ProfileRow {
  * that a mis-typed filter cannot pull the whole table into a server component.
  */
 const DEFAULT_LIMIT = 1000;
+
+/** Default cap for the dashboard's one-row-per-session read; callers may pass their own. */
+const SMEAR_LIMIT = 5000;
 
 const PATIENT_COLUMNS = "id, psgc_barangay_code, created_by, created_at";
 /** Who the patient is. Selected only for an `"identified"` reader. */
@@ -447,6 +452,31 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       fieldNumber: index + 1,
       fieldCount: record.samples.length,
     };
+  }
+
+  async listSmears(query: SmearQuery = {}): Promise<SmearRecord[]> {
+    const { startedFrom, startedTo, limit = SMEAR_LIMIT } = query;
+
+    let request = this.client
+      .from("sessions")
+      .select(SESSION_SUMMARY_TREE)
+      .order("started_at", { ascending: false })
+      .limit(limit);
+
+    // Dates are Manila calendar days, the frame the app records in.
+    if (startedFrom) request = request.gte("started_at", `${startedFrom}T00:00:00+08:00`);
+    if (startedTo) request = request.lte("started_at", `${startedTo}T23:59:59.999+08:00`);
+
+    const { data, error } = await request;
+    if (error) throw new DatabaseReadError("listSmears", error);
+
+    type Row = SessionRow & { samples?: SampleRow[] | null };
+    return ((data as unknown as Row[] | null) ?? []).map((row) => ({
+      sessionId: row.id,
+      patientId: row.patient_id,
+      startedAt: row.started_at,
+      summary: summariseSessionRow(row),
+    }));
   }
 
   async listSampleRecords(query: RecordQuery = {}): Promise<SampleRecord[]> {

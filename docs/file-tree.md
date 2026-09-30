@@ -36,7 +36,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   └── provider-registry.md   How a backend is selected, and why lazily.
 │       ├── processes/
 │       │   ├── lpf-session-summary.md What counts, and the LPF range, as the app does it.
-│       │   ├── epg-aggregation.md     Legacy EPG, dashboard and export only.
+│       │   ├── dashboard-figures.md   Per-smear counting, and why not to sum the map's rows.
+│       │   ├── epg-aggregation.md     Legacy EPG, export only.
 │       │   ├── research-matrix-export.md  Filter → rows → CSV/JSON. The column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
@@ -51,11 +52,11 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
-    │       ├── dashboard/     Summary cards, EPG trend, distribution, severity.
+    │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter.
     │       └── records/       Patients list; patients/, sessions/, samples/ detail pages;
     │                          loading.tsx; export/route.ts (legacy EPG export, gate repeated).
-    ├── domain/                Entities, read models, access rules, clinical (LPF) and
-    │                          patient rules, id checks; legacy EPG and severity. No I/O.
+    ├── domain/                Entities, read models, access rules, clinical (LPF),
+    │                          patient and dashboard rules, id checks; legacy EPG for the export. No I/O.
     ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
@@ -64,15 +65,16 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── ui/                shadcn components on Base UI. Ours to edit.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           LPF table, field image with box overlay, breadcrumbs.
+    │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
     │   ├── theme-provider.tsx next-themes, class-based.
-    │   └── charts/            Inline SVG. No charting dependency.
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
         ├── utils.ts           cn(): clsx + tailwind-merge.
         ├── format.ts          Dates in Asia/Manila, person names.
         ├── signed-urls.ts     Signs a page's frames; an unreadable one becomes null.
-        ├── palette.ts         Validated chart colors, with the validator's findings.
+        ├── palette.ts         Validated species colours, with the validator's findings.
+        ├── period.ts          The dashboard's from/to dates, defensively parsed.
         └── search-params.ts   Filter ⇄ query string, defensively parsed.
 ```
 
