@@ -1,6 +1,6 @@
 import type { PatientDisclosure, PatientListItem, PatientRecord, Profile } from "@/domain";
 import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
-import type { OrganizationDetail, OrganizationSummary, ReadScope } from "@/domain";
+import type { AuditEntry, OrganizationDetail, OrganizationSummary, ReadScope } from "@/domain";
 
 /**
  * The database port.
@@ -48,6 +48,18 @@ export interface SmearQuery {
   limit?: number;
 }
 
+export interface AuditQuery {
+  /** Whose entries: an organization's, or all of them for a super admin. */
+  scope: ReadScope;
+  actorId?: string;
+  action?: string;
+  /** Inclusive Manila calendar dates, `YYYY-MM-DD`. */
+  from?: string;
+  to?: string;
+  /** Hard cap on rows returned. Adapters must apply a sane default. */
+  limit?: number;
+}
+
 export interface DatabasePort {
   /** Patients, most recently registered first. */
   listPatients(query: PatientQuery): Promise<PatientListItem[]>;
@@ -81,6 +93,9 @@ export interface DatabasePort {
 
   /** One organization with its members; `null` when absent or hidden. */
   getOrganization(organizationId: string): Promise<OrganizationDetail | null>;
+
+  /** Audit entries, newest first. */
+  listAuditEntries(query: AuditQuery): Promise<AuditEntry[]>;
 
   /** One profile by id, or `null` when it is absent or unreadable. */
   getProfile(userId: string): Promise<Profile | null>;

@@ -87,6 +87,13 @@ records browser, the dashboard and the export — and gets a 404 for anything el
 URL. A super admin sees everything and can narrow the records, dashboard and export to one
 organization.
 
+### Audit trail
+
+`/audit` lists every console change and every export, newest first: when, who, the action,
+and one line saying what happened. Filter by person, action and date; a super admin also by
+organization. An org admin sees only their organization's entries. Entries are written by
+the database with the change itself and can never be edited or deleted by anyone.
+
 ### Console shell
 
 A sidebar with the sections the signed-in person may open, a header naming the scope ("All
@@ -132,7 +139,8 @@ per examined smear: session and patient record IDs, Manila date, barangay PSGC c
 examined, result, eggs, and for each of the three species its LPF min, max, descriptor and
 eggs, plus other species in one cell. No names and no birthdates. The column set is version
 2 and the version is in the file name. A period over 20,000 sessions is refused rather than
-cut short, and the page warns before the click. Exports are not yet written to the audit trail.
+cut short, and the page warns before the click. Every download is recorded in the audit trail
+first; if it cannot be recorded, no file is served.
 
 ## Not built yet, in this pass
 

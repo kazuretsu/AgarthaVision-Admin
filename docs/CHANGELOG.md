@@ -32,6 +32,19 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [feat] Audit trail: see who did what in the console, and every export
+
+`/audit` lists every administrative change and every export, newest first, with who, when,
+the action and one line describing it; filters for person, action, date and — for super
+admins — organization. Org admins read only their organization's entries, in the console's
+own query and in RLS. An action the build does not recognise is shown as recorded.
+
+`admin/0003_audit_exports.sql` adds `console_record_export`, which files an org admin's
+export under their own organization whatever is passed. The export route now records each
+download before serving it and refuses to serve the file if the entry cannot be written.
+SQL tests cover the misfiling attempt, a medtech's refusal, and that org admins can neither
+edit, delete nor read another laboratory's entries.
+
 ## [fix] Lab scoping keeps patients de-identified for a super admin who narrows
 
 Every patient read now takes both the read scope and the patient disclosure. Narrowing to

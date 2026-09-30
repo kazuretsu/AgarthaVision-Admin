@@ -80,7 +80,7 @@ export default async function ExportPage({
         <p className="text-[13px] text-stone-mid">
           One row per smear examined, with each species&apos; LPF range, descriptor and eggs
           counted. Patients appear only as a record ID, with their barangay code — no names and no
-          birthdates.
+          birthdates. Each download is recorded in the audit trail.
         </p>
       </header>
 

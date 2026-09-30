@@ -50,10 +50,11 @@ breaking change**: bump `RESEARCH_EXPORT_VERSION` (`:21`), which is in the file 
 **No names, no birthdates.** A patient appears only as their record ID, so repeat smears
 can be linked without identifying anyone, and the barangay code is the finest place given.
 
-## Not yet
+## Audited before it leaves
 
-Each export should be written to the audit trail. The trail's storage does not exist yet;
-the audit-trail work adds the write here.
+The route records the export — row count, format, period, column version — through
+`recordExport` before building the response, and refuses to serve the file if that fails.
+See `audit-trail.md`.
 
 ## If you change this
 

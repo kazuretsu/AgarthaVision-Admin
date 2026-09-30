@@ -49,6 +49,16 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
   async setOrganizationStatus(organizationId: string, status: OrganizationStatus): Promise<void> {
     await this.call("console_set_organization_status", { p_id: organizationId, p_status: status });
   }
+
+  async recordExport(
+    organizationId: string | null,
+    details: Record<string, unknown>,
+  ): Promise<void> {
+    await this.call("console_record_export", {
+      p_organization_id: organizationId,
+      p_details: details,
+    });
+  }
 }
 
 /** Builds the adapter against a request-scoped, session-carrying client. */

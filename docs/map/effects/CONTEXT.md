@@ -25,6 +25,7 @@ is right and this table is stale.**
 | `src/lib/palette.ts`, anything charting                                            | `../../constraints.md` (#11) — re-run the palette validator                                        |
 | `supabase/migrations/admin/*`                                                      | `../objects/organizations.md` · `../../constraints.md` (#7) — additive only; run `bun run test:db` |
 | `src/domain/scope.ts`, `src/lib/read-scope.ts`, `supabase/migrations/admin/0002_*` | `../processes/lab-scoping.md` — the console filter and the policies must agree                     |
+| `src/domain/audit.ts`, any new admin write                                         | `../processes/audit-trail.md` — a write must audit itself; add its action                          |
 | `src/ports/admin-write.ts`, `src/adapters/supabase/admin-write.ts`                 | `../objects/organizations.md` — every write audits itself                                          |
 | `SESSION_INIT.md`                                                                  | `../../constraints.md` (#13)                                                                       |
 | `.husky/*`, `package.json` scripts                                                 | `../../commands.md` · `../../constraints.md` (#9)                                                  |

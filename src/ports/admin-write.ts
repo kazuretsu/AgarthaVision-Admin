@@ -17,6 +17,13 @@ export interface AdminWritePort {
   renameOrganization(organizationId: string, name: string): Promise<void>;
   /** Deactivates or reactivates. Nothing is deleted either way. */
   setOrganizationStatus(organizationId: string, status: OrganizationStatus): Promise<void>;
+
+  /**
+   * Records a research export about to be handed out. The implementation files an
+   * org admin's export under their own organization whatever is passed, so the
+   * caller cannot misfile it. Callers must not serve the file if this throws.
+   */
+  recordExport(organizationId: string | null, details: Record<string, unknown>): Promise<void>;
 }
 
 export type AdminWriteFailure = "forbidden" | "conflict" | "not_found" | "invalid" | "failed";
