@@ -19,6 +19,22 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [feat] Research export in LPF, one row per smear, with no names or birthdates
+
+The SRS research matrix exported AI and validated EPG per sample; EPG was retracted with
+it. `/export` now shows how many smears a period holds and downloads one row per examined
+smear, as CSV or JSON: session and patient record IDs, Manila date, barangay PSGC code,
+fields examined, result, eggs counted, and for each of the three species its LPF min, max,
+descriptor and eggs, plus other species in one cell. The rows come from the same
+`SessionSummary` the records browser shows. The column set is version 2 and the version is
+in the file name. CSV cells that would run as a spreadsheet formula are neutralised. A
+period over 20,000 sessions is refused rather than silently cut short.
+
+This removes the last of EPG: `epg.ts`, the record filters, the sample-level
+`SampleRecord`, `listSampleRecords` and the old `/records/export` route are deleted with
+their tests, and so are the EPG and research-matrix cards. Exports are not yet written to
+the audit trail, which does not exist yet.
+
 ## [fix] Dashboard lays out for a desktop
 
 The summary cards sit in one row of five and the trend shares its row with the species mix

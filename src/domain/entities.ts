@@ -1,4 +1,4 @@
-import type { DetectionVerdict, ValidationStatus, EggSpecies } from "./enums";
+import type { DetectionVerdict } from "./enums";
 
 /**
  * Entity types mirrored from the AgarthaVision Postgres schema.
@@ -143,39 +143,4 @@ export interface Report {
   /** `{ "<species>": { "min": 0, "max": 4 } }`, stored as issued. */
   lpfPerSpecies: Record<string, { min: number; max: number }>;
   pdfFilePath: string | null;
-}
-
-/**
- * A sample joined with its detections and the values this console derives from
- * them. Composed in the domain layer, not a table: nothing here is persisted.
- *
- * Retained for the dashboard and the research export, which move to the
- * patient → session model in their own changes.
- */
-export interface SampleRecord {
-  sample: Sample;
-  detections: Detection[];
-  /** Owning medtech, when the profile row was readable. */
-  owner: Pick<Profile, "id" | "fullName"> | null;
-  /** Session label, carried for display and filtering. */
-  sessionLabel: string | null;
-  /** Derived per `ValidationStatus`. */
-  validationStatus: ValidationStatus;
-  /** Distinct species across all detections, model label or expert correction. */
-  detectedSpecies: EggSpecies[];
-  /** Mean model confidence across all detections; `null` when there are none. */
-  meanConfidence: number | null;
-  /** Every detection counted, before human validation. */
-  aiEggCount: number;
-  /** {@link aiEggCount} times the DOH volumetric multiplier. */
-  aiEpg: number;
-  /** Only `CONFIRMED` detections. */
-  validatedEggCount: number;
-  /** {@link validatedEggCount} times the DOH volumetric multiplier. */
-  validatedEpg: number;
-  /**
-   * Capture-to-verification duration in milliseconds; `null` when the sample has
-   * no `verifiedAt`. This is the console's "Processing Time".
-   */
-  processingTimeMs: number | null;
 }

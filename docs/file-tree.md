@@ -37,8 +37,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       ├── processes/
 │       │   ├── lpf-session-summary.md What counts, and the LPF range, as the app does it.
 │       │   ├── dashboard-figures.md   Per-smear counting, and why not to sum the map's rows.
-│       │   ├── epg-aggregation.md     Legacy EPG, export only.
-│       │   ├── research-matrix-export.md  Filter → rows → CSV/JSON. The column contract.
+│       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
 │       └── effects/CONTEXT.md         Change-impact: touch X, open these cards.
@@ -53,10 +52,12 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter.
-    │       └── records/       Patients list; patients/, sessions/, samples/ detail pages;
-    │                          loading.tsx; export/route.ts (legacy EPG export, gate repeated).
+    │       ├── records/       Patients list; patients/, sessions/, samples/ detail pages;
+    │                          loading.tsx.
+    │       └── export/        Research export page; download/route.ts (gate repeated).
     ├── domain/                Entities, read models, access rules, clinical (LPF),
-    │                          patient and dashboard rules, id checks; legacy EPG for the export. No I/O.
+    │                          patient, dashboard and research-export rules, id checks.
+    │                          No I/O.
     ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
@@ -74,8 +75,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── format.ts          Dates in Asia/Manila, person names.
         ├── signed-urls.ts     Signs a page's frames; an unreadable one becomes null.
         ├── palette.ts         Validated species colours, with the validator's findings.
-        ├── period.ts          The dashboard's from/to dates, defensively parsed.
-        └── search-params.ts   Filter ⇄ query string, defensively parsed.
+        └── period.ts          The dashboard's and export's from/to dates, defensively parsed.
 ```
 
 Every directory listed above holds committed files.

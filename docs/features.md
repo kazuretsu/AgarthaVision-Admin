@@ -25,23 +25,19 @@ and effect cards.
 
 ### Domain model
 
-`src/domain/` mirrors the AgarthaVision Postgres schema after migration `0008`, with
-per-field provenance comments naming the migration each column came from. Enums cover
-detection verdicts (canonical UPPERCASE, lenient parsing of the Android client's lowercase
-form), egg species (lenient, because `class_label` is free text upstream), report type,
-a console-derived validation status, and the EPG severity bands.
+`src/domain/` mirrors the app's consolidated schema (`0001`–`0006` on `development`), with
+per-field provenance comments. The one enum is the detection verdict (canonical UPPERCASE,
+lenient parsing of the app's lowercase form); species are free text upstream and are named
+by `canonicalSpecies`, as the app names them.
 
 Pure logic, all of it unit-tested and none of it touching I/O:
 
-- **EPG** — the DOH volumetric multiplier, the confirmed-only counting rule, per-species
-  EPG, the daily trend, the parasite distribution, the average / highest / lowest summary,
-  and the dashboard's headline counters.
-- **Severity** — species-specific light / moderate / heavy intensity bands, a per-sample
-  classification that takes the worst species burden on the frame, and the split.
-- **Research matrix** — the six SRS-fixed export columns, their formatting, and RFC 4180
-  CSV plus key-ordered JSON serialisation.
-- **Filters** — date range, sample ID substring, validation status, species, and the
-  confidence / EPG / processing-time ranges.
+- **Access** — who is a super admin, an org admin, or neither.
+- **Clinical** — the app's counting rule, the live-sample rule, the per-species LPF range
+  and descriptor, and box provenance, with the app's own LPF test cases.
+- **Patients** — display names (codenames included) and age in the Manila frame.
+- **Dashboard** — per-smear counting on the prevalence rule, species mix, weekly trend.
+- **Research export** — the version 2 column contract, CSV with formula neutralising, JSON.
 
 ### Port interfaces
 
@@ -110,11 +106,14 @@ deleted as a duplicate never appears or counts; LPF is a min–max range per fie
 mean; no EPG and no WHO tier. Codenamed patients show as their codename. Frames are signed
 as the signed-in user, not with the service-role key. Everything is read-only.
 
-### Research-matrix export (legacy)
+### Research export
 
-The EPG-based export route (`/records/export`) still exists and is still guarded; its link
-left the records page when the browser replaced the sample table. It is rebuilt in LPF in
-its own change.
+`/export` shows how many smears a period holds and downloads them as CSV or JSON, one row
+per examined smear: session and patient record IDs, Manila date, barangay PSGC code, fields
+examined, result, eggs, and for each of the three species its LPF min, max, descriptor and
+eggs, plus other species in one cell. No names and no birthdates. The column set is version
+2 and the version is in the file name. A period over 20,000 sessions is refused rather than
+cut short. Exports are not yet written to the audit trail.
 
 ## Not built yet, in this pass
 

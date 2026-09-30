@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Microscope } from "lucide-react";
+import { FileDown, LayoutDashboard, Microscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "./nav";
 
-const ICONS = { dashboard: LayoutDashboard, records: Microscope } as const;
+const ICONS = { dashboard: LayoutDashboard, records: Microscope, export: FileDown } as const;
 
 /** The sidebar links, marking the section the visitor is in. */
 export function SidebarNav({ items }: { items: NavItem[] }) {

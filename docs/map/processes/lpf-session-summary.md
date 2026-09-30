@@ -25,8 +25,7 @@ change to either side that the other does not make fails a test here.
 
 **Not a WHO tier.** There is no eggs-per-gram for a direct smear and no published intensity
 table for it (PB-16). The descriptor describes what the medtech saw and carries no clinical
-classification. The dashboard and export still show EPG until they are rebuilt; the records
-browser does not.
+classification. No surface in the console shows EPG.
 
 ## Steps
 
@@ -66,7 +65,8 @@ the overlay detects which (`:66`) and scales accordingly. Rejected boxes are das
 
 **Does not hit**
 
-- The dashboard and export, which still use `epg.ts` until they move.
+- Nothing outside the console. The dashboard and export read these summaries, so they move
+  with any change here.
 
 ## See
 

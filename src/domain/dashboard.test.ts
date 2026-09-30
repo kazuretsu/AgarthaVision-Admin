@@ -13,6 +13,7 @@ function smear(overrides: Partial<SmearRecord> = {}): SmearRecord {
     sessionId: `session-${next}`,
     patientId: `patient-${next}`,
     startedAt: "2026-09-02T02:00:00Z",
+    barangayCode: "0722217001",
     summary: summary(),
     ...overrides,
   };

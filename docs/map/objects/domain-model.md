@@ -30,7 +30,6 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 | `Detection`      | `0001`, `0004`, `0005`, `0006` | `prediction_id` (0004), `stage` (0005); `species_touched` dropped (0006)              |
 | `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range                             |
 | `Report`         | `0001`                         | `lpf_per_species` stored as issued; no `epg_per_species`                              |
-| `SampleRecord`   | `src/domain/entities.ts:155`   | **composed, not persisted**; still feeds the dashboard and export                     |
 
 Read models for the records browser live in `src/domain/records.ts`: `PatientListItem`
 (`:15`), `PatientRecord` (`:30`), `SessionRecord` (`:46`), `SampleRecordDetail` (`:55`).
@@ -51,15 +50,14 @@ Facts that trip people up:
   (`src/adapters/supabase/database.ts:148`).
 
 Enums live in `src/domain/enums.ts`. `DetectionVerdict` is UPPERCASE in Postgres and
-lowercase in Room; `parseDetectionVerdict` accepts either. `ValidationStatus` is **derived
-by this console** for the legacy `SampleRecord` and is not a column; `validation_records`
-is a Phase 2 ghost with no migration behind it.
+lowercase in Room; `parseDetectionVerdict` accepts either. Species are free text and have no
+enum; `canonicalSpecies` names them. `validation_records` is a Phase 2 ghost with no
+migration behind it.
 
 ## Connected to
 
 - Owned by: upstream migrations own every field.
-- Consumed by: `src/domain/clinical.ts`, `src/domain/patients.ts`, and — until they move —
-  `src/domain/epg.ts`, `severity.ts`, `research-matrix.ts`.
+- Consumed by: `src/domain/clinical.ts`, `patients.ts`, `dashboard.ts`, `research-export.ts`.
 - Produced by: `src/adapters/supabase/database.ts`, the only place snake_case and camelCase
   meet (`toPatient` at `:187` and its siblings).
 - Looks like but is not: Room entities in the Android client, which carry columns Postgres

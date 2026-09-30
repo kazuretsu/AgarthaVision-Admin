@@ -1,11 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  composeSampleRecord,
-  isLiveSample,
-  matchesFilter,
-  parseDetectionVerdict,
-  summariseSession,
-} from "@/domain";
+import { isLiveSample, parseDetectionVerdict, summariseSession } from "@/domain";
 import type {
   Detection,
   Patient,
@@ -16,7 +10,6 @@ import type {
   Profile,
   Sample,
   SampleDetail,
-  SampleRecord,
   SampleRecordDetail,
   Session,
   SessionRecord,
@@ -27,7 +20,6 @@ import {
   DatabaseReadError,
   type DatabasePort,
   type PatientQuery,
-  type RecordQuery,
   type SmearQuery,
 } from "@/ports/db";
 import { createRequestClient } from "./client";
@@ -458,7 +450,10 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   async listSmears(query: SmearQuery = {}): Promise<SmearRecord[]> {
     const { startedFrom, startedTo, limit = SMEAR_LIMIT } = query;
 
-    type Row = SessionRow & { samples?: SampleRow[] | null };
+    type Row = SessionRow & {
+      samples?: SampleRow[] | null;
+      patients: { psgc_barangay_code: string } | null;
+    };
 
     // Paged: one response stops at the server's row cap, not at `limit`. `id`
     // breaks ties in `started_at`, so the order is total and pages do not overlap.
@@ -468,7 +463,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       (from, to) => {
         let request = this.client
           .from("sessions")
-          .select(SESSION_SUMMARY_TREE)
+          .select(`${SESSION_SUMMARY_TREE}, patients ( psgc_barangay_code )`)
           .order("started_at", { ascending: false })
           .order("id", { ascending: false });
 
@@ -485,54 +480,9 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       sessionId: row.id,
       patientId: row.patient_id,
       startedAt: row.started_at,
+      barangayCode: row.patients?.psgc_barangay_code ?? "",
       summary: summariseSessionRow(row),
     }));
-  }
-
-  async listSampleRecords(query: RecordQuery = {}): Promise<SampleRecord[]> {
-    const { filter, limit = DEFAULT_LIMIT } = query;
-
-    // Only the date bounds are pushed down. Every other predicate is derived
-    // (mean confidence, validated EPG, processing time are computed, not stored)
-    // so it cannot be expressed in SQL without duplicating the domain rules in a
-    // second language. Filtering those in `matchesFilter` keeps one definition.
-    let request = this.client
-      .from("samples")
-      .select(
-        `${SAMPLE_COLUMNS}, detections ( ${DETECTION_COLUMNS} ), sessions ( label ), profiles ( id, full_name )`,
-      )
-      .is("deleted_at", null)
-      .order("captured_at", { ascending: false })
-      .limit(limit);
-
-    if (filter?.capturedFrom) {
-      request = request.gte("captured_at", `${filter.capturedFrom}T00:00:00Z`);
-    }
-    if (filter?.capturedTo) {
-      request = request.lte("captured_at", `${filter.capturedTo}T23:59:59.999Z`);
-    }
-    if (filter?.ownerId) {
-      request = request.eq("user_id", filter.ownerId);
-    }
-
-    const { data, error } = await request;
-    if (error) throw new DatabaseReadError("listSampleRecords", error);
-
-    type Row = SampleRow & {
-      sessions: { label: string | null } | null;
-      profiles: ProfileRefRow | null;
-    };
-    const records = ((data as unknown as Row[] | null) ?? []).map((row) =>
-      composeSampleRecord({
-        // Legacy EPG export path, removed with EPG by the research export.
-        sample: toSample(row, "identified"),
-        detections: (row.detections ?? []).map(toDetection),
-        owner: toPersonRef(row.profiles),
-        sessionLabel: row.sessions?.label ?? null,
-      }),
-    );
-
-    return filter ? records.filter((record) => matchesFilter(record, filter)) : records;
   }
 
   async getProfile(userId: string): Promise<Profile | null> {
