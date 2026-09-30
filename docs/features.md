@@ -62,11 +62,22 @@ key — necessary because upstream Storage RLS has no admin exception yet.
 
 ### Authentication and the admin gate
 
-Supabase Auth behind `AuthPort`. Identity comes from `getUser()`; the role comes from
-`profiles.role`, read server-side on every request, never from a token claim. The
-`(dashboard)` segment layout calls `requireAdmin()` once, so every page under it is guarded
-on creation. Route handlers repeat the check because they do not render inside the layout.
-`src/proxy.ts` refreshes tokens and is deliberately not the authorisation point.
+Supabase Auth behind `AuthPort`. Identity comes from `getUser()`; access comes from
+`profiles.role` (super admin) or an org-admin membership (org admin), read server-side on
+every request, never from a token claim. Org-admin memberships arrive with organizations —
+until then only super admins get in. The `(dashboard)` segment layout resolves the actor
+once, so every page under it is guarded on creation; narrower pages add
+`requirePageAccess()`, and route handlers repeat the check with `requireRouteAccess()`. A
+medtech who signs in is signed back out and told to use the Android app; a medtech with a
+live session sees that notice and no data. `src/proxy.ts` refreshes tokens and is
+deliberately not the authorisation point.
+
+### Console shell
+
+A sidebar with the sections the signed-in person may open, a header naming the scope ("All
+organizations", or the org admin's laboratory), and a user menu with the person's name,
+role, theme choice (light, dark, system) and sign out. On a narrow screen the sidebar
+becomes a row under the header. Components are shadcn on Base UI (D1).
 
 ### Administrative dashboard
 

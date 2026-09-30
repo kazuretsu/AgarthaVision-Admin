@@ -2,6 +2,27 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Console shell with role-aware navigation, shadcn on Base UI and dark mode
+
+The console now knows three people instead of one. A super admin (`profiles.role =
+'admin'`) sees everything; an org admin will see their own laboratory once memberships
+exist; a medtech is refused. The rule is `resolveConsoleAccess` in `src/domain/access.ts`,
+plain TypeScript so it holds under any provider (D7). `AuthPort.requireAdmin()` became
+`requireConsoleActor()`, which returns the user with their access. Pages narrower than
+"any console user" call `requirePageAccess()`, which 404s everyone else — a hidden sidebar
+link is never the protection. Route handlers use `requireRouteAccess()`.
+
+A medtech who signs in with the right password is signed back out and told to use the
+Android app. That message only appears after a correct password, so it confirms nothing to
+a stranger; wrong passwords and unknown emails still share one reply.
+
+The frame is a sidebar, a header naming the scope, and a user menu with theme and sign out.
+Components are shadcn-style files under `src/components/ui/` written on Base UI (D1); no
+Radix package is installed, and the shadcn registry is not used. Colours became two layers:
+the raw `--av-*` palette, and semantic tokens that a `dark` class swaps, so existing
+components are correct in both themes without `dark:` classes. `/` now redirects to the
+dashboard.
+
 ## [docs] Add a keep-the-docs-aligned rule to AGENTS.example.md
 
 A "Project shelf — keep it current" section, ported from the app repo's `AGENTS.example.md`

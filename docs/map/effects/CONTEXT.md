@@ -16,6 +16,8 @@ is right and this table is stale.**
 | `src/domain/research-matrix.ts`                     | `../processes/research-matrix-export.md` — the column set is a contract                 |
 | `src/domain/filters.ts`, `src/lib/search-params.ts` | `../processes/research-matrix-export.md` — the export reuses the page's filter          |
 | `src/app/(dashboard)/layout.tsx`                    | `../processes/admin-gate.md`                                                            |
+| `src/domain/access.ts`, `src/lib/console-access.ts` | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
+| `src/components/shell/nav.ts`                       | `../processes/admin-gate.md` — `visibleTo` must match each page's `requirePageAccess`   |
 | Any new route handler                               | `../processes/admin-gate.md` — handlers do **not** inherit the layout's gate            |
 | `src/proxy.ts`                                      | `../processes/admin-gate.md` — refresh only, never the authorisation point              |
 | `src/lib/palette.ts`, anything charting             | `../../constraints.md` (#11) — re-run the palette validator                             |

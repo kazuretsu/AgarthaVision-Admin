@@ -9,6 +9,9 @@ As-built. Versions are what `bun.lock` resolved, not what a range permits.
 | UI runtime                       | React / React DOM                | 19.2.8                  |
 | Language                         | TypeScript (`strict`)            | 5.9.3                   |
 | Styling                          | Tailwind CSS                     | 4.3.3                   |
+| UI primitives                    | Base UI (`@base-ui/react`)       | 1.8.0                   |
+| Theme switching                  | `next-themes`                    | 0.4.6                   |
+| Icons                            | `lucide-react`                   | 1.49.0                  |
 | Database + auth + storage client | `@supabase/supabase-js`          | 2.112.4                 |
 | Server-side session cookies      | `@supabase/ssr`                  | 0.12.5                  |
 | Tests                            | Vitest                           | 4.1.11                  |
@@ -24,8 +27,14 @@ As-built. Versions are what `bun.lock` resolved, not what a range permits.
 - **No charting library.** The EPG trend, distribution bars and severity split are
   hand-crafted inline SVG, mirroring the Android client's design rule. One less dependency
   and no runtime bundle cost.
-- **No component library.** Cards, tables, chips and filters are local components under
-  `src/components/`.
+- **shadcn on Base UI (D1).** `src/components/ui/` holds shadcn-style components written
+  against Base UI primitives, not Radix — no Radix package is installed. The shadcn CLI's
+  registry is not used; the files are ours and are edited in place. `cn()` in
+  `src/lib/utils.ts` merges classes with `clsx` + `tailwind-merge`, and variants use
+  `class-variance-authority`.
+- **Light and dark themes.** `next-themes` toggles a `dark` class on `<html>`; the semantic
+  tokens in `src/app/globals.css` swap under it, so components need no `dark:` classes of
+  their own.
 - **No web font is fetched at build time.** The font stack asks for Inter and falls back to
   the system UI face, so the production build has no network dependency.
 

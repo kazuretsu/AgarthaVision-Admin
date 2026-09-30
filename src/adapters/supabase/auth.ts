@@ -1,10 +1,12 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { resolveConsoleAccess, type OrgAdminMembership } from "@/domain/access";
 import {
   AuthenticationFailedError,
   NotAuthenticatedError,
   NotAuthorizedError,
   type AuthPort,
   type AuthenticatedUser,
+  type ConsoleActor,
   type Credentials,
   type UserRole,
 } from "@/ports/auth";
@@ -13,14 +15,14 @@ import { createRequestClient } from "./client";
 /**
  * Supabase Auth implementation of {@link AuthPort}.
  *
- * Identity comes from Supabase Auth; the role does not. `profiles.role` is the
- * only authority on whether someone is an admin — never a JWT claim, never user
- * metadata, both of which are shaped by data the user can influence at signup.
- * The lookup costs one extra round trip per request and is worth it.
+ * Identity comes from Supabase Auth; access does not. `profiles.role` decides
+ * who is a super admin, and an active org-admin membership decides who is an org
+ * admin — never a JWT claim, never `user_metadata`, both of which a user can
+ * influence. The lookups cost a round trip per request and are worth it.
  *
- * The medtech case is a refusal, not a downgrade. There is no partial console:
- * `requireAdmin()` throws rather than returning a reduced view, so a caller
- * cannot forget to branch on a role and leak a cross-user query.
+ * A medtech is a refusal, not a downgrade. There is no partial console:
+ * `requireConsoleActor()` throws rather than returning a reduced view, so a
+ * caller cannot forget to branch on a role and leak a cross-user query.
  */
 
 interface ProfileRoleRow {
@@ -60,6 +62,23 @@ export class SupabaseAuthAdapter implements AuthPort {
     };
   }
 
+  /**
+   * The user's active org-admin membership. Organizations do not exist yet, so
+   * nobody is an org admin; the organizations ticket reads the membership here
+   * and nothing else in the gate changes.
+   */
+  private async findOrgAdminMembership(): Promise<OrgAdminMembership | null> {
+    return null;
+  }
+
+  private async toActor(user: AuthenticatedUser): Promise<ConsoleActor> {
+    // A super admin needs no membership lookup; skip the round trip.
+    const membership = user.role === "admin" ? null : await this.findOrgAdminMembership();
+    const access = resolveConsoleAccess(user.role, membership);
+    if (!access) throw new NotAuthorizedError(user);
+    return { user, access };
+  }
+
   async getCurrentUser(): Promise<AuthenticatedUser | null> {
     // getUser() revalidates against the auth server. getSession() would only
     // decode the cookie, which the browser can set — never trust it for a
@@ -69,17 +88,16 @@ export class SupabaseAuthAdapter implements AuthPort {
     return this.toAuthenticatedUser(data.user);
   }
 
-  async requireAdmin(): Promise<AuthenticatedUser> {
+  async requireConsoleActor(): Promise<ConsoleActor> {
     const user = await this.getCurrentUser();
     if (!user) throw new NotAuthenticatedError();
-    if (user.role !== "admin") throw new NotAuthorizedError(user.role);
-    return user;
+    return this.toActor(user);
   }
 
-  async signInWithPassword({ email, password }: Credentials): Promise<AuthenticatedUser> {
+  async signInWithPassword({ email, password }: Credentials): Promise<ConsoleActor> {
     const { data, error } = await this.client.auth.signInWithPassword({ email, password });
     if (error || !data.user) throw new AuthenticationFailedError(error);
-    return this.toAuthenticatedUser(data.user);
+    return this.toActor(await this.toAuthenticatedUser(data.user));
   }
 
   async signOut(): Promise<void> {

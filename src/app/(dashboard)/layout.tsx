@@ -1,31 +1,35 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAuth } from "@/adapters/registry";
+import { accessLabel } from "@/domain/access";
 import { NotAuthenticatedError, NotAuthorizedError } from "@/ports/auth";
 import { MissingEnvironmentError } from "@/lib/env";
+import { getConsoleActor } from "@/lib/console-access";
+import { navFor } from "@/components/shell/nav";
+import { SidebarNav } from "@/components/shell/SidebarNav";
+import { UserMenu } from "@/components/shell/UserMenu";
+import { Button } from "@/components/ui/button";
 import { signOut } from "../(auth)/login/actions";
 
 /**
- * The admin gate.
+ * The console gate and shell.
  *
  * Every route in this segment is guarded here, once. Putting the check in the
  * layout rather than in each page means a new page under `(dashboard)/` is
  * protected the moment it is created — there is no per-page opt-in to forget.
+ * A page narrower than "any console user" adds `requirePageAccess()` on top.
  *
- * `requireAdmin()` reads `profiles.role` server-side on every request, so a
- * revoked admin loses access on their next navigation rather than whenever
- * their token happens to expire.
+ * Access is read server-side on every request, so a revoked admin loses access on
+ * their next navigation rather than whenever their token happens to expire.
  */
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  let user;
+  let actor;
   try {
-    user = await (await getAuth()).requireAdmin();
+    actor = await getConsoleActor();
   } catch (cause) {
-    if (cause instanceof NotAuthenticatedError || cause instanceof NotAuthorizedError) {
-      redirect("/login");
-    }
+    if (cause instanceof NotAuthenticatedError) redirect("/login");
+    if (cause instanceof NotAuthorizedError) return <NoConsoleAccess />;
     if (cause instanceof MissingEnvironmentError) {
       // A misconfigured server is not an authorisation failure — say so plainly
       // instead of bouncing the operator to a login form that cannot work.
@@ -43,35 +47,67 @@ export default async function DashboardLayout({ children }: { children: React.Re
     throw cause;
   }
 
+  const items = navFor(actor.access.kind);
+  const organizationName = actor.access.kind === "org_admin" ? actor.access.organizationName : null;
+
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="border-b border-stone-hair bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-6 px-6 py-3">
-          <Link href="/dashboard" className="text-[14px] font-bold text-stone-ink">
-            AgarthaVision <span className="font-medium text-stone-mid">Admin</span>
-          </Link>
-          <nav className="flex items-center gap-4 text-[13px]">
-            <Link href="/dashboard" className="text-stone-deep hover:text-maroon">
-              Dashboard
+    <div className="flex min-h-full">
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 border-r border-stone-hair bg-surface px-3 py-5 md:flex">
+        <Link href="/dashboard" className="px-3 text-[14px] font-bold text-stone-ink">
+          AgarthaVision <span className="font-medium text-stone-mid">Admin</span>
+        </Link>
+        <SidebarNav items={items} />
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex flex-col gap-2 border-b border-stone-hair bg-surface px-4 py-2 md:px-6">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard" className="text-[14px] font-bold text-stone-ink md:hidden">
+              AgarthaVision
             </Link>
-            <Link href="/records" className="text-stone-deep hover:text-maroon">
-              Records
-            </Link>
-          </nav>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-[12px] text-stone-mid">{user.fullName ?? user.email}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-[12px] font-medium text-stone-deep hover:text-maroon"
-              >
-                Sign out
-              </button>
-            </form>
+            {organizationName ? (
+              <span className="hidden text-[13px] font-semibold text-stone-deep md:inline">
+                {organizationName}
+              </span>
+            ) : (
+              <span className="hidden text-[13px] text-stone-mid md:inline">All organizations</span>
+            )}
+            <div className="ml-auto">
+              <UserMenu
+                name={actor.user.fullName ?? actor.user.email ?? "Signed in"}
+                roleLabel={accessLabel(actor.access)}
+                organizationName={organizationName}
+                signOutAction={signOut}
+              />
+            </div>
           </div>
-        </div>
-      </header>
-      <div className="flex-1">{children}</div>
+          <div className="md:hidden">
+            <SidebarNav items={items} orientation="horizontal" />
+          </div>
+        </header>
+        <div className="flex-1">{children}</div>
+      </div>
     </div>
+  );
+}
+
+/**
+ * What a medtech with a live session sees: where they should go instead, and a
+ * way out. No data and no navigation — a medtech is not a partial admin.
+ */
+function NoConsoleAccess() {
+  return (
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 px-6 py-16">
+      <h1 className="text-[20px] font-bold text-stone-ink">This console is for administrators</h1>
+      <p className="text-[14px] text-stone-deep">
+        Medical technologists use the AgarthaVision Android app. Sign in there with the same email
+        and password.
+      </p>
+      <form action={signOut}>
+        <Button type="submit" variant="outline">
+          Sign out
+        </Button>
+      </form>
+    </main>
   );
 }

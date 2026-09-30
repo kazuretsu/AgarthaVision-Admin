@@ -134,7 +134,7 @@ export function RecordsFilters({
       <div className="mt-4 flex items-center gap-3">
         <button
           type="submit"
-          className="rounded-[8px] bg-maroon px-4 py-2 text-[13px] font-semibold text-white"
+          className="rounded-[8px] bg-maroon px-4 py-2 text-[13px] font-semibold text-primary-foreground"
         >
           Apply filters
         </button>
