@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [docs] Add a keep-the-docs-aligned rule to AGENTS.example.md
+
+A "Project shelf — keep it current" section, ported from the app repo's `AGENTS.example.md`
+and adjusted to this repo: cards cite `path:line` rather than symbols, the router's "Where to
+go" table stands in for the app repo's object and process indexes, and the changelog and
+`docs/features.md` are part of the same change (#10). It is plain instructions for any agent or
+member, so keeping the shelf current no longer depends on a skill only some of the team has.
+
+It introduces `verified:` / `commit:` / `status: stale` frontmatter. No card here has
+frontmatter yet; each gains it the first time someone touches it, rather than in a sweep that
+would stamp cards as verified without re-checking them.
+
 ## [ci] Align the commit-msg hook with the app repo and add agent config templates
 
 The subject format gains a colon — `[type][ClickUp-ID][Lastname]: Task title` — and the
