@@ -25,6 +25,13 @@ import { createRequestClient } from "./client";
  * caller cannot forget to branch on a role and leak a cross-user query.
  */
 
+interface MembershipRow {
+  organization_id: string;
+  role: string;
+  status: string;
+  organizations: { name: string; status: string } | null;
+}
+
 interface ProfileRoleRow {
   full_name: string | null;
   role: string | null;
@@ -63,17 +70,28 @@ export class SupabaseAuthAdapter implements AuthPort {
   }
 
   /**
-   * The user's active org-admin membership. Organizations do not exist yet, so
-   * nobody is an org admin; the organizations ticket reads the membership here
-   * and nothing else in the gate changes.
+   * The user's active org-admin membership in an active organization
+   * (`admin/0001`). RLS lets every user read their own membership row and their
+   * own organization. Anything unreadable, inactive or not `org_admin` is no
+   * membership — the lesser privilege.
    */
-  private async findOrgAdminMembership(): Promise<OrgAdminMembership | null> {
-    return null;
+  private async findOrgAdminMembership(userId: string): Promise<OrgAdminMembership | null> {
+    const { data, error } = await this.client
+      .from("organization_members")
+      .select("organization_id, role, status, organizations ( name, status )")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    const row = data as unknown as MembershipRow;
+    if (row.role !== "org_admin" || row.status !== "active") return null;
+    if (!row.organizations || row.organizations.status !== "active") return null;
+    return { organizationId: row.organization_id, organizationName: row.organizations.name };
   }
 
   private async toActor(user: AuthenticatedUser): Promise<ConsoleActor> {
     // A super admin needs no membership lookup; skip the round trip.
-    const membership = user.role === "admin" ? null : await this.findOrgAdminMembership();
+    const membership = user.role === "admin" ? null : await this.findOrgAdminMembership(user.id);
     const access = resolveConsoleAccess(user.role, membership);
     if (!access) throw new NotAuthorizedError(user);
     return { user, access };

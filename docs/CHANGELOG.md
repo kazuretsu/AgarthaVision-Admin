@@ -19,6 +19,27 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [feat] Laboratory organizations, managed by super admins, with an append-only audit log
+
+The first schema this repo owns (D4): `supabase/migrations/admin/0001_organizations.sql`,
+additive only. Organizations; memberships keyed by user, so a user belongs to one laboratory
+and "org admin" is a role on the membership; `patient_organizations`, the owning laboratory
+of each patient; and `admin_audit_log`. Reads are RLS policies scoped to the super admin or
+the reader's own organization. Writes have no table policy: each is a security-definer
+function that checks the caller and appends the audit row in the same transaction. The
+audit log refuses UPDATE, DELETE and TRUNCATE for every role, allowing only the foreign
+key's own set-null when an actor's profile is deleted, so user deletion still works. A
+backfill puts every existing medtech and patient in one "Starting laboratory".
+
+The console gains `AdminWritePort` (D2), checks `canManageOrganizations` before every write,
+and gives super admins `/organizations` to create, rename, deactivate (with confirmation)
+and reactivate. The gate now recognises org admins from their own membership, and a
+deactivated membership or organization locks them out on their next request.
+
+`bun run test:db` applies the app's migrations and ours to a throwaway local Postgres and
+runs `supabase/tests/`: the backfill, super-admin-only writes, scoped reads, the audit log's
+immutability, and that a medtech still registers a patient afterwards.
+
 ## [fix] Export page lays out for a desktop
 
 The export page drops its phone padding breakpoint, as every other console page did. The

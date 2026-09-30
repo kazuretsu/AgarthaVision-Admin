@@ -24,10 +24,26 @@ Run in this order; it is the order `.husky/pre-commit` runs them in.
 | `bun run lint`       | `eslint .` then `prettier --check .`.                                               |
 | `bun run lint:fix`   | `eslint . --fix` then `prettier --write .`.                                         |
 | `bun run test:watch` | Vitest in watch mode while developing.                                              |
+| `bun run test:db`    | Applies every migration to a throwaway local Postgres and runs `supabase/tests/`.   |
 | `bun run clean`      | Remove `.next`, `coverage`, and the bundler cache.                                  |
 
 `vitest` is configured with `passWithNoTests`, so a docs-only or hooks-only commit does not
 fail the gate for having touched no test file.
+
+## Database tests
+
+`bun run test:db` (`scripts/db-test.ts`) drops and recreates a local database, applies
+Supabase stubs, the app repo's migrations, a small pre-existing seed, this repo's admin
+migrations and the test helpers, then runs each `supabase/tests/*.test.sql` in a
+transaction that is always rolled back. It needs a local Postgres and a checkout of the app
+repo, and is not part of the pre-commit hook.
+
+| Variable                  | Default                                                       |
+| ------------------------- | ------------------------------------------------------------- |
+| `ADMIN_TEST_DATABASE_URL` | `postgres://postgres@localhost:5432/agarthavision_admin_test` |
+| `AGARTHAVISION_APP_DIR`   | `../AgarthaVision` — check out its `development` branch       |
+
+It refuses any host but localhost and any database whose name does not end in `_test`.
 
 ## Hooks
 

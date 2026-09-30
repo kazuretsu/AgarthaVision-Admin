@@ -16,6 +16,13 @@ import type {
   SmearRecord,
   SpeciesFinding,
 } from "@/domain";
+import { sortMembers } from "@/domain";
+import type {
+  MembershipRole,
+  OrganizationDetail,
+  OrganizationStatus,
+  OrganizationSummary,
+} from "@/domain";
 import {
   DatabaseReadError,
   type DatabasePort,
@@ -109,6 +116,24 @@ interface FindingRow {
   egg_count: number;
 }
 
+interface OrganizationRow {
+  id: string;
+  name: string;
+  status: string;
+  created_at: string;
+  deactivated_at: string | null;
+  organization_members?: MemberRow[] | null;
+  patient_organizations?: { count: number }[] | null;
+}
+
+interface MemberRow {
+  user_id: string;
+  role: string;
+  status: string;
+  added_at: string;
+  profiles?: { full_name: string | null } | null;
+}
+
 interface ProfileRow {
   id: string;
   full_name: string | null;
@@ -169,6 +194,33 @@ const SESSION_SUMMARY_TREE = `${SESSION_COLUMNS},
   samples ( id, deleted_at,
     detections ( sample_id, verdict, class_label, expert_class ),
     sample_species_findings ( sample_id, species, egg_count ) )`;
+
+const ORGANIZATION_COLUMNS = "id, name, status, created_at, deactivated_at";
+
+/**
+ * A member's own profile. `organization_members` reaches `profiles` twice
+ * (`user_id` and `added_by`), so the embed names its constraint.
+ */
+const MEMBER_TREE =
+  "organization_members ( user_id, role, status, added_at, profiles!organization_members_user_id_fkey ( full_name ) )";
+
+function toStatus(value: string): OrganizationStatus {
+  return value === "deactivated" ? "deactivated" : "active";
+}
+
+function toOrganizationSummary(row: OrganizationRow): OrganizationSummary {
+  const active = (row.organization_members ?? []).filter((member) => member.status === "active");
+  return {
+    id: row.id,
+    name: row.name,
+    status: toStatus(row.status),
+    createdAt: row.created_at,
+    deactivatedAt: row.deactivated_at,
+    orgAdminCount: active.filter((member) => member.role === "org_admin").length,
+    medtechCount: active.filter((member) => member.role === "medtech").length,
+    patientCount: row.patient_organizations?.[0]?.count ?? 0,
+  };
+}
 
 /**
  * Characters that carry meaning inside a PostgREST `or=(…)` filter or an ILIKE
@@ -483,6 +535,43 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       barangayCode: row.patients?.psgc_barangay_code ?? "",
       summary: summariseSessionRow(row),
     }));
+  }
+
+  async listOrganizations(): Promise<OrganizationSummary[]> {
+    const { data, error } = await this.client
+      .from("organizations")
+      .select(
+        `${ORGANIZATION_COLUMNS}, organization_members ( role, status ), patient_organizations ( count )`,
+      )
+      .order("name", { ascending: true });
+
+    if (error) throw new DatabaseReadError("listOrganizations", error);
+    return ((data as unknown as OrganizationRow[] | null) ?? []).map(toOrganizationSummary);
+  }
+
+  async getOrganization(organizationId: string): Promise<OrganizationDetail | null> {
+    const { data, error } = await this.client
+      .from("organizations")
+      .select(`${ORGANIZATION_COLUMNS}, ${MEMBER_TREE}, patient_organizations ( count )`)
+      .eq("id", organizationId)
+      .maybeSingle();
+
+    if (error) throw new DatabaseReadError("getOrganization", error);
+    if (!data) return null;
+
+    const row = data as unknown as OrganizationRow;
+    return {
+      ...toOrganizationSummary(row),
+      members: sortMembers(
+        (row.organization_members ?? []).map((member) => ({
+          userId: member.user_id,
+          fullName: member.profiles?.full_name ?? null,
+          role: (member.role === "org_admin" ? "org_admin" : "medtech") as MembershipRole,
+          status: toStatus(member.status),
+          addedAt: member.added_at,
+        })),
+      ),
+    };
   }
 
   async getProfile(userId: string): Promise<Profile | null> {

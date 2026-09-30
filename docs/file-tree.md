@@ -15,6 +15,11 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │   ├── commit-msg             Enforces [type][ClickUp-ID][Lastname]: Task title.
 │   └── pre-push               Full production build before push.
 ├── commitlint.config.js       Conventional config plus this repo's scope-enum.
+├── scripts/
+│   └── db-test.ts             bun run test:db. Local databases only.
+├── supabase/
+│   ├── migrations/admin/      This repo's own migrations, additive only (D4).
+│   └── tests/                 SQL tests, Supabase stubs, helpers, pre-admin seed.
 ├── lint-staged.config.js      **/*.{ts,tsx} → eslint --fix, prettier --write.
 ├── eslint.config.mjs          next/core-web-vitals + next/typescript + prettier.
 ├── next.config.ts             Minimal. Strict mode on.
@@ -32,6 +37,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │   └── map/
 │       ├── objects/
 │       │   ├── domain-model.md        Entities and enums, mirrored from upstream migrations.
+│       │   ├── organizations.md       Labs, members, patient ownership, the audit log.
 │       │   ├── ports.md               The three interfaces and their error types.
 │       │   └── provider-registry.md   How a backend is selected, and why lazily.
 │       ├── processes/
@@ -54,16 +60,18 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter.
     │       ├── records/       Patients list; patients/, sessions/, samples/ detail pages;
     │                          loading.tsx.
-    │       └── export/        Research export page; download/route.ts (gate repeated).
+    │       ├── export/        Research export page; download/route.ts (gate repeated).
+    │       └── organizations/ Super admin: list, detail, and the audited server actions.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
     │                          patient, dashboard and research-export rules, id checks.
     │                          No I/O.
-    ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
+    ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
-    │   └── supabase/          client, env, database (paged reads in paging.ts), storage, auth.
+    │   └── supabase/          client, env, database (paged reads in paging.ts), admin-write, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
-    │   ├── ui/                shadcn components on Base UI. Ours to edit.
+    │   ├── ui/                shadcn components on Base UI (incl. alert dialog). Ours to edit.
+    │   ├── organizations/     Create, rename and deactivate forms.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           LPF table, field image with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.

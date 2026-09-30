@@ -1,5 +1,6 @@
 import type { PatientDisclosure, PatientListItem, PatientRecord, Profile } from "@/domain";
 import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
+import type { OrganizationDetail, OrganizationSummary } from "@/domain";
 
 /**
  * The database port.
@@ -57,6 +58,12 @@ export interface DatabasePort {
 
   /** Every session in the period with its summary, for the dashboard and the export. */
   listSmears(query?: SmearQuery): Promise<SmearRecord[]>;
+
+  /** Organizations the caller may read, by name, with member and patient counts. */
+  listOrganizations(): Promise<OrganizationSummary[]>;
+
+  /** One organization with its members; `null` when absent or hidden. */
+  getOrganization(organizationId: string): Promise<OrganizationDetail | null>;
 
   /** One profile by id, or `null` when it is absent or unreadable. */
   getProfile(userId: string): Promise<Profile | null>;

@@ -1,3 +1,8 @@
+---
+verified: 2026-09-30
+commit: e5e0d2d
+---
+
 # Provider registry
 
 The one module that names a concrete backend: `src/adapters/registry.ts`.
@@ -8,7 +13,7 @@ If more than one file named a provider, "swap the database" would mean finding e
 of them. Feature code asks `getDatabase()` and receives a `DatabasePort`; it never learns
 which implementation answered.
 
-Adapters are imported **lazily** inside each getter (`src/adapters/registry.ts:61-88`).
+Adapters are imported **lazily** inside each getter (`src/adapters/registry.ts:61-102`).
 Two reasons, both load-bearing: a future S3 or Postgres adapter must not drag its SDK into
 the bundle of a deployment that does not use it, and an eager import would make this
 module unimportable in a unit test that has no request context.
@@ -18,11 +23,12 @@ module unimportable in a unit test that has no request context.
 Selection reads one variable per port, defaulting to the first supported entry
 (`src/adapters/registry.ts:41-46`):
 
-| Variable           | Getter          | Supported today |
-| ------------------ | --------------- | --------------- |
-| `DB_PROVIDER`      | `getDatabase()` | `supabase`      |
-| `STORAGE_PROVIDER` | `getStorage()`  | `supabase`      |
-| `AUTH_PROVIDER`    | `getAuth()`     | `supabase`      |
+| Variable           | Getter             | Supported today                                     |
+| ------------------ | ------------------ | --------------------------------------------------- |
+| `DB_PROVIDER`      | `getDatabase()`    | `supabase`                                          |
+| `STORAGE_PROVIDER` | `getStorage()`     | `supabase`                                          |
+| `AUTH_PROVIDER`    | `getAuth()`        | `supabase`                                          |
+| `DB_PROVIDER`      | `getAdminWrites()` | `supabase` — the writes live in the reads' database |
 
 An unrecognised value throws `UnknownProviderError` (`src/adapters/registry.ts:31`) rather
 than falling back. A silent fallback would let a deployment believe it is pointed at one

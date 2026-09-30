@@ -16,7 +16,10 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - Every report and export surface states the validation exclusion in the UI.
 - Domain field names mirror the upstream Postgres schema. Do not invent columns.
 - `validation_records` is not implemented upstream. Do not build against it.
-- No migrations in this repo.
+- Admin migrations only, in `supabase/migrations/admin/`, additive only. Never alter or drop
+  an app-owned object; never apply a migration to a live project from a script.
+- Every administrative write goes through `AdminWritePort` and is audited in the same
+  transaction. No table the console writes has a client write policy.
 - Commit subject: `[type][ClickUp-ID][Lastname]: Task title`. No trailers.
 - Never commit a real secret, or a plausible-looking fake one.
 - Never bypass the hooks.

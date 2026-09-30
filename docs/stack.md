@@ -2,22 +2,22 @@
 
 As-built. Versions are what `bun.lock` resolved, not what a range permits.
 
-| Layer                            | Choice                           | Version                 |
-| -------------------------------- | -------------------------------- | ----------------------- |
-| Runtime / package manager        | Bun                              | 1.3.11                  |
-| Framework                        | Next.js (App Router)             | 16.3.3                  |
-| UI runtime                       | React / React DOM                | 19.2.8                  |
-| Language                         | TypeScript (`strict`)            | 5.9.3                   |
-| Styling                          | Tailwind CSS                     | 4.3.3                   |
-| UI primitives                    | Base UI (`@base-ui/react`)       | 1.8.0                   |
-| Theme switching                  | `next-themes`                    | 0.4.6                   |
-| Icons                            | `lucide-react`                   | 1.49.0                  |
-| Database + auth + storage client | `@supabase/supabase-js`          | 2.112.4                 |
-| Server-side session cookies      | `@supabase/ssr`                  | 0.12.5                  |
-| Tests                            | Vitest                           | 4.1.11                  |
-| Lint                             | ESLint + `eslint-config-next`    | 9.x / 16.3.3            |
-| Format                           | Prettier                         | 3.9.6                   |
-| Hooks                            | Husky + lint-staged + commitlint | 9.1.7 / 17.4.1 / 21.2.2 |
+| Layer                            | Choice                                              | Version                     |
+| -------------------------------- | --------------------------------------------------- | --------------------------- |
+| Runtime / package manager        | Bun                                                 | 1.3.11                      |
+| Framework                        | Next.js (App Router)                                | 16.3.3                      |
+| UI runtime                       | React / React DOM                                   | 19.2.8                      |
+| Language                         | TypeScript (`strict`)                               | 5.9.3                       |
+| Styling                          | Tailwind CSS                                        | 4.3.3                       |
+| UI primitives                    | Base UI (`@base-ui/react`)                          | 1.8.0                       |
+| Theme switching                  | `next-themes`                                       | 0.4.6                       |
+| Icons                            | `lucide-react`                                      | 1.49.0                      |
+| Database + auth + storage client | `@supabase/supabase-js`                             | 2.112.4                     |
+| Server-side session cookies      | `@supabase/ssr`                                     | 0.12.5                      |
+| Tests                            | Vitest; SQL tests through Bun's built-in SQL client | 4.1.11; `@types/bun` 1.3.11 |
+| Lint                             | ESLint + `eslint-config-next`                       | 9.x / 16.3.3                |
+| Format                           | Prettier                                            | 3.9.6                       |
+| Hooks                            | Husky + lint-staged + commitlint                    | 9.1.7 / 17.4.1 / 21.2.2     |
 
 ## Notes
 
