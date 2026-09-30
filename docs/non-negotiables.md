@@ -11,7 +11,8 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - Every route under `(dashboard)` is gated server-side on console access (super admin or org
   admin). Route handlers repeat the check. A hidden link is not a gate.
 - The console never writes clinical data. No insert, no update, no delete.
-- Only `CONFIRMED` detections on validated samples count toward EPG and exports.
+- Every non-rejected detection on a live (not deleted) sample counts — the app's rule.
+- LPF is a min–max range per field. Never a mean, never EPG, never a WHO tier.
 - Every report and export surface states the validation exclusion in the UI.
 - Domain field names mirror the upstream Postgres schema. Do not invent columns.
 - `validation_records` is not implemented upstream. Do not build against it.

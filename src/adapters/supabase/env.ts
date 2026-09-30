@@ -3,9 +3,9 @@ import { optionalEnv, optionalIntEnv, requireEnv } from "@/lib/env";
 /**
  * Supabase configuration, read at request time.
  *
- * The anon key is browser-safe because RLS still applies to it. The service-role
- * key is not, and is read only by {@link serviceConfig}, which no client
- * component may reach — the storage adapter calls it from the server.
+ * The anon key is browser-safe because RLS still applies to it. Nothing in the
+ * console reads the service-role key: every read, image signing included, runs as
+ * the signed-in user.
  */
 
 export interface SupabasePublicConfig {
@@ -13,8 +13,7 @@ export interface SupabasePublicConfig {
   anonKey: string;
 }
 
-export interface SupabaseServiceConfig extends SupabasePublicConfig {
-  serviceRoleKey: string;
+export interface SupabaseStorageConfig {
   samplesBucket: string;
   signedUrlTtlSeconds: number;
 }
@@ -26,11 +25,8 @@ export function publicConfig(): SupabasePublicConfig {
   };
 }
 
-/** Server-only. Never call this from a component that ships to the browser. */
-export function serviceConfig(): SupabaseServiceConfig {
+export function storageConfig(): SupabaseStorageConfig {
   return {
-    ...publicConfig(),
-    serviceRoleKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
     samplesBucket: optionalEnv("SUPABASE_SAMPLES_BUCKET", "samples"),
     signedUrlTtlSeconds: optionalIntEnv("SUPABASE_SIGNED_URL_TTL_SECONDS", 60),
   };

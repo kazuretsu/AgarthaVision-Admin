@@ -67,7 +67,7 @@ export async function getDatabase(): Promise<DatabasePort> {
   }
 }
 
-/** The storage port. Server-side only — it holds elevated credentials. */
+/** The storage port for this request. Server-side only. */
 export async function getStorage(): Promise<StoragePort> {
   switch (storageProvider()) {
     case "supabase": {

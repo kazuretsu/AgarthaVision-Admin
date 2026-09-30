@@ -12,7 +12,8 @@ is right and this table is stale.**
 | `src/adapters/supabase/storage.ts`                  | `../processes/signed-image-url.md`                                                      |
 | `src/adapters/supabase/auth.ts`                     | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
 | `src/domain/entities.ts`, `enums.ts`                | `../objects/domain-model.md` · `../../constraints.md` (#5, #7)                          |
-| `src/domain/epg.ts`, `severity.ts`                  | `../processes/epg-aggregation.md` · `../../constraints.md` (#6)                         |
+| `src/domain/clinical.ts`, `patients.ts`             | `../processes/lpf-session-summary.md` · `../../constraints.md` (#6)                     |
+| `src/domain/epg.ts`, `severity.ts`                  | `../processes/epg-aggregation.md` — dashboard and export only                           |
 | `src/domain/research-matrix.ts`                     | `../processes/research-matrix-export.md` — the column set is a contract                 |
 | `src/domain/filters.ts`, `src/lib/search-params.ts` | `../processes/research-matrix-export.md` — the export reuses the page's filter          |
 | `src/app/(dashboard)/layout.tsx`                    | `../processes/admin-gate.md`                                                            |
@@ -25,27 +26,26 @@ is right and this table is stale.**
 | `.husky/*`, `package.json` scripts                  | `../../commands.md` · `../../constraints.md` (#9)                                       |
 | `.env.example`                                      | `../objects/provider-registry.md` · `../../stack.md` · `../../constraints.md` (#2, #12) |
 
-## The four non-obvious breaks
+## The non-obvious breaks
 
 **A route handler is not behind the gate.** The `(dashboard)` layout guards pages that
 render inside it. A route handler under the same folder does not render inside it and
 inherits nothing. `records/export` calls `requireRouteAccess()` for exactly this reason; a new
 handler that forgets to is an open dataset.
 
-**An admin can read every row and no image.** Table RLS grants admins cross-user reads;
-Storage RLS does not (`0003_storage_rls.sql` has no admin exception). The fix,
-`0009_storage_admin_read.sql`, exists upstream but is applied by hand and **may not be
-applied yet**. See `../processes/signed-image-url.md`.
+**One dropped column fails the whole query.** The consolidated schema removed
+`samples.gps_*`, `sessions.notes`, `sessions.ended_at` and `reports.epg_per_species`.
+PostgREST rejects a select naming any of them, so every page on that query errors — this is
+how the console broke. Read `0001_init.sql` before adding a column to a select.
 
-**Three upstream renames bite silently.** `0002_verification_fields.sql` renamed
-`roboflow_model_version` → `inference_model_version`, added `needs_reannotation`, and
-**dropped** `detections.verified_by_user`. Code written against the old names compiles and
-reads `undefined`.
+**An ambiguous embed fails the whole query.** `patients` reaches `profiles` through
+`created_by` and through `patient_users`, so `profiles(...)` from `patients` must name
+`patients_created_by_fkey`. See `../objects/domain-model.md`.
 
-**What counts toward EPG is cross-repo.** Only `CONFIRMED` detections count
-(`src/domain/epg.ts:33`), matching the Android client's session reports. Changing that rule
-here makes the two surfaces disagree about the same smear — it is a cross-repo behaviour
-change, not a local one.
+**What counts is cross-repo.** Every non-rejected detection on a live sample counts
+(`src/domain/clinical.ts:32`), matching the app's Session Detail and its PDF report, and
+the tests carry the app's own cases. Changing the rule here alone makes the console and the
+report a patient was handed disagree about the same smear.
 
 ## What points into this tree from outside
 

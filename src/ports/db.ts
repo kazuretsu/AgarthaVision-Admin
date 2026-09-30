@@ -1,4 +1,5 @@
-import type { Profile, SampleRecord } from "@/domain/entities";
+import type { PatientListItem, PatientRecord, Profile, SampleRecord } from "@/domain";
+import type { SampleRecordDetail, SessionRecord } from "@/domain";
 import type { RecordFilter } from "@/domain/filters";
 
 /**
@@ -11,6 +12,9 @@ import type { RecordFilter } from "@/domain/filters";
  * Read-only by construction. There is no `insert`, `update` or `delete` here,
  * which is how the read-mostly rule is enforced rather than merely stated: the
  * console cannot mutate clinical data because it has no verb for it.
+ *
+ * Every method returns only what the caller may see. The adapter reads as the
+ * signed-in user, so row-level security decides visibility; it never widens it.
  */
 
 export interface RecordQuery {
@@ -20,11 +24,31 @@ export interface RecordQuery {
   limit?: number;
 }
 
+export interface PatientQuery {
+  /** Matches surname, given name or codename, case-insensitively. */
+  search?: string;
+  /** Exact 10-digit PSGC barangay code. */
+  barangayCode?: string;
+  /** Hard cap on rows returned. Adapters must apply a sane default. */
+  limit?: number;
+}
+
 export interface DatabasePort {
+  /** Patients, most recently registered first. */
+  listPatients(query?: PatientQuery): Promise<PatientListItem[]>;
+
+  /** One patient with their sessions and what each showed; `null` when absent or hidden. */
+  getPatientRecord(patientId: string): Promise<PatientRecord | null>;
+
+  /** One session with its live fields; `null` when absent or hidden. */
+  getSessionRecord(sessionId: string): Promise<SessionRecord | null>;
+
+  /** One live field; `null` when absent, hidden, or deleted as a duplicate. */
+  getSampleRecord(sampleId: string): Promise<SampleRecordDetail | null>;
+
   /**
-   * Every processed sample the caller is allowed to see, joined with its
-   * detections and composed into {@link SampleRecord}. Cross-user visibility is
-   * granted by the upstream RLS admin policy; this port does not widen it.
+   * Every processed sample, composed into {@link SampleRecord}. Serves the
+   * dashboard and export until they move to the session model.
    */
   listSampleRecords(query?: RecordQuery): Promise<SampleRecord[]>;
 

@@ -90,12 +90,27 @@ labels and a table view, parasite distribution bars, the light/moderate/heavy in
 split on the reserved status palette, and average/highest/lowest EPG. Every aggregate
 counts human-validated records only.
 
-### Detailed records and export
+### Records browser
 
-A filterable table of all processed samples showing AI EPG beside technologist-validated
-EPG, with filters held in the query string so a view is shareable and the export reuses the
-same query. Research-matrix export as CSV or JSON through a guarded route handler,
-validated-only by default with a separately labelled link for a working file.
+Records follow the app's clinical hierarchy: **Patient → Session (one smear) → Sample (one
+field) → Detections**. `/records` lists patients, searchable by name or codename and by
+barangay PSGC code, with the query in the URL. A patient page lists every session with who
+read it, the fields examined, a positive/negative result, the per-species LPF range and the
+eggs counted. A session page shows the findings table the way the app's Session Detail does
+and every live field as a frame with its boxes drawn over it. A sample page shows one field:
+the frame, the eggs recorded per species, and each detection with its verdict, whether its
+box is the model's, redrawn or added by the medtech, and its stage.
+
+Figures follow the app exactly: every detection except a rejected one counts; a sample
+deleted as a duplicate never appears or counts; LPF is a min–max range per field, never a
+mean; no EPG and no WHO tier. Codenamed patients show as their codename. Frames are signed
+as the signed-in user, not with the service-role key. Everything is read-only.
+
+### Research-matrix export (legacy)
+
+The EPG-based export route (`/records/export`) still exists and is still guarded; its link
+left the records page when the browser replaced the sample table. It is rebuilt in LPF in
+its own change.
 
 ## Not built yet, in this pass
 
@@ -114,6 +129,7 @@ Tracked here so the gap is visible:
 
 - Mutating any diagnostic record. The console is read-only over clinical data.
 - PDF export. CSV and JSON only this pass.
-- Geospatial mapping of sample GPS.
+- Geospatial mapping of sample GPS. The columns no longer exist upstream; the map will key
+  on the patient's barangay.
 - Anything built on `validation_records` — the table is a Phase 2 ghost with no upstream
   migration behind it.

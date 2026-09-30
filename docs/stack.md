@@ -50,4 +50,4 @@ silently.
 | S3 storage adapter        | Supabase Storage behind `src/ports/storage.ts` | Sample bytes already live in the `samples` bucket.                                                                                        |
 | A second database adapter | Supabase only                                  | The registry's unknown-provider path is tested, so the second adapter is an addition, not a refactor.                                     |
 | PDF export                | CSV and JSON                                   | Column fidelity for the research matrix matters more than layout this pass.                                                               |
-| Geospatial mapping        | GPS columns carried, not plotted               | Out of scope.                                                                                                                             |
+| Geospatial mapping        | None yet; GPS columns are gone upstream        | The map will key on the patient's PSGC barangay code, not on GPS.                                                                         |

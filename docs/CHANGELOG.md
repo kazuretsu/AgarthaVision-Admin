@@ -9,6 +9,26 @@ page's `requirePageAccess()` is the only check that runs. It let the layout's tw
 escape as errors, and a session that ended or an access revoked since the last click
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
+## [feat] Browse records as patient → session → sample, in LPF as the app reports them
+
+The console was broken: every sample query still selected `samples.gps_*`, which the
+consolidated schema dropped, so the dashboard and records pages failed outright. The
+domain now mirrors the app's `0001`–`0006` on `development` — patients, sessions owned by
+patients, `deleted_at` on samples, `prediction_id` and `stage` on detections, per-field
+species findings — and the records page became a browser: patients, a patient's sessions,
+a session's findings and fields, and one field's frame and detections.
+
+Figures follow the app, not a local rule: every detection except `FALSE_POSITIVE` counts; a
+sample deleted as a duplicate appears nowhere and counts toward nothing; each species gets a
+min–max eggs-per-field range with a rare/few/moderate/numerous descriptor, never a mean,
+never EPG. `src/domain/clinical.test.ts` carries every case from the app's
+`LpfAggregationTest`. Each detection says whether its box is the model's, redrawn or added,
+and a frame with no stored predictions says "unknown" rather than guessing.
+
+Frames are signed with the visitor's own session: `0001` already grants admins read on the
+whole bucket, so the service-role path is gone and nothing reads that key. The dashboard
+works again but still shows EPG, and the EPG export route remains without a link; both move
+to LPF in their own changes.
 
 ## [fix] Desktop-only console, and the three tiers named as the product names them
 
