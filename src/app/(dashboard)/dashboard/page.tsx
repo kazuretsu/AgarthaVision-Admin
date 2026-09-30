@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getDatabase } from "@/adapters/registry";
-import { summariseDashboard } from "@/domain";
+import { summariseDashboard, type OrganizationSummary } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { describePeriod, parsePeriod } from "@/lib/period";
+import { scopeForRequest } from "@/lib/read-scope";
+import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { SpeciesMix } from "@/components/dashboard/SpeciesMix";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -38,13 +40,23 @@ export default async function DashboardPage({
   // repeats the check: a revoked admin loses access on their next click.
   await requirePageAccess(ANY_CONSOLE_USER);
 
-  const period = parsePeriod(await searchParams);
+  const params = await searchParams;
+  const period = parsePeriod(params);
+  const { actor, scope } = await scopeForRequest(params.org);
 
   let smears;
+  let organizations: OrganizationSummary[] = [];
   try {
-    smears = await (
-      await getDatabase()
-    ).listSmears({ startedFrom: period.from, startedTo: period.to, limit: SMEAR_LIMIT + 1 });
+    const db = await getDatabase();
+    [smears, organizations] = await Promise.all([
+      db.listSmears({
+        scope,
+        startedFrom: period.from,
+        startedTo: period.to,
+        limit: SMEAR_LIMIT + 1,
+      }),
+      actor.access.kind === "super_admin" ? db.listOrganizations() : Promise.resolve([]),
+    ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Dashboard" variable={cause.variable} />;
@@ -76,12 +88,15 @@ export default async function DashboardPage({
             <span className="text-[12px] font-medium text-stone-deep">To</span>
             <Input type="date" name="to" defaultValue={period.to} className="w-40" />
           </label>
+          {actor.access.kind === "super_admin" ? (
+            <OrganizationFilter organizations={organizations} scope={scope} />
+          ) : null}
           <Button type="submit" variant="outline">
             Apply
           </Button>
-          {period.from || period.to ? (
+          {period.from || period.to || params.org ? (
             <Link href="/dashboard" className="px-2 text-[13px] text-stone-mid hover:text-maroon">
-              All time
+              Reset
             </Link>
           ) : null}
         </form>

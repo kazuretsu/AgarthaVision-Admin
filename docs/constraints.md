@@ -43,7 +43,9 @@ never the authority. Hiding a sidebar link is presentation, not protection.
 `src/app/(dashboard)/layout.tsx` (server-side gate before any child renders);
 `src/lib/console-access.ts` (`requirePageAccess` for narrower pages, `requireRouteAccess`
 for route handlers); `src/ports/auth.ts` (`requireConsoleActor()` is the only entry point
-features may call). `src/proxy.ts` refreshes the session and is not a gate.
+features may call). `src/proxy.ts` refreshes the session and is not a gate. Which records
+an org admin may read is decided twice: by the `ReadScope` every clinical read requires
+(`src/domain/scope.ts`), and by the policies in `supabase/migrations/admin/0002`.
 
 ### 4. Read-mostly console
 

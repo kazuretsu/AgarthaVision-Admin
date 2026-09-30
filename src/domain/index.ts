@@ -9,3 +9,4 @@ export * from "./ids";
 export * from "./patients";
 export * from "./records";
 export * from "./research-export";
+export * from "./scope";

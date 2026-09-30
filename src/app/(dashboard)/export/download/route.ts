@@ -5,6 +5,7 @@ import {
   RESEARCH_EXPORT_VERSION,
   buildResearchExport,
   clinicalDate,
+  readScopeFor,
   toResearchExportCsv,
   toResearchExportJson,
 } from "@/domain";
@@ -33,6 +34,8 @@ export async function GET(request: NextRequest) {
   if ("response" in access) return access.response;
 
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
+  // The org admin's own laboratory, whatever `org` says; a super admin may narrow.
+  const scope = readScopeFor(access.actor.access, params.org);
   const period = parsePeriod(params);
   const format = params.format === "json" ? "json" : "csv";
 
@@ -42,6 +45,7 @@ export async function GET(request: NextRequest) {
     smears = await (
       await getDatabase()
     ).listSmears({
+      scope,
       startedFrom: period.from,
       startedTo: period.to,
       limit: RESEARCH_EXPORT_LIMIT + 1,
@@ -71,10 +75,10 @@ export async function GET(request: NextRequest) {
 
   const rows = buildResearchExport(smears);
   // Today in Manila, the frame every other date in the file uses.
-  const scope = [period.from ?? "start", period.to ?? clinicalDate(new Date().toISOString())].join(
+  const span = [period.from ?? "start", period.to ?? clinicalDate(new Date().toISOString())].join(
     "_to_",
   );
-  const filename = `agarthavision-research-export-v${RESEARCH_EXPORT_VERSION}-${scope}.${format}`;
+  const filename = `agarthavision-research-export-v${RESEARCH_EXPORT_VERSION}-${span}.${format}`;
   const body =
     format === "json" ? toResearchExportJson(rows) : UTF8_BOM + toResearchExportCsv(rows);
 

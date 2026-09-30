@@ -22,23 +22,24 @@ source of truth — when a card and the code disagree, the code wins and the car
 
 ## Where to go
 
-| Situation                                       | Open                                                                 |
-| ----------------------------------------------- | -------------------------------------------------------------------- |
-| Adding a feature or UI surface                  | `docs/features.md`, then the relevant `docs/map/objects/` card       |
-| Adding or swapping a data/storage/auth provider | `docs/map/objects/provider-registry.md`, `docs/map/objects/ports.md` |
-| Touching anything under `src/adapters/`         | `docs/map/effects/CONTEXT.md`                                        |
-| Changing a domain entity or enum                | `docs/map/objects/domain-model.md`, `docs/constraints.md` (#5, #7)   |
-| Changing what counts, LPF or session figures    | `docs/map/processes/lpf-session-summary.md`                          |
-| Changing the export columns or file format      | `docs/map/processes/research-export.md`                              |
-| Organizations, memberships or the audit log     | `docs/map/objects/organizations.md`, `docs/constraints.md` (#4, #7)  |
-| Changing who can reach a route                  | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
-| Loading sample images                           | `docs/map/processes/signed-image-url.md`                             |
-| Wondering what a command does                   | `docs/commands.md`                                                   |
-| Wondering which versions are installed          | `docs/stack.md`                                                      |
-| Wondering where a file lives                    | `docs/file-tree.md`                                                  |
-| A hook rejected your commit                     | `docs/constraints.md` (#8, #9), `docs/commands.md`                   |
-| Asking "may I do X?"                            | `docs/non-negotiables.md`                                            |
-| Asking "what changed?"                          | `docs/CHANGELOG.md`                                                  |
+| Situation                                        | Open                                                                 |
+| ------------------------------------------------ | -------------------------------------------------------------------- |
+| Adding a feature or UI surface                   | `docs/features.md`, then the relevant `docs/map/objects/` card       |
+| Adding or swapping a data/storage/auth provider  | `docs/map/objects/provider-registry.md`, `docs/map/objects/ports.md` |
+| Touching anything under `src/adapters/`          | `docs/map/effects/CONTEXT.md`                                        |
+| Changing a domain entity or enum                 | `docs/map/objects/domain-model.md`, `docs/constraints.md` (#5, #7)   |
+| Changing what counts, LPF or session figures     | `docs/map/processes/lpf-session-summary.md`                          |
+| Changing the export columns or file format       | `docs/map/processes/research-export.md`                              |
+| Organizations, memberships or the audit log      | `docs/map/objects/organizations.md`, `docs/constraints.md` (#4, #7)  |
+| Changing which laboratory's records someone sees | `docs/map/processes/lab-scoping.md`                                  |
+| Changing who can reach a route                   | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
+| Loading sample images                            | `docs/map/processes/signed-image-url.md`                             |
+| Wondering what a command does                    | `docs/commands.md`                                                   |
+| Wondering which versions are installed           | `docs/stack.md`                                                      |
+| Wondering where a file lives                     | `docs/file-tree.md`                                                  |
+| A hook rejected your commit                      | `docs/constraints.md` (#8, #9), `docs/commands.md`                   |
+| Asking "may I do X?"                             | `docs/non-negotiables.md`                                            |
+| Asking "what changed?"                           | `docs/CHANGELOG.md`                                                  |
 
 ## The 13 constraints
 

@@ -32,6 +32,23 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [feat] A laboratory's patients and records stay inside that laboratory
+
+`admin/0002_patient_scoping.sql`, additive only. A trigger on the app's `patients` insert
+files each new patient under its creator's organization, permanently; it catches every
+error, so a creator with no organization leaves the patient unassigned and nothing can
+ever fail the app's sync (R4). Permissive SELECT policies let an org admin read their
+organization's patients, links, sessions, samples, detections, predictions, findings,
+reports, members' profiles and sample frames — and nothing else. The frame policy reads the
+sample id from the `{user_id}/{sample_id}.jpg` key and requires the stored path to match.
+
+The console enforces the same boundary itself (D7): every clinical read now requires a
+`ReadScope`, derived by `readScopeFor` from who is asking, and the adapter inner-joins the
+owning organization. An org admin is held to their own laboratory whatever the URL says and
+gets a 404 on anything outside it. Super admins can narrow the records, dashboard and export
+to one organization. SQL tests cover ownership at creation, the no-organization case, the
+trigger surviving a forced failure, and cross-organization refusal on every table.
+
 ## [fix] Organizations: tier names, desktop layout, and leaving keeps the author
 
 Organization pages say Organization admin where they said Org admin, and lay out for a

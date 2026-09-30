@@ -1,9 +1,13 @@
 import type { PatientDisclosure, PatientListItem, PatientRecord, Profile } from "@/domain";
 import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
-import type { OrganizationDetail, OrganizationSummary } from "@/domain";
+import type { OrganizationDetail, OrganizationSummary, ReadScope } from "@/domain";
 
 /**
  * The database port.
+ *
+ * Every read of clinical data takes a {@link ReadScope}. An implementation must
+ * return nothing outside it, on its own, whatever the backing store's policies
+ * would allow — the policies are the second line (D7).
  *
  * A pure interface: no vendor type appears in any signature, so a second
  * implementation is an addition rather than a refactor. Feature code depends on
@@ -18,6 +22,8 @@ import type { OrganizationDetail, OrganizationSummary } from "@/domain";
  */
 
 export interface PatientQuery {
+  /** Whose patients. Required: derive it with `readScopeFor`, never from the URL alone. */
+  scope: ReadScope;
   /**
    * Whether names, sex and birthdates are read at all. Derive it with
    * `patientDisclosureFor`. When `"deidentified"` the adapter never selects those
@@ -33,6 +39,8 @@ export interface PatientQuery {
 }
 
 export interface SmearQuery {
+  /** Whose smears. Required: derive it with `readScopeFor`. */
+  scope: ReadScope;
   /** Inclusive Manila calendar dates, `YYYY-MM-DD`, bounding `sessions.started_at`. */
   startedFrom?: string;
   startedTo?: string;
@@ -45,19 +53,28 @@ export interface DatabasePort {
   listPatients(query: PatientQuery): Promise<PatientListItem[]>;
 
   /** One patient with their sessions and what each showed; `null` when absent or hidden. */
-  getPatientRecord(patientId: string, disclosure: PatientDisclosure): Promise<PatientRecord | null>;
+  getPatientRecord(
+    patientId: string,
+    scope: ReadScope,
+    disclosure: PatientDisclosure,
+  ): Promise<PatientRecord | null>;
 
   /** One session with its live fields; `null` when absent or hidden. */
-  getSessionRecord(sessionId: string, disclosure: PatientDisclosure): Promise<SessionRecord | null>;
+  getSessionRecord(
+    sessionId: string,
+    scope: ReadScope,
+    disclosure: PatientDisclosure,
+  ): Promise<SessionRecord | null>;
 
   /** One live field; `null` when absent, hidden, or deleted as a duplicate. */
   getSampleRecord(
     sampleId: string,
+    scope: ReadScope,
     disclosure: PatientDisclosure,
   ): Promise<SampleRecordDetail | null>;
 
   /** Every session in the period with its summary, for the dashboard and the export. */
-  listSmears(query?: SmearQuery): Promise<SmearRecord[]>;
+  listSmears(query: SmearQuery): Promise<SmearRecord[]>;
 
   /** Organizations the caller may read, by name, with member and patient counts. */
   listOrganizations(): Promise<OrganizationSummary[]>;

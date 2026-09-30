@@ -77,6 +77,16 @@ locks the laboratory's org admins out until reactivated. Every change is written
 audit log in the same transaction by the database, which checks the caller again. Existing
 users and patients start in one "Starting laboratory". Org admins and medtechs get a 404.
 
+### Laboratory scoping
+
+A patient belongs to the laboratory of the medtech who registered it, set by a database
+trigger as the app syncs it and never changed; a creator with no laboratory leaves it
+unassigned, and the trigger can never fail the app's sync. An org admin sees only their
+laboratory's patients, sessions, samples, detections, findings and frames — in the
+records browser, the dashboard and the export — and gets a 404 for anything else, even by
+URL. A super admin sees everything and can narrow the records, dashboard and export to one
+organization.
+
 ### Console shell
 
 A sidebar with the sections the signed-in person may open, a header naming the scope ("All

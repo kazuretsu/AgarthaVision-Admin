@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { getDatabase } from "@/adapters/registry";
-import { ageYears, isCodenamed, patientDisclosureFor, patientLabel } from "@/domain";
+import {
+  ageYears,
+  isCodenamed,
+  patientDisclosureFor,
+  patientLabel,
+  type OrganizationSummary,
+} from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
+import { scopeForRequest } from "@/lib/read-scope";
+import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
 import { formatDate, personName } from "@/lib/format";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Badge } from "@/components/ui/badge";
@@ -48,12 +56,16 @@ export default async function RecordsPage({
   const params = await searchParams;
   const search = identified ? param(params.q) : "";
   const barangay = param(params.barangay);
+  const { scope } = await scopeForRequest(params.org);
 
   let patients;
+  let organizations: OrganizationSummary[] = [];
   try {
-    patients = await (
-      await getDatabase()
-    ).listPatients({ disclosure, search, barangayCode: barangay || undefined });
+    const db = await getDatabase();
+    [patients, organizations] = await Promise.all([
+      db.listPatients({ scope, disclosure, search, barangayCode: barangay || undefined }),
+      actor.access.kind === "super_admin" ? db.listOrganizations() : Promise.resolve([]),
+    ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Records" variable={cause.variable} />;
@@ -92,10 +104,15 @@ export default async function RecordsPage({
             placeholder="10 digits"
           />
         </label>
+        {actor.access.kind === "super_admin" ? (
+          <OrganizationFilter organizations={organizations} scope={scope} />
+        ) : null}
         <Button type="submit">
           <Search aria-hidden /> Search
         </Button>
-        {search || barangay ? (
+        {search ||
+        barangay ||
+        (actor.access.kind === "super_admin" && scope.kind === "organization") ? (
           <Link href="/records" className="text-[13px] text-stone-mid hover:text-maroon">
             Clear
           </Link>

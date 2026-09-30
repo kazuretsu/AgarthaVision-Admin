@@ -11,6 +11,7 @@ import {
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
+import { scopeForRequest } from "@/lib/read-scope";
 import { formatDateTime, personName } from "@/lib/format";
 import { signFrames } from "@/lib/signed-urls";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
@@ -36,13 +37,14 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
   const actor = await requirePageAccess(ANY_CONSOLE_USER);
   // A malformed id names no record; Postgres would reject it as an error.
   if (!isUuid(sessionId)) notFound();
+  const { scope } = await scopeForRequest();
 
   let record;
   let urls;
   try {
     record = await (
       await getDatabase()
-    ).getSessionRecord(sessionId, patientDisclosureFor(actor.access));
+    ).getSessionRecord(sessionId, scope, patientDisclosureFor(actor.access));
     if (!record) notFound();
     urls = await signFrames(record.samples.map((detail) => detail.sample.storagePath));
   } catch (cause) {
