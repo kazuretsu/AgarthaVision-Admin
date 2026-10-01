@@ -19,7 +19,7 @@ does not dilute the denominator.
 
 ## Steps
 
-1. `listSmears` (`src/adapters/supabase/database.ts:413`) reads each session in the period
+1. `listSmears` (`src/adapters/supabase/database.ts:532`) reads each session in the period
    with only what a summary needs. Period bounds are Manila calendar days (`:430`). It
    reads in pages through `readPages` (`src/adapters/supabase/paging.ts`): PostgREST stops
    every response at the project's `db-max-rows` (1000 by default) whatever `.limit()` asks

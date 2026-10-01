@@ -32,6 +32,13 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Audit trail lays out for a desktop
+
+The audit page drops its phone padding breakpoint like every other console page. Entries
+name organizations, people who acted and export periods, never a patient, so the trail
+needs no de-identification of its own. The map cards' line references point at the
+current code again.
+
 ## [fix] Audit trail page repeats the access check
 
 `/audit` now calls `requirePageAccess()` like every other console page, so a revoked admin

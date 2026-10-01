@@ -35,7 +35,7 @@ their own organization whatever the console passes (`:30`), so an entry cannot b
 
 ## Reading
 
-`listAuditEntries` (`src/adapters/supabase/database.ts:567`) reads newest first, scoped like
+`listAuditEntries` (`src/adapters/supabase/database.ts:616`) reads newest first, scoped like
 every other read: an org admin sees their organization's entries (and RLS agrees); a super
 admin sees all or one organization. `describeAuditEntry` (`src/domain/audit.ts:43`) turns an
 entry into one line; an action this build does not know is shown as recorded, never hidden.

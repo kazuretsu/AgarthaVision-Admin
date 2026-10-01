@@ -27,7 +27,7 @@ the insert to fail and checks the patient is still saved.
    makes it required. `readScopeFor` (`src/domain/scope.ts:18`) holds an org admin to their
    own organization whatever the URL says, and lets a super admin see everything or narrow
    to one organization (`?org=`). The adapter joins `patient_organizations!inner` and
-   filters on it (`src/adapters/supabase/database.ts:193`), so an out-of-scope patient,
+   filters on it (`src/adapters/supabase/database.ts:209`), so an out-of-scope patient,
    session or sample is simply not found — a 404 on its page.
 2. **The database.** Additive SELECT policies (`0002`, from `:131`) let an org admin read
    their organization's patients, patient links, sessions, samples, detections,

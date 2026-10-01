@@ -30,7 +30,7 @@ classification. No surface in the console shows EPG.
 ## Steps
 
 1. The adapter reads a session with its samples and their detections, findings and
-   prediction ids (`SAMPLE_TREE`, `src/adapters/supabase/database.ts:160`), or only what a
+   prediction ids (`SAMPLE_TREE`, `src/adapters/supabase/database.ts:186`), or only what a
    summary needs for a patient's session list (`SESSION_SUMMARY_TREE`, `:156`).
 2. `summariseSession` (`src/domain/clinical.ts:219`) keeps live samples, counts eggs per
    species, ranges the findings over the live field count, and decides positivity.
