@@ -45,7 +45,7 @@ export default async function OrganizationPage({
   if (!organization) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
       <Breadcrumbs
         items={[{ label: "Organizations", href: "/organizations" }, { label: organization.name }]}
       />
@@ -60,8 +60,8 @@ export default async function OrganizationPage({
       </header>
 
       <Card>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Fact label="Org admins" value={String(organization.orgAdminCount)} mono />
+        <CardContent className="grid grid-cols-4 gap-4">
+          <Fact label="Organization admins" value={String(organization.orgAdminCount)} mono />
           <Fact label="Medtechs" value={String(organization.medtechCount)} mono />
           <Fact label="Patients" value={String(organization.patientCount)} mono />
           <Fact label="Created" value={formatDate(organization.createdAt)} />
@@ -72,7 +72,7 @@ export default async function OrganizationPage({
         <h2 className="text-[15px] font-semibold text-stone-ink">Members</h2>
         {organization.members.length === 0 ? (
           <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
-            Nobody belongs to this organization yet. Org admins are added by invitation.
+            Nobody belongs to this organization yet. Organization admins are added by invitation.
           </p>
         ) : (
           <Table className="min-w-[560px]">
@@ -91,7 +91,7 @@ export default async function OrganizationPage({
                   <TableCell className="font-medium text-stone-ink">{personName(member)}</TableCell>
                   <TableCell>
                     {member.role === "org_admin" ? (
-                      <Badge>Org admin</Badge>
+                      <Badge>Organization admin</Badge>
                     ) : (
                       <Badge variant="neutral">Medtech</Badge>
                     )}

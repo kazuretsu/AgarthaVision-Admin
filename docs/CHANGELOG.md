@@ -19,6 +19,12 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Organizations: tier names, desktop layout, and leaving keeps the author
+
+Organization pages say Organization admin where they said Org admin, and lay out for a
+desktop. The organizations card now states the offboarding rule: a member who leaves is
+deactivated, never deleted, so their profile and their authorship of every record stay.
+
 ## [feat] Laboratory organizations, managed by super admins, with an append-only audit log
 
 The first schema this repo owns (D4): `supabase/migrations/admin/0001_organizations.sql`,

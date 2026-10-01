@@ -116,8 +116,8 @@ export function OrganizationStatusForm({
           <AlertDialogContent>
             <AlertDialogTitle>Deactivate {name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Its org admins lose console access until it is reactivated. Nothing is deleted: its
-              members, patients and every record stay exactly as they are.
+              Its organization admins lose console access until it is reactivated. Nothing is
+              deleted: its members, patients and every record stay exactly as they are.
             </AlertDialogDescription>
             <div className="mt-2 flex justify-end gap-2">
               <AlertDialogClose className={buttonVariants({ variant: "ghost" })}>
