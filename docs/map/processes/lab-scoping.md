@@ -24,7 +24,7 @@ the insert to fail and checks the patient is still saved.
 ## Two layers, the same boundary (D7)
 
 1. **The console.** Every clinical read on `DatabasePort` takes a `ReadScope`, and the type
-   makes it required. `readScopeFor` (`src/domain/scope.ts:17`) holds an org admin to their
+   makes it required. `readScopeFor` (`src/domain/scope.ts:18`) holds an org admin to their
    own organization whatever the URL says, and lets a super admin see everything or narrow
    to one organization (`?org=`). The adapter joins `patient_organizations!inner` and
    filters on it (`src/adapters/supabase/database.ts:193`), so an out-of-scope patient,

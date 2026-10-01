@@ -32,6 +32,11 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Lab scoping: a malformed `?org=` is ignored
+
+`readScopeFor` uses the strict `isUuid` check, so a super admin's `?org=` of 36 dashes is
+treated as no filter rather than sent to Postgres, which rejected it with a 500.
+
 ## [feat] A laboratory's patients and records stay inside that laboratory
 
 `admin/0002_patient_scoping.sql`, additive only. A trigger on the app's `patients` insert

@@ -1,4 +1,5 @@
 import type { ConsoleAccess } from "./access";
+import { isUuid } from "./ids";
 
 /**
  * Which records a console read may return (D11, D7).
@@ -22,7 +23,5 @@ export function readScopeFor(
     return { kind: "organization", organizationId: access.organizationId };
   }
   const requested = requestedOrganizationId?.trim();
-  return requested && /^[0-9a-f-]{36}$/i.test(requested)
-    ? { kind: "organization", organizationId: requested }
-    : { kind: "all" };
+  return isUuid(requested) ? { kind: "organization", organizationId: requested } : { kind: "all" };
 }
