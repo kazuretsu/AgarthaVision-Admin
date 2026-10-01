@@ -38,6 +38,12 @@ the insert to fail and checks the patient is still saved.
 Pages call `scopeForRequest` (`src/lib/read-scope.ts:10`); the export route derives its
 scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:32`).
 
+**Scope is which laboratory; disclosure is whether you see who the patient is.** They are
+separate inputs to every patient read. An org admin reads their own laboratory identified.
+A super admin who narrows to one laboratory with `?org=` still reads it de-identified: the
+filter changes which rows come back, never which columns (constraint #14,
+`patientDisclosureFor`).
+
 ## The frame policy reads the key
 
 Sample keys are `{user_id}/{sample_id}.jpg` (the app's `SampleRemoteDataSource`). The
@@ -55,7 +61,8 @@ grants nothing. A frame stored under any other key is unreadable to an org admin
 
 **Does not hit**
 
-- Super admins, who still read everything through the app's `is_admin()` policies.
+- Super admins, who still read every row through the app's `is_admin()` policies, and
+  receive patients de-identified whatever organization they narrow to.
 - Medtechs.
 
 ## See

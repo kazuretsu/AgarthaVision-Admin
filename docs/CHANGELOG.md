@@ -32,6 +32,13 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Lab scoping keeps patients de-identified for a super admin who narrows
+
+Every patient read now takes both the read scope and the patient disclosure. Narrowing to
+one laboratory with `?org=` changes which rows a super admin reads, never which columns: an
+organization admin sees their own laboratory's patients identified, and a super admin sees
+any laboratory's de-identified. The lab-scoping card says so.
+
 ## [fix] Lab scoping: a malformed `?org=` is ignored
 
 `readScopeFor` uses the strict `isUuid` check, so a super admin's `?org=` of 36 dashes is
