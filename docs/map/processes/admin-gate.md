@@ -55,9 +55,12 @@ layout and the page share one lookup per request.
 ## Why the gate is in the layout
 
 Every route under `(dashboard)/` is protected the moment it is created; there is no
-per-page opt-in to forget. Because the layout is `force-dynamic`
-(`src/app/(dashboard)/layout.tsx:24`) and re-reads access each request, a revoked admin
-loses access on their next navigation rather than whenever their token expires.
+per-page opt-in to forget. The layout is `force-dynamic`
+(`src/app/(dashboard)/layout.tsx:24`), but a client-side navigation between pages of the
+segment does not re-render it — only the page. So every page also calls
+`requirePageAccess(ANY_CONSOLE_USER)` (or narrower) before it reads anything; that call,
+cached per request, is what makes a revoked admin lose access on their next click rather
+than at their next hard load or token expiry. A new page must make the same call.
 
 `requireConsoleActor()` throws rather than returning a reduced view. There is no partial
 console, so a caller cannot forget to branch on a role and leak a cross-user query.

@@ -16,10 +16,10 @@ import { signOut } from "../(auth)/login/actions";
  * Every route in this segment is guarded here, once. Putting the check in the
  * layout rather than in each page means a new page under `(dashboard)/` is
  * protected the moment it is created — there is no per-page opt-in to forget.
- * A page narrower than "any console user" adds `requirePageAccess()` on top.
  *
- * Access is read server-side on every request, so a revoked admin loses access on
- * their next navigation rather than whenever their token happens to expire.
+ * Every page also calls `requirePageAccess()`: a client-side navigation does not
+ * re-render this layout, so the page's own call is what re-reads access on each
+ * click. A revoked admin loses access on their next navigation, not at token expiry.
  */
 export const dynamic = "force-dynamic";
 

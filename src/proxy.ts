@@ -10,8 +10,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * that can both read the old cookies and set the new ones.
  *
  * This is refresh only — it is deliberately NOT the authorisation gate. Role is
- * decided by `requireAdmin()` against `profiles.role` in the layout that renders
- * the guarded routes, close to the data it protects, so a routing change cannot
+ * decided by `getConsoleActor()` against `profiles.role` in the layout that renders
+ * the guarded routes, and again in each page, close to the data it protects, so a routing change cannot
  * silently unguard a page. Env is read directly rather than through the registry
  * because this runs in a separate runtime with its own module graph.
  */

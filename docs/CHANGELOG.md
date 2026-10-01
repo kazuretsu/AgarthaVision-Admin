@@ -8,9 +8,11 @@ The console now knows three people instead of one. A super admin (`profiles.role
 'admin'`) sees everything; an org admin will see their own laboratory once memberships
 exist; a medtech is refused. The rule is `resolveConsoleAccess` in `src/domain/access.ts`,
 plain TypeScript so it holds under any provider (D7). `AuthPort.requireAdmin()` became
-`requireConsoleActor()`, which returns the user with their access. Pages narrower than
-"any console user" call `requirePageAccess()`, which 404s everyone else — a hidden sidebar
-link is never the protection. Route handlers use `requireRouteAccess()`.
+`requireConsoleActor()`, which returns the user with their access. Every page calls
+`requirePageAccess()`, which 404s anyone it does not admit — a hidden sidebar link is never
+the protection, and a client-side navigation does not re-render the layout, so the page's
+call is what re-reads access. Route handlers use `requireRouteAccess()`. An `error.tsx`
+under `(dashboard)/` replaces the bare framework error page with a retry.
 
 A medtech who signs in with the right password is signed back out and told to use the
 Android app. That message only appears after a correct password, so it confirms nothing to

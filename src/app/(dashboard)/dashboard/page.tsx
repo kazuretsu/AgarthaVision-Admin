@@ -7,6 +7,7 @@ import {
   summariseEpg,
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { StatTile } from "@/components/StatTile";
 import { EpgTrendChart } from "@/components/charts/EpgTrendChart";
 import { SeveritySplit } from "@/components/charts/SeveritySplit";
@@ -23,6 +24,10 @@ import { SpeciesDistribution } from "@/components/charts/SpeciesDistribution";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  // The layout is not re-rendered on a client-side navigation, so the page
+  // repeats the check: a revoked admin loses access on their next click.
+  await requirePageAccess(ANY_CONSOLE_USER);
+
   let records;
   try {
     records = await (await getDatabase()).listSampleRecords();

@@ -49,6 +49,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
+    │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Summary cards, EPG trend, distribution, severity.
     │       └── records/       Filterable table, plus export/route.ts (gate repeated).
     ├── domain/                Entity types, enums, access rules, EPG and severity logic. No I/O.

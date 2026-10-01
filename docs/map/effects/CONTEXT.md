@@ -29,7 +29,7 @@ is right and this table is stale.**
 
 **A route handler is not behind the gate.** The `(dashboard)` layout guards pages that
 render inside it. A route handler under the same folder does not render inside it and
-inherits nothing. `records/export` repeats `requireAdmin()` for exactly this reason; a new
+inherits nothing. `records/export` calls `requireRouteAccess()` for exactly this reason; a new
 handler that forgets to is an open dataset.
 
 **An admin can read every row and no image.** Table RLS grants admins cross-user reads;
