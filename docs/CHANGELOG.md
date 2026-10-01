@@ -19,6 +19,12 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Export page lays out for a desktop
+
+The export page drops its phone padding breakpoint, as every other console page did. The
+file itself is unchanged: it carries no names, sex or birthdates, so it is already the
+de-identified view a super admin may take.
+
 ## [fix] Research export: the 20,000 refusal works, and the count matches the file
 
 The refusal could never fire: one PostgREST response stops at 1000 rows, so a busy period
