@@ -34,6 +34,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Changing the export columns or file format      | `docs/map/processes/research-matrix-export.md`                       |
 | Changing who can reach a route                  | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
 | Loading sample images                           | `docs/map/processes/signed-image-url.md`                             |
+| Deploying or changing hosting/email settings    | `docs/deployment.md`                                                 |
 | Wondering what a command does                   | `docs/commands.md`                                                   |
 | Wondering which versions are installed          | `docs/stack.md`                                                      |
 | Wondering where a file lives                    | `docs/file-tree.md`                                                  |

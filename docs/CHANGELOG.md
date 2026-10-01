@@ -2,6 +2,16 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [docs] Deployment runbook for Vercel, Supabase email and Resend
+
+`docs/deployment.md` records how the console is hosted as built: Vercel's Production tracks
+`staging` at `agarthan-admin.vercel.app`, Supabase Auth's Site URL and redirect list point
+there, and Supabase sends its auth email through Resend from `mail.kazuretsu.dev`, verified by
+DKIM, SPF and DMARC records in Cloudflare. It names every environment variable and where each
+secret is stored without any values (#12), and gives the redeploy, rollback and
+migrations-before-merge steps. The custom domain `agarthavision.kazuretsu.dev` is deferred; the
+page says what changes when it is attached.
+
 ## [docs] Add a keep-the-docs-aligned rule to AGENTS.example.md
 
 A "Project shelf — keep it current" section, ported from the app repo's `AGENTS.example.md`

@@ -26,6 +26,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │   ├── non-negotiables.md     Terse absolute rules.
 │   ├── stack.md               Tech stack with resolved versions, and the deferrals.
 │   ├── commands.md            Every runnable command.
+│   ├── deployment.md          Vercel, Supabase Auth/SMTP, Resend, DNS. How to redeploy.
 │   ├── features.md            What exists today.
 │   ├── CHANGELOG.md           What changed, newest first.
 │   ├── file-tree.md           This file.
