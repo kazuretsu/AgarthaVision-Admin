@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: e89c2ad
+verified: 2026-10-01
+commit: 704ff09
 ---
 
 # Admin gate
@@ -41,11 +41,13 @@ method is the one seam the organizations work fills; nothing else in the gate ch
    renders `NoConsoleAccess` (`:32`, `:98`) — a message and a sign-out button, no data, no
    navigation.
 6. **Narrow a page.** A page for fewer than all console users calls `requirePageAccess`
-   (`src/lib/console-access.ts:27`), which 404s anyone else (`:31`). The sidebar's
-   `visibleTo` (`src/components/shell/nav.ts`) only hides links; this call is the
-   protection.
+   (`src/lib/console-access.ts:31`), which 404s anyone else (`:42`). It handles the
+   layout's two refusals itself (`:38-39`): no session redirects to `/login`, and no
+   access is a 404, so a client-side navigation after a revocation never reaches the error
+   boundary. The sidebar's `visibleTo` (`src/components/shell/nav.ts`) only hides links;
+   this call is the protection.
 7. **Repeat it in route handlers.** A handler does not render inside the layout and
-   inherits nothing. `requireRouteAccess` (`src/lib/console-access.ts:39`) returns 401, 403
+   inherits nothing. `requireRouteAccess` (`src/lib/console-access.ts:50`) returns 401, 403
    or 503 as JSON; `records/export` calls it first
    (`src/app/(dashboard)/records/export/route.ts:22`).
 

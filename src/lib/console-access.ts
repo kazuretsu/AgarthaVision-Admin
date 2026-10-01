@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getAuth } from "@/adapters/registry";
 import { isAllowed, type ConsoleAccessKind } from "@/domain/access";
 import { NotAuthenticatedError, NotAuthorizedError, type ConsoleActor } from "@/ports/auth";
@@ -23,11 +23,22 @@ export const getConsoleActor = cache(async (): Promise<ConsoleActor> => {
 /**
  * The actor, when their access kind is one this page admits. Anyone else gets a
  * 404: a page an org admin may not open is not a page that exists for them.
+ *
+ * On a client-side navigation the layout does not re-render, so this is the only
+ * check that runs: a session that ended goes to `/login`, and access revoked
+ * since the last click is a 404 rather than the error boundary.
  */
 export async function requirePageAccess(
   allowed: readonly ConsoleAccessKind[],
 ): Promise<ConsoleActor> {
-  const actor = await getConsoleActor();
+  let actor: ConsoleActor;
+  try {
+    actor = await getConsoleActor();
+  } catch (cause) {
+    if (cause instanceof NotAuthenticatedError) redirect("/login");
+    if (cause instanceof NotAuthorizedError) notFound();
+    throw cause;
+  }
   if (!isAllowed(actor.access, allowed)) notFound();
   return actor;
 }

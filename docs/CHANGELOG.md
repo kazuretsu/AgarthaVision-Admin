@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] A page turns a signed-out or revoked visitor away itself
+
+A client-side navigation re-renders the page but not the `(dashboard)` layout, so the
+page's `requirePageAccess()` is the only check that runs. It let the layout's two refusals
+escape as errors, and a session that ended or an access revoked since the last click
+landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
+`/login` and gives a revoked one a 404, as a full load would.
+
 ## [fix] Desktop-only console, and the three tiers named as the product names them
 
 Super admins and organization admins use the console at a computer; medtechs use the mobile
