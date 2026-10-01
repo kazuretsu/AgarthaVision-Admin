@@ -58,7 +58,7 @@ export default async function DashboardPage({
   const figures = summariseDashboard(smears);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-[22px] font-bold text-stone-ink">Dashboard</h1>
@@ -94,7 +94,7 @@ export default async function DashboardPage({
         </p>
       ) : null}
 
-      <section aria-label="Summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section aria-label="Summary" className="grid grid-cols-5 gap-3">
         <StatCard
           label="Patients"
           value={figures.patients.toLocaleString()}
@@ -114,7 +114,7 @@ export default async function DashboardPage({
         />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div className="grid grid-cols-[2fr_1fr] gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Smears per week</CardTitle>

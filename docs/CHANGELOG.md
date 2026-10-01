@@ -19,6 +19,11 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Dashboard lays out for a desktop
+
+The summary cards sit in one row of five and the trend shares its row with the species mix
+at every width, instead of stacking below 1024px. The console is desktop only.
+
 ## [fix] Dashboard: read every session in the period, not the newest 1000
 
 `.limit(5000)` could not raise PostgREST's response cap (`db-max-rows`, 1000 by default on
