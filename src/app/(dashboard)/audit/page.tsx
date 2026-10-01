@@ -70,7 +70,7 @@ export default async function AuditPage({
       db.listAuditEntries({
         scope,
         actorId,
-        action: action && action in AUDIT_ACTIONS ? action : undefined,
+        action: action && Object.hasOwn(AUDIT_ACTIONS, action) ? action : undefined,
         from: period.from,
         to: period.to,
         limit: AUDIT_LIMIT,

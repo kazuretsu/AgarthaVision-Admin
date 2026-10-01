@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Audit trail: ignore a malformed person or action filter
+
+`?actor=` was checked against a loose pattern, so a 36-character string of hex digits and
+dashes in the wrong layout reached Postgres and the page was a 500. It is now checked with
+`isUuid`, as every record id is. `?action=` was checked with `in`, which also accepts
+inherited names such as `constructor`; it now has to be a listed action.
+
 ## [fix] Organizations: 404 a malformed id, and test against the app's current schema
 
 `/organizations/abc` was a 500, because the id went straight to Postgres. It is now a 404,

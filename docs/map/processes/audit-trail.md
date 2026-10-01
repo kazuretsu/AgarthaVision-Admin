@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: f99fd4c
+verified: 2026-10-01
+commit: 4e5390d
 ---
 
 # Audit trail
@@ -35,11 +35,12 @@ their own organization whatever the console passes (`:30`), so an entry cannot b
 
 ## Reading
 
-`listAuditEntries` (`src/adapters/supabase/database.ts:616`) reads newest first, scoped like
+`listAuditEntries` (`src/adapters/supabase/database.ts:624`) reads newest first, scoped like
 every other read: an org admin sees their organization's entries (and RLS agrees); a super
 admin sees all or one organization. `describeAuditEntry` (`src/domain/audit.ts:43`) turns an
 entry into one line; an action this build does not know is shown as recorded, never hidden.
-The page caps at 500 entries and says so.
+The page caps at 500 entries and says so. A person filter that is not a well-formed id, or an
+action this build does not list, is ignored rather than sent to Postgres.
 
 Each entry keeps `actor_label`, the actor's name at the time, so it still reads correctly if
 the profile is later removed.

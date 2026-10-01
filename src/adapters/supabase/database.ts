@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isLiveSample, parseDetectionVerdict, summariseSession } from "@/domain";
+import { isLiveSample, isUuid, parseDetectionVerdict, summariseSession } from "@/domain";
 import type {
   Detection,
   Patient,
@@ -635,7 +635,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       .limit(limit);
 
     if (organizationId) request = request.eq("organization_id", organizationId);
-    if (actorId && /^[0-9a-f-]{36}$/i.test(actorId)) request = request.eq("actor_id", actorId);
+    if (isUuid(actorId)) request = request.eq("actor_id", actorId);
     if (action) request = request.eq("action", action);
     if (from) request = request.gte("at", `${from}T00:00:00+08:00`);
     if (to) request = request.lte("at", `${to}T23:59:59.999+08:00`);
