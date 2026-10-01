@@ -2,6 +2,23 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [security] A super admin's patient reads go through the de-identified views
+
+Every patient, session and sample read a super admin makes now comes from the app's
+`patients_deidentified`, `sessions_deidentified` and `samples_deidentified` views (app
+`0012`), embedded under the tables' names so pages are unchanged. That covers the records
+list, the patient, session and sample pages, and the dashboard's and export's barangay
+codes. The request never names a name, sex, birthdate, session label or note. App `0013`
+then removes a super admin's access to the tables, and the console works the same before and
+after it. Organization admins still read the tables, identified.
+
+Session labels and notes were already dropped for a super admin when a row is mapped
+(`toSession`, `toSample`, named by `sessionLabel`); now they are not requested either, so
+they never leave the database for one. A unit test pins that no super admin request names an
+identity column or a clinical table. `app_0013_deidentified_reads.test.sql` covers a super
+admin, an organization admin, a medtech, a colleague and an anonymous caller against the
+narrowed policy. Constraint #14 now names the database as the second line.
+
 ## [fix] Audit trail: ignore a malformed person or action filter
 
 `?actor=` was checked against a loose pattern, so a 36-character string of hex digits and

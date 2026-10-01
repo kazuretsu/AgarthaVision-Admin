@@ -16,7 +16,7 @@ not an addition. Grep the three files for `supabase` and you should find it only
 
 Every clinical read on `DatabasePort` takes a required `ReadScope` (`src/domain/scope.ts`)
 and must return nothing outside it on its own — see `docs/map/processes/lab-scoping.md`.
-`DatabasePort` is **read-only by construction** (`src/ports/db.ts:63`). There is no
+`DatabasePort` is **read-only by construction** (`src/ports/db.ts:70`). There is no
 `insert`, `update` or `delete` verb on it. That is how constraint #4 is enforced rather
 than merely stated: the console cannot mutate clinical data because it has no way to
 express the intent.
@@ -25,13 +25,13 @@ express the intent.
 
 | Port             | Members                                                                                                               | File                       |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `DatabasePort`   | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles` | `src/ports/db.ts:63`       |
+| `DatabasePort`   | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles` | `src/ports/db.ts:70`       |
 | `AdminWritePort` | `createOrganization`, `renameOrganization`, `setOrganizationStatus` — each audited                                    | `src/ports/admin-write.ts` |
 | `StoragePort`    | `createSignedUrl`                                                                                                     | `src/ports/storage.ts:21`  |
 | `AuthPort`       | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                              | `src/ports/auth.ts:33`     |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
-provider raised it: `DatabaseReadError` (`src/ports/db.ts:108`), `StorageAccessError`
+provider raised it: `DatabaseReadError` (`src/ports/db.ts:115`), `StorageAccessError`
 (`src/ports/storage.ts:30`), and `NotAuthenticatedError` / `NotAuthorizedError` /
 `AuthenticationFailedError` (`src/ports/auth.ts:55-77`).
 

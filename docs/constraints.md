@@ -170,18 +170,24 @@ re-read. If it grows past roughly 60 lines, content has leaked into it.
 
 A patient's name, sex and birthdate reach an **organization admin** of the patient's own
 laboratory and nobody else in the console. A **super admin** reads records de-identified:
-the identity columns are never selected for them, a name search is ignored, and the
-session label and the medtech's free-text note on a field are withheld, because the label is
-pre-filled from the patient's initials and either can be typed over with a name. Each
-clinic is the controller of its patients' data under RA 10173 and AgarthaVision hosts it
-as the clinic's processor; running the platform needs no patient's identity, so
-proportionality (§11) keeps it out. Pages name a de-identified patient or session by the
-first eight characters of its record id.
+no name, sex or birthdate, no name search, no session label (a generated label such as
+`LDNJ-M21-S01` spells the surname's letters, sex, age and first initial), and no medtech's
+free-text note on a field, which can name the patient. Each clinic is the controller of its
+patients' data under RA 10173 and AgarthaVision hosts it as the clinic's processor; running
+the platform needs no patient's identity, so proportionality (§11) keeps it out. Pages name a
+de-identified patient and session by the first eight characters of the record id.
+
+A super admin's patient, session and sample reads come from the app's de-identified views
+(`patients_deidentified`, `sessions_deidentified`, `samples_deidentified`, app
+`0012_deidentified_reads.sql`), never from the tables. Since app
+`0013_super_admin_reads_deidentified.sql` the tables return a super admin nothing, so the
+database enforces the rule too: the console's code is the first line and the app's policies
+the second.
 
 **Enforced at:** `src/domain/access.ts` (`patientDisclosureFor`, the rule);
-`src/ports/db.ts` (every patient read takes a `PatientDisclosure`);
-`src/adapters/supabase/database.ts` (`patientColumns`, which leaves the identity columns
-out of the request; `toSession` and `toSample`, which drop the label and the note). The
-app's own policies still let `profiles.role = 'admin'` read every
-patient row, so the console's rule is the only line today; narrowing that policy is the
-app's change to make.
+`src/ports/db.ts` (every patient and smear read takes a `PatientDisclosure`);
+`src/adapters/supabase/database.ts` (`SOURCES`, which picks the views and their columns for
+a de-identified reader; `toSession` and `toSample`, which drop the label and the note
+whatever the source returns); `src/adapters/supabase/database.test.ts` (no super admin request
+names an identity column or a clinical table); app `0012`/`0013`, covered by
+`supabase/tests/app_0013_deidentified_reads.test.sql`.

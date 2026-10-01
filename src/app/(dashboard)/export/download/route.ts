@@ -6,6 +6,7 @@ import {
   RESEARCH_EXPORT_VERSION,
   buildResearchExport,
   clinicalDate,
+  patientDisclosureFor,
   readScopeFor,
   toResearchExportCsv,
   toResearchExportJson,
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
       await getDatabase()
     ).listSmears({
       scope,
+      disclosure: patientDisclosureFor(access.actor.access),
       startedFrom: period.from,
       startedTo: period.to,
       limit: RESEARCH_EXPORT_LIMIT + 1,

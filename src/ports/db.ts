@@ -26,8 +26,9 @@ export interface PatientQuery {
   scope: ReadScope;
   /**
    * Whether names, sex and birthdates are read at all. Derive it with
-   * `patientDisclosureFor`. When `"deidentified"` the adapter never selects those
-   * columns and ignores {@link search}, which would otherwise match on a name.
+   * `patientDisclosureFor`. When `"deidentified"` the adapter reads the
+   * de-identified views instead of the tables, never names those columns, and
+   * ignores {@link search}, which would otherwise match on a name.
    */
   disclosure: PatientDisclosure;
   /** Matches surname, given name or codename, case-insensitively. */
@@ -41,6 +42,12 @@ export interface PatientQuery {
 export interface SmearQuery {
   /** Whose smears. Required: derive it with `readScopeFor`. */
   scope: ReadScope;
+  /**
+   * Which source the smears are read from. Derive it with `patientDisclosureFor`:
+   * a super admin's smears come from the de-identified views, which still carry
+   * the barangay code a smear is counted under.
+   */
+  disclosure: PatientDisclosure;
   /** Inclusive Manila calendar dates, `YYYY-MM-DD`, bounding `sessions.started_at`. */
   startedFrom?: string;
   startedTo?: string;

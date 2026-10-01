@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-01
-commit: 58be5a5
+verified: 2026-09-30
+commit: ff526ba
 ---
 
 # Domain model
@@ -21,15 +21,15 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 
 ## Shape
 
-| Type             | Source of truth                | Notes                                                                                 |
-| ---------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
-| `Profile`        | `0001`                         | `role` CHECK `('medtech','admin')`; `full_name` is never filled by the signup trigger |
-| `Patient`        | `0001`, `0002`                 | name, sex, birthdate under `identity`, `null` for a de-identified reader (#14)        |
-| `Session`        | `0001`                         | one smear, owned by a patient; `user_id` is the **author**; `label` `null` if de-id'd |
-| `Sample`         | `0001`                         | `deleted_at` is the duplicate tombstone — see below                                   |
-| `Detection`      | `0001`, `0004`, `0005`, `0006` | `prediction_id` (0004), `stage` (0005); `species_touched` dropped (0006)              |
-| `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range                             |
-| `Report`         | `0001`                         | `lpf_per_species` stored as issued; no `epg_per_species`                              |
+| Type             | Source of truth                | Notes                                                                                                       |
+| ---------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `Profile`        | `0001`                         | `role` CHECK `('medtech','admin')`; `full_name` is never filled by the signup trigger                       |
+| `Patient`        | `0001`, `0002`                 | name, sex, birthdate under `identity`, `null` for a de-identified reader (#14)                              |
+| `Session`        | `0001`                         | one smear, owned by a patient; `user_id` is the **author**; `label` `null` for a de-identified reader (#14) |
+| `Sample`         | `0001`                         | `deleted_at` is the duplicate tombstone — see below; `userNote` `null` for a de-identified reader           |
+| `Detection`      | `0001`, `0004`, `0005`, `0006` | `prediction_id` (0004), `stage` (0005); `species_touched` dropped (0006)                                    |
+| `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range                                                   |
+| `Report`         | `0001`                         | `lpf_per_species` stored as issued; no `epg_per_species`                                                    |
 
 Read models for the records browser live in `src/domain/records.ts`: `PatientListItem`
 (`:15`), `PatientRecord` (`:30`), `SessionRecord` (`:46`), `SampleRecordDetail` (`:55`).
@@ -47,7 +47,7 @@ Facts that trip people up:
   provenance only.
 - **`patients` reaches `profiles` two ways** (`created_by`, and the `patient_users` join),
   so an embed must name the constraint: `profiles!patients_created_by_fkey`
-  (`src/adapters/supabase/database.ts:174`).
+  (`src/adapters/supabase/database.ts:217`).
 
 Enums live in `src/domain/enums.ts`. `DetectionVerdict` is UPPERCASE in Postgres and
 lowercase in Room; `parseDetectionVerdict` accepts either. Species are free text and have no

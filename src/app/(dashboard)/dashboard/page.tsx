@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getDatabase } from "@/adapters/registry";
-import { summariseDashboard, type OrganizationSummary } from "@/domain";
+import { patientDisclosureFor, summariseDashboard, type OrganizationSummary } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { describePeriod, parsePeriod } from "@/lib/period";
@@ -51,6 +51,7 @@ export default async function DashboardPage({
     [smears, organizations] = await Promise.all([
       db.listSmears({
         scope,
+        disclosure: patientDisclosureFor(actor.access),
         startedFrom: period.from,
         startedTo: period.to,
         limit: SMEAR_LIMIT + 1,

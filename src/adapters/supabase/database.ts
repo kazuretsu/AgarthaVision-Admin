@@ -76,7 +76,8 @@ interface SessionRow {
   patient_id: string;
   device_id: string;
   started_at: string;
-  label: string | null;
+  /** Absent from the de-identified view: it encodes initials, sex and age. */
+  label?: string | null;
   profiles?: ProfileRefRow | null;
 }
 
@@ -90,7 +91,8 @@ interface SampleRow {
   inference_model_version: string | null;
   needs_reannotation: boolean;
   is_manual: boolean;
-  user_note: string | null;
+  /** Absent from the de-identified view. */
+  user_note?: string | null;
   deleted_at: string | null;
   detections?: DetectionRow[] | null;
   sample_species_findings?: FindingRow[] | null;
@@ -158,13 +160,54 @@ const PATIENT_COLUMNS = "id, psgc_barangay_code, created_by, created_at";
 const PATIENT_IDENTITY_COLUMNS = "lastname, firstname, middle_name, sex, birthdate";
 
 /**
- * The patient columns a reader may receive. A de-identified reader's request
- * never names the identity columns, so they do not leave the database for them.
+ * Where a reader's patient data comes from, and which columns are asked for.
+ *
+ * An identified reader (an organization admin) reads the tables, through their
+ * own row-level policies. A de-identified reader (a super admin) reads the app's
+ * de-identified views (`0012_deidentified_reads.sql`), which have no name, sex,
+ * birthdate, session label or sample note to give: the request never names
+ * them, and since app `0013` the tables return a super admin nothing at all.
+ * Every clinical read below takes its sources from here, never from a literal.
  */
-function patientColumns(disclosure: PatientDisclosure): string {
-  return disclosure === "identified"
-    ? `${PATIENT_COLUMNS}, ${PATIENT_IDENTITY_COLUMNS}`
-    : PATIENT_COLUMNS;
+interface ClinicalSources {
+  patients: string;
+  sessions: string;
+  samples: string;
+  patientColumns: string;
+  sessionColumns: string;
+  sampleColumns: string;
+}
+
+const SESSION_BASE_COLUMNS = "id, user_id, patient_id, device_id, started_at";
+const SAMPLE_BASE_COLUMNS =
+  "id, session_id, user_id, captured_at, verified_at, storage_path, inference_model_version, needs_reannotation, is_manual, deleted_at";
+
+const SOURCES: Record<PatientDisclosure, ClinicalSources> = {
+  identified: {
+    patients: "patients",
+    sessions: "sessions",
+    samples: "samples",
+    patientColumns: `${PATIENT_COLUMNS}, ${PATIENT_IDENTITY_COLUMNS}`,
+    sessionColumns: `${SESSION_BASE_COLUMNS}, label`,
+    sampleColumns: `${SAMPLE_BASE_COLUMNS}, user_note`,
+  },
+  deidentified: {
+    patients: "patients_deidentified",
+    sessions: "sessions_deidentified",
+    samples: "samples_deidentified",
+    patientColumns: PATIENT_COLUMNS,
+    sessionColumns: SESSION_BASE_COLUMNS,
+    sampleColumns: SAMPLE_BASE_COLUMNS,
+  },
+};
+
+/**
+ * An embed of `source` that keeps the table's name as its key, so a row has the
+ * same shape whichever source it came from: `patients:patients_deidentified`.
+ * PostgREST filters on an embed address it by that key.
+ */
+function embed(key: "patients" | "sessions" | "samples", source: string, hint = ""): string {
+  return source === key ? `${key}${hint}` : `${key}:${source}${hint}`;
 }
 /**
  * The medtech who registered a patient. Named by constraint because `patients`
@@ -172,9 +215,6 @@ function patientColumns(disclosure: PatientDisclosure): string {
  * and PostgREST refuses an ambiguous embed.
  */
 const PATIENT_REGISTRAR = "profiles!patients_created_by_fkey ( id, full_name )";
-const SESSION_COLUMNS = "id, user_id, patient_id, device_id, started_at, label";
-const SAMPLE_COLUMNS =
-  "id, session_id, user_id, captured_at, verified_at, storage_path, inference_model_version, needs_reannotation, is_manual, user_note, deleted_at";
 const DETECTION_COLUMNS =
   "id, sample_id, class_label, confidence, bbox_x, bbox_y, bbox_w, bbox_h, verdict, expert_class, prediction_id, stage";
 const FINDING_COLUMNS = "sample_id, species, stage, egg_count";
@@ -183,20 +223,24 @@ const FINDING_COLUMNS = "sample_id, species, stage, egg_count";
  * A sample with everything recorded on it. Each child table holds exactly one
  * foreign key to `samples`, so the embeds need no disambiguating hint.
  */
-const SAMPLE_TREE = `${SAMPLE_COLUMNS},
+function sampleTree(sources: ClinicalSources): string {
+  return `${sources.sampleColumns},
   detections ( ${DETECTION_COLUMNS} ),
   sample_species_findings ( ${FINDING_COLUMNS} ),
   predictions ( id )`;
+}
 
 /**
  * Only what a session summary needs. `sessions` → `profiles` is the author;
  * `sessions` holds one FK to each of `profiles` and `patients`.
  */
-const SESSION_SUMMARY_TREE = `${SESSION_COLUMNS},
+function sessionSummaryTree(sources: ClinicalSources): string {
+  return `${sources.sessionColumns},
   profiles ( id, full_name ),
-  samples ( id, deleted_at,
+  ${embed("samples", sources.samples)} ( id, deleted_at,
     detections ( sample_id, verdict, class_label, expert_class ),
     sample_species_findings ( sample_id, species, egg_count ) )`;
+}
 
 const ORGANIZATION_COLUMNS = "id, name, status, created_at, deactivated_at";
 
@@ -280,7 +324,7 @@ function toSession(row: SessionRow, disclosure: PatientDisclosure): Session {
     patientId: row.patient_id,
     deviceId: row.device_id,
     startedAt: row.started_at,
-    label: disclosure === "identified" ? row.label : null,
+    label: disclosure === "identified" ? (row.label ?? null) : null,
   };
 }
 
@@ -295,7 +339,7 @@ function toSample(row: SampleRow, disclosure: PatientDisclosure): Sample {
     inferenceModelVersion: row.inference_model_version,
     needsReannotation: row.needs_reannotation,
     isManual: row.is_manual,
-    userNote: disclosure === "identified" ? row.user_note : null,
+    userNote: disclosure === "identified" ? (row.user_note ?? null) : null,
     deletedAt: row.deleted_at,
   };
 }
@@ -346,7 +390,7 @@ function toSampleDetail(row: SampleRow, disclosure: PatientDisclosure): SampleDe
   };
 }
 
-/** Summarises a session row fetched with {@link SESSION_SUMMARY_TREE}. */
+/** Summarises a session row fetched with {@link sessionSummaryTree}. */
 function summariseSessionRow(row: SessionRow & { samples?: SampleRow[] | null }) {
   const samples = row.samples ?? [];
   return summariseSession({
@@ -386,11 +430,12 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   async listPatients(query: PatientQuery): Promise<PatientListItem[]> {
     const { scope, disclosure, search, barangayCode, limit = DEFAULT_LIMIT } = query;
     const organizationId = scopedOrganization(scope);
+    const sources = SOURCES[disclosure];
 
     let request = this.client
-      .from("patients")
+      .from(sources.patients)
       .select(
-        `${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( started_at )${organizationId ? `, ${OWNER}` : ""}`,
+        `${sources.patientColumns}, ${PATIENT_REGISTRAR}, ${embed("sessions", sources.sessions)} ( started_at )${organizationId ? `, ${OWNER}` : ""}`,
       )
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -428,10 +473,11 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     disclosure: PatientDisclosure,
   ): Promise<PatientRecord | null> {
     const organizationId = scopedOrganization(scope);
+    const sources = SOURCES[disclosure];
     let request = this.client
-      .from("patients")
+      .from(sources.patients)
       .select(
-        `${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( ${SESSION_SUMMARY_TREE} )${organizationId ? `, ${OWNER}` : ""}`,
+        `${sources.patientColumns}, ${PATIENT_REGISTRAR}, ${embed("sessions", sources.sessions)} ( ${sessionSummaryTree(sources)} )${organizationId ? `, ${OWNER}` : ""}`,
       )
       .eq("id", patientId);
     if (organizationId)
@@ -465,13 +511,14 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     disclosure: PatientDisclosure,
   ): Promise<SessionRecord | null> {
     const organizationId = scopedOrganization(scope);
+    const sources = SOURCES[disclosure];
     const patient = organizationId
-      ? `patients!inner ( ${patientColumns(disclosure)}, ${OWNER} )`
-      : `patients ( ${patientColumns(disclosure)} )`;
+      ? `${embed("patients", sources.patients, "!inner")} ( ${sources.patientColumns}, ${OWNER} )`
+      : `${embed("patients", sources.patients)} ( ${sources.patientColumns} )`;
     let request = this.client
-      .from("sessions")
+      .from(sources.sessions)
       .select(
-        `${SESSION_COLUMNS}, profiles ( id, full_name ), ${patient}, samples ( ${SAMPLE_TREE} )`,
+        `${sources.sessionColumns}, profiles ( id, full_name ), ${patient}, ${embed("samples", sources.samples)} ( ${sampleTree(sources)} )`,
       )
       .eq("id", sessionId);
     if (organizationId) {
@@ -508,7 +555,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     disclosure: PatientDisclosure,
   ): Promise<SampleRecordDetail | null> {
     const { data: owner, error: ownerError } = await this.client
-      .from("samples")
+      .from(SOURCES[disclosure].samples)
       .select("session_id, deleted_at")
       .eq("id", sampleId)
       .maybeSingle();
@@ -538,8 +585,9 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   }
 
   async listSmears(query: SmearQuery): Promise<SmearRecord[]> {
-    const { scope, startedFrom, startedTo, limit = SMEAR_LIMIT } = query;
+    const { scope, disclosure, startedFrom, startedTo, limit = SMEAR_LIMIT } = query;
     const organizationId = scopedOrganization(scope);
+    const sources = SOURCES[disclosure];
 
     type Row = SessionRow & {
       samples?: SampleRow[] | null;
@@ -553,11 +601,11 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       limit,
       (from, to) => {
         let request = this.client
-          .from("sessions")
+          .from(sources.sessions)
           .select(
             organizationId
-              ? `${SESSION_SUMMARY_TREE}, patients!inner ( psgc_barangay_code, ${OWNER} )`
-              : `${SESSION_SUMMARY_TREE}, patients ( psgc_barangay_code )`,
+              ? `${sessionSummaryTree(sources)}, ${embed("patients", sources.patients, "!inner")} ( psgc_barangay_code, ${OWNER} )`
+              : `${sessionSummaryTree(sources)}, ${embed("patients", sources.patients)} ( psgc_barangay_code )`,
           )
           .order("started_at", { ascending: false })
           .order("id", { ascending: false });

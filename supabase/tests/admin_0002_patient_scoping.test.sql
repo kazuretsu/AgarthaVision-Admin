@@ -164,10 +164,11 @@ begin
         and exists (select 1 from public.patients where id = f.patient_b),
         'and the other way round');
 
+    -- De-identified, through the app's view (app 0012/0013, D19).
     perform tests.act_as(f.super_admin);
     perform tests.check(
-        (select count(*) from public.patients where id in (f.patient_a, f.patient_b)) = 2,
-        'a super admin reads both');
+        (select count(*) from public.patients_deidentified where id in (f.patient_a, f.patient_b)) = 2,
+        'a super admin reads both, de-identified');
 
     -- A medtech's own view is exactly what the app's policies gave them.
     perform tests.act_as(f.medtech_a);
