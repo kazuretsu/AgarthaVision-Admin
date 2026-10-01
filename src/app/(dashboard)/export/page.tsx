@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { getDatabase } from "@/adapters/registry";
-import { RESEARCH_EXPORT_COLUMNS, isExamined } from "@/domain";
+import { RESEARCH_EXPORT_COLUMNS, RESEARCH_EXPORT_LIMIT, isExamined } from "@/domain";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { MissingEnvironmentError } from "@/lib/env";
 import { describePeriod, parsePeriod } from "@/lib/period";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
@@ -21,13 +22,23 @@ export default async function ExportPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // The layout is not re-rendered on a client-side navigation, so the page
+  // repeats the check: a revoked admin loses access on their next click.
+  await requirePageAccess(ANY_CONSOLE_USER);
+
   const period = parsePeriod(await searchParams);
 
   let smears;
   try {
     smears = await (
       await getDatabase()
-    ).listSmears({ startedFrom: period.from, startedTo: period.to });
+    ).listSmears({
+      // The download's own limit, so this count and the file agree, and a period
+      // the download would refuse is flagged here first.
+      startedFrom: period.from,
+      startedTo: period.to,
+      limit: RESEARCH_EXPORT_LIMIT + 1,
+    });
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Export" variable={cause.variable} />;
@@ -35,6 +46,7 @@ export default async function ExportPage({
     throw cause;
   }
 
+  const tooLarge = smears.length > RESEARCH_EXPORT_LIMIT;
   const examined = smears.filter(isExamined).length;
   const query = new URLSearchParams();
   if (period.from) query.set("from", period.from);
@@ -81,9 +93,22 @@ export default async function ExportPage({
             ) : null}
           </form>
 
+          {tooLarge ? (
+            <p
+              role="status"
+              className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn"
+            >
+              This period holds more than {RESEARCH_EXPORT_LIMIT.toLocaleString()} sessions, more
+              than one file may hold. Narrow the period to export it.
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-[14px] text-stone-ink">
-              <span className="tnum font-bold">{examined.toLocaleString()}</span> smear
+              <span className="tnum font-bold">
+                {tooLarge ? "At least " : ""}
+                {examined.toLocaleString()}
+              </span>{" "}
+              smear
               {examined === 1 ? "" : "s"} examined, {describePeriod(period)}.
             </p>
             <div className="ml-auto flex gap-2">

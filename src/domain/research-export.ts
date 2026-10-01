@@ -20,6 +20,12 @@ import { clinicalDate } from "./patients";
 
 export const RESEARCH_EXPORT_VERSION = 2;
 
+/**
+ * Sessions one export may hold. A file cut short would be silently wrong, so a
+ * longer period is refused, and the export page warns before the click.
+ */
+export const RESEARCH_EXPORT_LIMIT = 20000;
+
 /** The species that get their own columns, in column order. */
 export const EXPORT_SPECIES = ["Ascaris lumbricoides", "Trichuris trichiura", "Hookworm"] as const;
 

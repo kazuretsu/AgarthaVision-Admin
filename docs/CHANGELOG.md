@@ -19,6 +19,16 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Research export: the 20,000 refusal works, and the count matches the file
+
+The refusal could never fire: one PostgREST response stops at 1000 rows, so a busy period
+downloaded the newest 1000 sessions as if they were all. `listSmears` now pages (see the
+dashboard fix), the download asks for `RESEARCH_EXPORT_LIMIT + 1`, and the export page reads
+with the same limit, so its "N smears examined" matches the file and a period the download
+would refuse is flagged first. A failed read is a 502 or 503 with no database detail instead
+of a bare 500. CSVs carry a UTF-8 byte-order mark so Excel keeps the en dash in `0–2 LPF`,
+and an open-ended file is named for today in Manila rather than in UTC.
+
 ## [feat] Research export in LPF, one row per smear, with no names or birthdates
 
 The SRS research matrix exported AI and validated EPG per sample; EPG was retracted with

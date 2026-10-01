@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDatabase } from "@/adapters/registry";
 import {
+  RESEARCH_EXPORT_LIMIT,
   RESEARCH_EXPORT_VERSION,
   buildResearchExport,
+  clinicalDate,
   toResearchExportCsv,
   toResearchExportJson,
 } from "@/domain";
 import { ANY_CONSOLE_USER, requireRouteAccess } from "@/lib/console-access";
+import { MissingEnvironmentError } from "@/lib/env";
 import { parsePeriod } from "@/lib/period";
 
 /**
@@ -19,8 +22,11 @@ import { parsePeriod } from "@/lib/period";
  */
 export const dynamic = "force-dynamic";
 
-/** Sessions read for one file. A file cut short would be silently wrong, so it is refused. */
-const EXPORT_LIMIT = 20000;
+/**
+ * A UTF-8 byte-order mark. Excel on Windows reads a CSV without one as the
+ * system code page and mangles the en dash in "0–2 LPF" and any non-ASCII name.
+ */
+const UTF8_BOM = "﻿";
 
 export async function GET(request: NextRequest) {
   const access = await requireRouteAccess(ANY_CONSOLE_USER);
@@ -30,22 +36,47 @@ export async function GET(request: NextRequest) {
   const period = parsePeriod(params);
   const format = params.format === "json" ? "json" : "csv";
 
-  const smears = await (
-    await getDatabase()
-  ).listSmears({ startedFrom: period.from, startedTo: period.to, limit: EXPORT_LIMIT + 1 });
-  if (smears.length > EXPORT_LIMIT) {
+  let smears;
+  try {
+    // One past the limit, so a period over it is detected rather than cut short.
+    smears = await (
+      await getDatabase()
+    ).listSmears({
+      startedFrom: period.from,
+      startedTo: period.to,
+      limit: RESEARCH_EXPORT_LIMIT + 1,
+    });
+  } catch (cause) {
+    if (cause instanceof MissingEnvironmentError) {
+      return NextResponse.json(
+        { error: `Server is not configured: ${cause.variable} is not set.` },
+        { status: 503 },
+      );
+    }
+    // The cause stays in the server log; the response names no table or column.
+    console.error("research export read failed", cause);
     return NextResponse.json(
-      { error: `More than ${EXPORT_LIMIT} sessions in this period. Export a shorter period.` },
+      { error: "The records could not be read. Try again." },
+      { status: 502 },
+    );
+  }
+  if (smears.length > RESEARCH_EXPORT_LIMIT) {
+    return NextResponse.json(
+      {
+        error: `More than ${RESEARCH_EXPORT_LIMIT} sessions in this period. Export a shorter period.`,
+      },
       { status: 413 },
     );
   }
 
   const rows = buildResearchExport(smears);
-  const scope = [period.from ?? "start", period.to ?? new Date().toISOString().slice(0, 10)].join(
+  // Today in Manila, the frame every other date in the file uses.
+  const scope = [period.from ?? "start", period.to ?? clinicalDate(new Date().toISOString())].join(
     "_to_",
   );
   const filename = `agarthavision-research-export-v${RESEARCH_EXPORT_VERSION}-${scope}.${format}`;
-  const body = format === "json" ? toResearchExportJson(rows) : toResearchExportCsv(rows);
+  const body =
+    format === "json" ? toResearchExportJson(rows) : UTF8_BOM + toResearchExportCsv(rows);
 
   return new NextResponse(body, {
     headers: {

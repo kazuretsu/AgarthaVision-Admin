@@ -113,7 +113,7 @@ per examined smear: session and patient record IDs, Manila date, barangay PSGC c
 examined, result, eggs, and for each of the three species its LPF min, max, descriptor and
 eggs, plus other species in one cell. No names and no birthdates. The column set is version
 2 and the version is in the file name. A period over 20,000 sessions is refused rather than
-cut short. Exports are not yet written to the audit trail.
+cut short, and the page warns before the click. Exports are not yet written to the audit trail.
 
 ## Not built yet, in this pass
 
