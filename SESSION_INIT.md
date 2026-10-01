@@ -4,8 +4,8 @@ Read once at session start. Do not re-read. This file routes; it carries no cont
 
 ## What this is
 
-The **AgarthaVision Admin Console** — a Next.js web app for the `admin` role of the
-AgarthaVision soil-transmitted helminth (STH) diagnostic system. A medical technologist
+The **AgarthaVision Admin Console** — a desktop Next.js web app for the super admins and
+organization admins of the AgarthaVision soil-transmitted helminth (STH) diagnostic system. A medical technologist
 captures microscopy frames of a fecal smear through a phone on a microscope; an inference
 model detects and classifies _Ascaris lumbricoides_, _Trichuris trichiura_ and Hookworm
 eggs; the system computes Eggs Per Gram (EPG) with the DOH volumetric multiplier; a human

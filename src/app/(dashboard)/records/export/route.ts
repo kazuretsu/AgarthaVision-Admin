@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuth, getDatabase } from "@/adapters/registry";
+import { getDatabase } from "@/adapters/registry";
 import { buildResearchMatrix, toResearchMatrixCsv, toResearchMatrixJson } from "@/domain";
-import { NotAuthenticatedError, NotAuthorizedError } from "@/ports/auth";
-import { MissingEnvironmentError } from "@/lib/env";
+import { ANY_CONSOLE_USER, requireRouteAccess } from "@/lib/console-access";
 import { parseRecordFilter } from "@/lib/search-params";
 
 /**
@@ -14,29 +13,14 @@ import { parseRecordFilter } from "@/lib/search-params";
  * only to be re-serialised there.
  *
  * The gate is repeated here. A route handler does not render inside the
- * `(dashboard)` layout, so it does not inherit that layout's `requireAdmin()` —
+ * `(dashboard)` layout, so it does not inherit that layout's gate —
  * relying on it would leave the whole dataset on an unguarded URL.
  */
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  try {
-    await (await getAuth()).requireAdmin();
-  } catch (cause) {
-    if (cause instanceof NotAuthenticatedError) {
-      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
-    }
-    if (cause instanceof NotAuthorizedError) {
-      return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
-    }
-    if (cause instanceof MissingEnvironmentError) {
-      return NextResponse.json(
-        { error: `Server is not configured: ${cause.variable} is not set.` },
-        { status: 503 },
-      );
-    }
-    throw cause;
-  }
+  const access = await requireRouteAccess(ANY_CONSOLE_USER);
+  if ("response" in access) return access.response;
 
   const params = request.nextUrl.searchParams;
   const format = params.get("format") === "json" ? "json" : "csv";

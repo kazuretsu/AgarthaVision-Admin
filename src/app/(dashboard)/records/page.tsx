@@ -1,6 +1,7 @@
 import { getDatabase } from "@/adapters/registry";
 import { isValidatedRecord } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { isEmptyFilter, parseRecordFilter, toSearchParams } from "@/lib/search-params";
 import { RecordsFilters } from "@/components/RecordsFilters";
 import { RecordsTable } from "@/components/RecordsTable";
@@ -19,6 +20,10 @@ export default async function RecordsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // The layout is not re-rendered on a client-side navigation, so the page
+  // repeats the check: a revoked admin loses access on their next click.
+  await requirePageAccess(ANY_CONSOLE_USER);
+
   const params = toSearchParams(await searchParams);
   const filter = parseRecordFilter(params);
 
@@ -73,7 +78,7 @@ export default async function RecordsPage({
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <a
             href={href("csv")}
-            className="rounded-[8px] bg-maroon px-3 py-1.5 text-[13px] font-semibold text-white"
+            className="rounded-[8px] bg-maroon px-3 py-1.5 text-[13px] font-semibold text-primary-foreground"
           >
             CSV
           </a>

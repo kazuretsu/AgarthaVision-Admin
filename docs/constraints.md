@@ -29,13 +29,19 @@ functions); `.env.example` documents which variables are public and which are no
 
 ### 3. Admin-only routes
 
-Every console surface requires an authenticated session whose `profiles.role` is `admin`.
-A medtech session is not a partial admin: it is redirected. The role check reads the
-profile row server-side; a cookie or a client claim is never the authority.
+Every console surface requires a session with console access: a **super admin** (the
+AgarthaVision developers and owners, `profiles.role = 'admin'`) or an **organization admin**
+(a clinic's admin staff, an active org-admin membership). Medtechs use the mobile app only. A
+medtech session is not a partial admin: it sees a notice pointing to the mobile app and no
+data.
+Access is read server-side on every request; a cookie, a JWT claim or `user_metadata` is
+never the authority. Hiding a sidebar link is presentation, not protection.
 
-**Enforced at:** `src/app/(admin)/layout.tsx` (server-side gate before any child renders);
-`proxy.ts` (cheap unauthenticated bounce before render); `src/ports/auth.ts`
-(`requireAdmin()` is the only entry point features may call).
+**Enforced at:** `src/domain/access.ts` (`resolveConsoleAccess`, the rule itself);
+`src/app/(dashboard)/layout.tsx` (server-side gate before any child renders);
+`src/lib/console-access.ts` (`requirePageAccess` for narrower pages, `requireRouteAccess`
+for route handlers); `src/ports/auth.ts` (`requireConsoleActor()` is the only entry point
+features may call). `src/proxy.ts` refreshes the session and is not a gate.
 
 ### 4. Read-mostly console
 

@@ -20,7 +20,7 @@ import { serviceConfig } from "./env";
  *
  * Two things keep that narrow. The key never leaves the server — this module is
  * imported only from server components and route handlers. And the caller is
- * expected to have passed `requireAdmin()` first: this adapter mints a URL for
+ * expected to have passed `requirePageAccess()` or `requireRouteAccess()` first: this adapter mints a URL for
  * whatever key it is given and performs no authorisation of its own.
  */
 export class SupabaseStorageAdapter implements StoragePort {

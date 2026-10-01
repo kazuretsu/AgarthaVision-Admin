@@ -1,10 +1,18 @@
 @import "tailwindcss";
 
+/* Class-based dark mode, toggled by next-themes on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * AgarthaVision Clinical Microscopy design tokens.
  * Mirrors the Android client's palette (CIT-U maroon #8C1823 + gold #FFB81C)
  * so the console and the medtech app read as one product.
  * Raw hex values appear only in this file; components read the token names.
+ *
+ * Two layers. The `--av-*` ramp is the raw palette and never changes. The
+ * semantic layer below it (`--ink`, `--surface`, `--primary`, …) is what the
+ * theme swaps, so a component written against `text-stone-ink` or `bg-surface`
+ * is correct in both modes without a `dark:` class of its own.
  */
 :root {
   --av-maroon: #8c1823;
@@ -25,7 +33,10 @@
   --av-gray-400: #8a847f;
   --av-gray-500: #78716c;
   --av-gray-700: #44403c;
+  --av-gray-800: #292524;
+  --av-gray-850: #211d1b;
   --av-gray-900: #1c1917;
+  --av-gray-950: #151211;
 
   --av-red: #dc2626;
   --av-red-tint: #fee2e2;
@@ -37,38 +48,93 @@
   --background: var(--av-off-white);
   --foreground: var(--av-gray-900);
   --surface: var(--av-white);
-  --border: var(--av-gray-100);
-  --muted: var(--av-gray-500);
+  --surface-sunken: var(--av-gray-50);
+  --hair: var(--av-gray-100);
+  --line: var(--av-gray-200);
+  --soft: var(--av-gray-300);
+  --mid: var(--av-gray-500);
+  --deep: var(--av-gray-700);
+  --ink: var(--av-gray-900);
+
+  --primary: var(--av-maroon);
+  --primary-hover: var(--av-maroon-hover);
+  --primary-foreground: var(--av-white);
+  --primary-tint: var(--av-maroon-tint);
+  --primary-tint-2: var(--av-maroon-tint-2);
+  --gold-tint: var(--av-gold-tint);
+  --gold-text: var(--av-gold-text);
+
+  --danger: var(--av-red);
+  --danger-tint: var(--av-red-tint);
+  --ok: var(--av-green);
+  --ok-tint: var(--av-green-tint);
+  --warn: var(--av-amber);
+  --warn-tint: var(--av-amber-tint);
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: var(--av-gray-950);
+  --foreground: var(--av-gray-50);
+  --surface: var(--av-gray-900);
+  --surface-sunken: var(--av-gray-850);
+  --hair: var(--av-gray-800);
+  --line: var(--av-gray-700);
+  --soft: var(--av-gray-500);
+  --mid: var(--av-gray-300);
+  --deep: var(--av-gray-200);
+  --ink: var(--av-gray-50);
+
+  /* Maroon on near-black fails text contrast, so the dark theme lifts it to a rose. */
+  --primary: #e0707b;
+  --primary-hover: #eb8e97;
+  --primary-foreground: var(--av-gray-950);
+  --primary-tint: #3a1a1e;
+  --primary-tint-2: #2a1618;
+  --gold-tint: #3a2e10;
+  --gold-text: #f5cf6b;
+
+  --danger: #f87171;
+  --danger-tint: #3b1515;
+  --ok: #4ade80;
+  --ok-tint: #12301d;
+  --warn: #fbbf24;
+  --warn-tint: #382a0c;
+
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
-  --color-border-hairline: var(--border);
-  --color-muted: var(--muted);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border-hairline: var(--hair);
+  --color-muted: var(--mid);
 
-  --color-maroon: var(--av-maroon);
-  --color-maroon-hover: var(--av-maroon-hover);
-  --color-maroon-tint: var(--av-maroon-tint);
-  --color-maroon-tint-2: var(--av-maroon-tint-2);
+  --color-maroon: var(--primary);
+  --color-maroon-hover: var(--primary-hover);
+  --color-maroon-tint: var(--primary-tint);
+  --color-maroon-tint-2: var(--primary-tint-2);
+  --color-primary-foreground: var(--primary-foreground);
   --color-gold: var(--av-gold);
-  --color-gold-tint: var(--av-gold-tint);
-  --color-gold-text: var(--av-gold-text);
+  --color-gold-tint: var(--gold-tint);
+  --color-gold-text: var(--gold-text);
 
-  --color-stone-hair: var(--av-gray-100);
-  --color-stone-line: var(--av-gray-200);
-  --color-stone-soft: var(--av-gray-300);
-  --color-stone-mid: var(--av-gray-500);
-  --color-stone-deep: var(--av-gray-700);
-  --color-stone-ink: var(--av-gray-900);
+  --color-stone-hair: var(--hair);
+  --color-stone-line: var(--line);
+  --color-stone-soft: var(--soft);
+  --color-stone-mid: var(--mid);
+  --color-stone-deep: var(--deep);
+  --color-stone-ink: var(--ink);
 
-  --color-danger: var(--av-red);
-  --color-danger-tint: var(--av-red-tint);
-  --color-ok: var(--av-green);
-  --color-ok-tint: var(--av-green-tint);
-  --color-warn: var(--av-amber);
-  --color-warn-tint: var(--av-amber-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-ok: var(--ok);
+  --color-ok-tint: var(--ok-tint);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
 
   --font-sans:
     Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -86,7 +152,7 @@ body {
   font-weight: 500;
 }
 
-/* Tabular numerals on every data field: IDs, EPG, confidence, timestamps. */
+/* Tabular numerals on every data field: IDs, counts, LPF ranges, timestamps. */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;

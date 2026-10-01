@@ -2,6 +2,49 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] A page turns a signed-out or revoked visitor away itself
+
+A client-side navigation re-renders the page but not the `(dashboard)` layout, so the
+page's `requirePageAccess()` is the only check that runs. It let the layout's two refusals
+escape as errors, and a session that ended or an access revoked since the last click
+landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
+`/login` and gives a revoked one a 404, as a full load would.
+
+## [fix] Desktop-only console, and the three tiers named as the product names them
+
+Super admins and organization admins use the console at a computer; medtechs use the mobile
+app. The shell no longer folds its sidebar into a row under the header below 768px: the
+sidebar and the organization name are always shown, the shell holds a 1024px minimum width
+and a narrower window scrolls sideways. Grids keep their desktop columns.
+
+The tiers are named Super admin, Organization admin and Medtech wherever a person reads
+them. The refusal shown after a correct password no longer assumes the person is a medtech:
+a deactivated organization admin sees it too, so it says who the console is for and who
+to ask.
+
+## [feat] Console shell with role-aware navigation, shadcn on Base UI and dark mode
+
+The console now knows three people instead of one. A super admin (`profiles.role =
+'admin'`) sees everything; an org admin will see their own laboratory once memberships
+exist; a medtech is refused. The rule is `resolveConsoleAccess` in `src/domain/access.ts`,
+plain TypeScript so it holds under any provider (D7). `AuthPort.requireAdmin()` became
+`requireConsoleActor()`, which returns the user with their access. Every page calls
+`requirePageAccess()`, which 404s anyone it does not admit — a hidden sidebar link is never
+the protection, and a client-side navigation does not re-render the layout, so the page's
+call is what re-reads access. Route handlers use `requireRouteAccess()`. An `error.tsx`
+under `(dashboard)/` replaces the bare framework error page with a retry.
+
+A medtech who signs in with the right password is signed back out and told to use the
+Android app. That message only appears after a correct password, so it confirms nothing to
+a stranger; wrong passwords and unknown emails still share one reply.
+
+The frame is a sidebar, a header naming the scope, and a user menu with theme and sign out.
+Components are shadcn-style files under `src/components/ui/` written on Base UI (D1); no
+Radix package is installed, and the shadcn registry is not used. Colours became two layers:
+the raw `--av-*` palette, and semantic tokens that a `dark` class swaps, so existing
+components are correct in both themes without `dark:` classes. `/` now redirects to the
+dashboard.
+
 ## [docs] Add a keep-the-docs-aligned rule to AGENTS.example.md
 
 A "Project shelf — keep it current" section, ported from the app repo's `AGENTS.example.md`

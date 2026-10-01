@@ -1,3 +1,8 @@
+---
+verified: 2026-09-30
+commit: e89c2ad
+---
+
 # Ports
 
 The three interfaces every feature depends on: `DatabasePort`, `StoragePort`, `AuthPort`.
@@ -16,19 +21,22 @@ express the intent.
 
 ## Shape
 
-| Port           | Members                                                           | File                      |
-| -------------- | ----------------------------------------------------------------- | ------------------------- |
-| `DatabasePort` | `listSampleRecords`, `getProfile`, `listProfiles`                 | `src/ports/db.ts:23`      |
-| `StoragePort`  | `createSignedUrl`                                                 | `src/ports/storage.ts:21` |
-| `AuthPort`     | `getCurrentUser`, `requireAdmin`, `signInWithPassword`, `signOut` | `src/ports/auth.ts:24`    |
+| Port           | Members                                                                  | File                      |
+| -------------- | ------------------------------------------------------------------------ | ------------------------- |
+| `DatabasePort` | `listSampleRecords`, `getProfile`, `listProfiles`                        | `src/ports/db.ts:23`      |
+| `StoragePort`  | `createSignedUrl`                                                        | `src/ports/storage.ts:21` |
+| `AuthPort`     | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut` | `src/ports/auth.ts:33`    |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:39`), `StorageAccessError`
 (`src/ports/storage.ts:34`), and `NotAuthenticatedError` / `NotAuthorizedError` /
-`AuthenticationFailedError` (`src/ports/auth.ts:41-63`).
+`AuthenticationFailedError` (`src/ports/auth.ts:55-77`).
 
-`requireAdmin()` throws rather than returning a reduced view. There is no partial console,
-so a caller cannot forget to branch on a role and leak a cross-user query.
+`requireConsoleActor()` returns the user together with their `ConsoleAccess`
+(`src/domain/access.ts:19`) — super admin, or org admin with their organization — and
+throws rather than returning a reduced view for anyone else. There is no partial console,
+so a caller cannot forget to branch on a role and leak a cross-user query. The port
+imports that one domain type; it still names no vendor.
 
 ## Connected to
 

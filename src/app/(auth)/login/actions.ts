@@ -2,20 +2,27 @@
 
 import { redirect } from "next/navigation";
 import { getAuth } from "@/adapters/registry";
-import { AuthenticationFailedError, NotAuthorizedError } from "@/ports/auth";
+import { AuthenticationFailedError, NotAuthorizedError, type AuthPort } from "@/ports/auth";
 import { MissingEnvironmentError } from "@/lib/env";
 import type { LoginState } from "./state";
 
+/** Shown for bad credentials, and for any provider failure. */
+const INVALID_CREDENTIALS = "These credentials cannot access the admin console.";
+
 /**
- * Signs in, then admits only admins.
+ * Shown only after the password was correct, so it tells the account holder
+ * where to go without telling a stranger anything: nobody sees it who does not
+ * already know the password.
+ */
+const MEDTECH_NOTICE =
+  "This console is for super admins and organization admins. Medtechs use the AgarthaVision mobile app with the same email and password. If you manage a laboratory, ask an AgarthaVision super admin to check your access.";
+
+/**
+ * Signs in, then admits only people with console access.
  *
  * A medtech with correct credentials is signed straight back out. Leaving the
- * session in place would mean a valid cookie for a console they may not use,
- * and every later guard would have to remember to re-check.
- *
- * Both failure modes return the same message. Distinguishing "wrong password"
- * from "not an admin" would confirm to an outsider which addresses are real
- * accounts, and to a medtech that the console exists at all.
+ * session in place would mean a valid cookie for a console they may not use, and
+ * every later guard would have to remember to re-check.
  */
 export async function signIn(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
@@ -25,20 +32,19 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
     return { error: "Enter both an email address and a password." };
   }
 
+  let auth: AuthPort | null = null;
   try {
-    const auth = await getAuth();
-    const user = await auth.signInWithPassword({ email, password });
-    if (user.role !== "admin") {
-      await auth.signOut();
-      return { error: "These credentials cannot access the admin console." };
-    }
+    auth = await getAuth();
+    await auth.signInWithPassword({ email, password });
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return { error: `Server is not configured: ${cause.variable} is not set.` };
     }
-    if (cause instanceof AuthenticationFailedError || cause instanceof NotAuthorizedError) {
-      return { error: "These credentials cannot access the admin console." };
+    if (cause instanceof NotAuthorizedError) {
+      await auth?.signOut();
+      return { error: MEDTECH_NOTICE };
     }
+    if (cause instanceof AuthenticationFailedError) return { error: INVALID_CREDENTIALS };
     throw cause;
   }
 

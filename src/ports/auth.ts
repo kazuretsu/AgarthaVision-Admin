@@ -1,11 +1,14 @@
+import type { ConsoleAccess } from "@/domain/access";
+
 /**
  * The authentication port.
  *
- * Identity and the admin decision both live behind this interface. Feature code
- * asks `requireAdmin()` and never inspects a cookie, a token or a provider
- * session object.
+ * Identity and the console-access decision both live behind this interface.
+ * Feature code asks `requireConsoleActor()` and never inspects a cookie, a token
+ * or a provider session object.
  */
 
+/** `profiles.role`. Only `admin` means anything to the console: it is a super admin. */
 export type UserRole = "medtech" | "admin";
 
 export interface AuthenticatedUser {
@@ -14,6 +17,12 @@ export interface AuthenticatedUser {
   fullName: string | null;
   /** Read from `profiles.role`. A client claim is never the authority. */
   role: UserRole;
+}
+
+/** A signed-in user together with what they may do in the console. */
+export interface ConsoleActor {
+  user: AuthenticatedUser;
+  access: ConsoleAccess;
 }
 
 export interface Credentials {
@@ -26,13 +35,18 @@ export interface AuthPort {
   getCurrentUser(): Promise<AuthenticatedUser | null>;
 
   /**
-   * Returns the signed-in user when their role is `admin`.
+   * The signed-in user and their console access, read server-side on every call.
    * Throws {@link NotAuthenticatedError} with no session, and
-   * {@link NotAuthorizedError} when the session belongs to a medtech.
+   * {@link NotAuthorizedError} when the user has no console access (a medtech).
    */
-  requireAdmin(): Promise<AuthenticatedUser>;
+  requireConsoleActor(): Promise<ConsoleActor>;
 
-  signInWithPassword(credentials: Credentials): Promise<AuthenticatedUser>;
+  /**
+   * Signs in and returns the actor. Throws {@link AuthenticationFailedError} on
+   * bad credentials and {@link NotAuthorizedError} when the credentials are
+   * valid but carry no console access — the caller must then sign out.
+   */
+  signInWithPassword(credentials: Credentials): Promise<ConsoleActor>;
 
   signOut(): Promise<void>;
 }
@@ -45,10 +59,10 @@ export class NotAuthenticatedError extends Error {
   }
 }
 
-/** A valid session that is not an admin. A medtech is not a partial admin. */
+/** A valid session with no console access. A medtech is not a partial admin. */
 export class NotAuthorizedError extends Error {
-  constructor(role: UserRole) {
-    super(`Role "${role}" may not use the admin console.`);
+  constructor(public readonly user: AuthenticatedUser) {
+    super(`User ${user.id} has no console access.`);
     this.name = "NotAuthorizedError";
   }
 }

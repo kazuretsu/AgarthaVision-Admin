@@ -5,7 +5,8 @@ JSON download.
 
 ## Steps
 
-1. **Gate.** `requireAdmin()` runs first (`src/app/(dashboard)/records/export/route.ts:24`).
+1. **Gate.** `requireRouteAccess(ANY_CONSOLE_USER)` runs first
+   (`src/app/(dashboard)/records/export/route.ts:22`).
    A route handler does **not** render inside the `(dashboard)` layout, so it does not
    inherit that layout's check; without this line the whole dataset sits on an unguarded URL.
 2. **Parse the filter.** `parseRecordFilter` (`src/lib/search-params.ts:60`) reads the same

@@ -45,21 +45,27 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── app/
     │   ├── layout.tsx         Root shell and metadata.
     │   ├── globals.css        Design tokens. The only file holding raw hex.
-    │   ├── page.tsx           Public entry surface.
+    │   ├── page.tsx           Redirects to /dashboard; the gate decides from there.
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
-    │   └── (dashboard)/       Everything behind requireAdmin().
-    │       ├── layout.tsx     The admin gate. Guards every page in this segment.
+    │   └── (dashboard)/       Everything behind the console gate.
+    │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
+    │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Summary cards, EPG trend, distribution, severity.
     │       └── records/       Filterable table, plus export/route.ts (gate repeated).
-    ├── domain/                Entity types, enums, EPG and severity logic. No I/O.
+    ├── domain/                Entity types, enums, access rules, EPG and severity logic. No I/O.
     ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   └── supabase/          client, env, database, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
+    │   ├── ui/                shadcn components on Base UI. Ours to edit.
+    │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
+    │   ├── theme-provider.tsx next-themes, class-based.
     │   └── charts/            Inline SVG. No charting dependency.
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
+        ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
+        ├── utils.ts           cn(): clsx + tailwind-merge.
         ├── palette.ts         Validated chart colors, with the validator's findings.
         └── search-params.ts   Filter ⇄ query string, defensively parsed.
 ```

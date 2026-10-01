@@ -16,6 +16,8 @@ is right and this table is stale.**
 | `src/domain/research-matrix.ts`                     | `../processes/research-matrix-export.md` — the column set is a contract                 |
 | `src/domain/filters.ts`, `src/lib/search-params.ts` | `../processes/research-matrix-export.md` — the export reuses the page's filter          |
 | `src/app/(dashboard)/layout.tsx`                    | `../processes/admin-gate.md`                                                            |
+| `src/domain/access.ts`, `src/lib/console-access.ts` | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
+| `src/components/shell/nav.ts`                       | `../processes/admin-gate.md` — `visibleTo` must match each page's `requirePageAccess`   |
 | Any new route handler                               | `../processes/admin-gate.md` — handlers do **not** inherit the layout's gate            |
 | `src/proxy.ts`                                      | `../processes/admin-gate.md` — refresh only, never the authorisation point              |
 | `src/lib/palette.ts`, anything charting             | `../../constraints.md` (#11) — re-run the palette validator                             |
@@ -27,7 +29,7 @@ is right and this table is stale.**
 
 **A route handler is not behind the gate.** The `(dashboard)` layout guards pages that
 render inside it. A route handler under the same folder does not render inside it and
-inherits nothing. `records/export` repeats `requireAdmin()` for exactly this reason; a new
+inherits nothing. `records/export` calls `requireRouteAccess()` for exactly this reason; a new
 handler that forgets to is an open dataset.
 
 **An admin can read every row and no image.** Table RLS grants admins cross-user reads;

@@ -29,7 +29,7 @@ export function RecordsFilters({
 }) {
   return (
     <form method="get" className="rounded-[12px] border border-stone-hair bg-surface p-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-4 gap-3">
         <label className="flex flex-col gap-1">
           <span className={LABEL}>Captured from</span>
           <input
@@ -134,7 +134,7 @@ export function RecordsFilters({
       <div className="mt-4 flex items-center gap-3">
         <button
           type="submit"
-          className="rounded-[8px] bg-maroon px-4 py-2 text-[13px] font-semibold text-white"
+          className="rounded-[8px] bg-maroon px-4 py-2 text-[13px] font-semibold text-primary-foreground"
         >
           Apply filters
         </button>
