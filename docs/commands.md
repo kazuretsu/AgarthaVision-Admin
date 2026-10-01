@@ -43,6 +43,9 @@ repo, and is not part of the pre-commit hook.
 | `ADMIN_TEST_DATABASE_URL` | `postgres://postgres@localhost:5432/agarthavision_admin_test` |
 | `AGARTHAVISION_APP_DIR`   | `../AgarthaVision` — check out its `development` branch       |
 
+`app_0013_deidentified_reads.test.sql` needs an app checkout with `0012` and `0013`, and fails
+with a message naming them when it has neither.
+
 It refuses any host but localhost and any database whose name does not end in `_test`.
 
 ## Hooks

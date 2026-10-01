@@ -5,6 +5,7 @@ import {
   RESEARCH_EXPORT_COLUMNS,
   RESEARCH_EXPORT_LIMIT,
   isExamined,
+  patientDisclosureFor,
   type OrganizationSummary,
 } from "@/domain";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -46,6 +47,7 @@ export default async function ExportPage({
       // the download would refuse is flagged here first.
       db.listSmears({
         scope,
+        disclosure: patientDisclosureFor(actor.access),
         startedFrom: period.from,
         startedTo: period.to,
         limit: RESEARCH_EXPORT_LIMIT + 1,

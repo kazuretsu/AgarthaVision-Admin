@@ -11,7 +11,7 @@ Output: a CSV or JSON download, one row per examined smear.
 ## Steps
 
 1. **Gate.** `requireRouteAccess` runs first
-   (`src/app/(dashboard)/export/download/route.ts:34`). A route handler does not render
+   (`src/app/(dashboard)/export/download/route.ts:35`). A route handler does not render
    inside the `(dashboard)` layout and inherits nothing from it.
 2. **Read.** The period is parsed the way the page parses it (`src/lib/period.ts`), and
    `listSmears` reads each session with its summary and the patient's barangay code, in

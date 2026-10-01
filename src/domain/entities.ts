@@ -64,6 +64,11 @@ export interface Session {
   /** Client-generated stable device identifier. */
   deviceId: string;
   startedAt: Iso8601;
+  /**
+   * The medtech's label, e.g. `LDNJ-M21-S01`: surname letters, sex and age, first
+   * initial. Identifying, so `null` for a de-identified reader, who never reads it.
+   * Name a session on screen with `sessionLabel`.
+   */
   label: string | null;
 }
 
@@ -87,6 +92,7 @@ export interface Sample {
   needsReannotation: boolean;
   /** A capture taken without inference. Its detections carry null boxes. */
   isManual: boolean;
+  /** Free text that can name the patient. `null` for a de-identified reader, who never reads it. */
   userNote: string | null;
   /**
    * The C8 tombstone. A medtech deleted this frame as a duplicate: it is hidden

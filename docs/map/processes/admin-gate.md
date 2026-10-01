@@ -50,7 +50,7 @@ out on their next request.
 7. **Repeat it in route handlers.** A handler does not render inside the layout and
    inherits nothing. `requireRouteAccess` (`src/lib/console-access.ts:50`) returns 401, 403
    or 503 as JSON; `export/download` calls it first
-   (`src/app/(dashboard)/export/download/route.ts:34`).
+   (`src/app/(dashboard)/export/download/route.ts:35`).
 
 `getConsoleActor` is wrapped in React's `cache()` (`src/lib/console-access.ts:19`), so the
 layout and the page share one lookup per request.

@@ -27,7 +27,7 @@ the insert to fail and checks the patient is still saved.
    makes it required. `readScopeFor` (`src/domain/scope.ts:18`) holds an org admin to their
    own organization whatever the URL says, and lets a super admin see everything or narrow
    to one organization (`?org=`). The adapter joins `patient_organizations!inner` and
-   filters on it (`src/adapters/supabase/database.ts:209`), so an out-of-scope patient,
+   filters on it (`src/adapters/supabase/database.ts:253`), so an out-of-scope patient,
    session or sample is simply not found — a 404 on its page.
 2. **The database.** Additive SELECT policies (`0002`, from `:131`) let an org admin read
    their organization's patients, patient links, sessions, samples, detections,
@@ -36,13 +36,15 @@ the insert to fail and checks the patient is still saved.
    app's own policies are untouched and a medtech sees exactly what they saw before.
 
 Pages call `scopeForRequest` (`src/lib/read-scope.ts:10`); the export route derives its
-scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:34`).
+scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:35`).
 
 **Scope is which laboratory; disclosure is whether you see who the patient is.** They are
 separate inputs to every patient read. An org admin reads their own laboratory identified.
 A super admin who narrows to one laboratory with `?org=` still reads it de-identified: the
 filter changes which rows come back, never which columns (constraint #14,
-`patientDisclosureFor`).
+`patientDisclosureFor`). Their reads come from the app's de-identified views, which carry the
+same foreign keys as the tables, so the `patient_organizations!inner` filter narrows them
+exactly as it narrows an org admin's.
 
 ## The frame policy reads the key
 
@@ -57,12 +59,13 @@ grants nothing. A frame stored under any other key is unreadable to an org admin
 
 - Every records page, the dashboard and the export, for org admins.
 - The app's patient sync, if the trigger ever raises. Keep the handler.
-- `supabase/tests/admin_0002_patient_scoping.test.sql`.
+- `supabase/tests/admin_0002_patient_scoping.test.sql` and
+  `supabase/tests/app_0013_deidentified_reads.test.sql`.
 
 **Does not hit**
 
-- Super admins, who still read every row through the app's `is_admin()` policies, and
-  receive patients de-identified whatever organization they narrow to.
+- Super admins, who read every laboratory through the app's de-identified views, never
+  the tables, and receive patients de-identified whatever organization they narrow to.
 - Medtechs.
 
 ## See
