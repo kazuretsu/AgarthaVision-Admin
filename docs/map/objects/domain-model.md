@@ -24,13 +24,13 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 | Type             | Source of truth                | Notes                                                                                 |
 | ---------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
 | `Profile`        | `0001`                         | `role` CHECK `('medtech','admin')`; `full_name` is never filled by the signup trigger |
-| `Patient`        | `0001`, `0002`                 | `firstname` is `''` for a codenamed patient, never SQL null                           |
+| `Patient`        | `0001`, `0002`                 | name, sex, birthdate under `identity`, `null` for a de-identified reader (#14)        |
 | `Session`        | `0001`                         | one smear, owned by a patient; `user_id` is the **author**                            |
 | `Sample`         | `0001`                         | `deleted_at` is the duplicate tombstone — see below                                   |
 | `Detection`      | `0001`, `0004`, `0005`, `0006` | `prediction_id` (0004), `stage` (0005); `species_touched` dropped (0006)              |
 | `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range                             |
 | `Report`         | `0001`                         | `lpf_per_species` stored as issued; no `epg_per_species`                              |
-| `SampleRecord`   | `src/domain/entities.ts:143`   | **composed, not persisted**; still feeds the dashboard and export                     |
+| `SampleRecord`   | `src/domain/entities.ts:155`   | **composed, not persisted**; still feeds the dashboard and export                     |
 
 Read models for the records browser live in `src/domain/records.ts`: `PatientListItem`
 (`:15`), `PatientRecord` (`:30`), `SessionRecord` (`:46`), `SampleRecordDetail` (`:55`).
@@ -48,7 +48,7 @@ Facts that trip people up:
   provenance only.
 - **`patients` reaches `profiles` two ways** (`created_by`, and the `patient_users` join),
   so an embed must name the constraint: `profiles!patients_created_by_fkey`
-  (`src/adapters/supabase/database.ts:135`).
+  (`src/adapters/supabase/database.ts:148`).
 
 Enums live in `src/domain/enums.ts`. `DetectionVerdict` is UPPERCASE in Postgres and
 lowercase in Room; `parseDetectionVerdict` accepts either. `ValidationStatus` is **derived
@@ -61,7 +61,7 @@ is a Phase 2 ghost with no migration behind it.
 - Consumed by: `src/domain/clinical.ts`, `src/domain/patients.ts`, and — until they move —
   `src/domain/epg.ts`, `severity.ts`, `research-matrix.ts`.
 - Produced by: `src/adapters/supabase/database.ts`, the only place snake_case and camelCase
-  meet (`toPatient` at `:174` and its siblings).
+  meet (`toPatient` at `:187` and its siblings).
 - Looks like but is not: Room entities in the Android client, which carry columns Postgres
   does not (`status`, `is_repeat`, `predictions_json`).
 

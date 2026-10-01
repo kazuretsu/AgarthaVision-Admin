@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageYears, clinicalDate, isCodenamed, patientDisplayName } from "./patients";
+import { ageYears, clinicalDate, isCodenamed, patientDisplayName, patientLabel } from "./patients";
 
 describe("patientDisplayName", () => {
   it("writes surname, given name and middle initial", () => {
@@ -40,5 +40,24 @@ describe("ageYears", () => {
 describe("clinicalDate", () => {
   it("gives the Manila calendar date", () => {
     expect(clinicalDate("2026-09-01T17:30:00Z")).toBe("2026-09-02");
+  });
+});
+
+describe("patientLabel", () => {
+  const id = "1a2b3c4d-0000-4000-8000-000000000000";
+
+  it("names an identified patient", () => {
+    const identity = {
+      lastname: "Cruz",
+      firstname: "Gerald",
+      middleName: null,
+      sex: "M" as const,
+      birthdate: "2015-01-01",
+    };
+    expect(patientLabel({ id, identity })).toBe("Cruz, Gerald");
+  });
+
+  it("gives a de-identified patient their short record id, not a name", () => {
+    expect(patientLabel({ id, identity: null })).toBe("Patient 1a2b3c4d");
   });
 });

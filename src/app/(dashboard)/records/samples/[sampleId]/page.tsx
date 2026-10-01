@@ -8,7 +8,8 @@ import {
   detectionSpecies,
   isCountedDetection,
   isUuid,
-  patientDisplayName,
+  patientDisclosureFor,
+  patientLabel,
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -50,14 +51,15 @@ const VERDICT_LABEL: Record<DetectionVerdict, string> = {
 
 export default async function SamplePage({ params }: { params: Promise<{ sampleId: string }> }) {
   const { sampleId } = await params;
-  await requirePageAccess(ANY_CONSOLE_USER);
+  const actor = await requirePageAccess(ANY_CONSOLE_USER);
+  const disclosure = patientDisclosureFor(actor.access);
   // A malformed id names no record; Postgres would reject it as an error.
   if (!isUuid(sampleId)) notFound();
 
   let record;
   let urls;
   try {
-    record = await (await getDatabase()).getSampleRecord(sampleId);
+    record = await (await getDatabase()).getSampleRecord(sampleId, disclosure);
     if (!record) notFound();
     urls = await signFrames([record.sample.storagePath]);
   } catch (cause) {
@@ -69,12 +71,12 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
 
   const { sample, detections, findings, session, patient, author, fieldNumber, fieldCount } =
     record;
-  const patientName = patientDisplayName(patient);
+  const patientName = patientLabel(patient);
   const sessionTitle = session.label ?? "Untitled session";
   const counted = detections.filter(isCountedDetection).length;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
       <Breadcrumbs
         items={[
           { label: "Records", href: "/records" },
@@ -92,7 +94,7 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
         {sample.needsReannotation ? <Badge variant="warn">Model missed eggs</Badge> : null}
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-[3fr_2fr] gap-6">
         <FieldImage
           url={urls.get(sample.storagePath) ?? null}
           alt={`Field ${fieldNumber} of ${sessionTitle}`}
@@ -106,7 +108,9 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
             <Fact label="Model" value={sample.inferenceModelVersion ?? "—"} />
             <Fact label="Eggs counted" value={String(counted)} mono />
             <Fact label="Detections" value={String(detections.length)} mono />
-            {sample.userNote ? (
+            {/* Free text the medtech typed: it can name the patient, so it follows the
+                same disclosure as the patient's name. */}
+            {sample.userNote && disclosure === "identified" ? (
               <div className="col-span-2">
                 <Fact label="Medtech's note" value={sample.userNote} />
               </div>

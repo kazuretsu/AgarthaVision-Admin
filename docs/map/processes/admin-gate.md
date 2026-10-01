@@ -17,7 +17,7 @@ Input: an HTTP request → Movement: refresh session, resolve identity, resolve 
 | Organization admin | An active org-admin membership (organizations) | Their own organization's pages                  |
 | Medtech            | Anyone else                                    | None — told to use the mobile app, sees no data |
 
-The rule is `resolveConsoleAccess` (`src/domain/access.ts:37`). It is plain domain code so
+The rule is `resolveConsoleAccess` (`src/domain/access.ts:41`). It is plain domain code so
 it runs before any read or write, whichever provider sits behind the ports (D7). The profile
 role wins: a super admin who also holds a membership stays a super admin.
 

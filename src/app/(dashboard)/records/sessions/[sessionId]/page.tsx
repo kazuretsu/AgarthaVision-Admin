@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { canonicalSpecies, isCountedDetection, isUuid, patientDisplayName } from "@/domain";
+import {
+  canonicalSpecies,
+  isCountedDetection,
+  isUuid,
+  patientDisclosureFor,
+  patientLabel,
+} from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { formatDateTime, personName } from "@/lib/format";
@@ -26,14 +32,16 @@ export const dynamic = "force-dynamic";
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
-  await requirePageAccess(ANY_CONSOLE_USER);
+  const actor = await requirePageAccess(ANY_CONSOLE_USER);
   // A malformed id names no record; Postgres would reject it as an error.
   if (!isUuid(sessionId)) notFound();
 
   let record;
   let urls;
   try {
-    record = await (await getDatabase()).getSessionRecord(sessionId);
+    record = await (
+      await getDatabase()
+    ).getSessionRecord(sessionId, patientDisclosureFor(actor.access));
     if (!record) notFound();
     urls = await signFrames(record.samples.map((detail) => detail.sample.storagePath));
   } catch (cause) {
@@ -44,11 +52,11 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
   }
 
   const { session, patient, author, samples, summary } = record;
-  const patientName = patientDisplayName(patient);
+  const patientName = patientLabel(patient);
   const title = session.label ?? "Untitled session";
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
       <Breadcrumbs
         items={[
           { label: "Records", href: "/records" },
@@ -63,7 +71,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       </header>
 
       <Card>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <CardContent className="grid grid-cols-5 gap-4">
           <Fact
             label="Patient"
             value={
@@ -96,7 +104,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
             No verified fields in this session yet.
           </p>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-3 gap-4">
             {samples.map((detail, index) => {
               const counted = detail.detections.filter(isCountedDetection);
               const fieldEggs = new Map<string, number>();

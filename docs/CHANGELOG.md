@@ -9,6 +9,19 @@ page's `requirePageAccess()` is the only check that runs. It let the layout's tw
 escape as errors, and a session that ended or an access revoked since the last click
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
+## [fix] Records: super admins see patients de-identified
+
+A patient's name, sex and birthdate now reach only an organization admin of the patient's
+own laboratory. Each clinic controls its patients' data under RA 10173 and AgarthaVision
+processes it for them; a super admin runs the platform and needs no patient's identity.
+`patientDisclosureFor` decides it, every patient read in `DatabasePort` takes the result,
+and the Supabase adapter leaves the identity columns out of a de-identified request, so
+they never leave the database for a super admin. A name search is ignored for them, the
+medtech's free-text note is withheld, and a patient is named by the start of their record
+id. `Patient` carries the identity fields under `identity`, `null` when withheld.
+
+Record pages also drop their phone breakpoints, as the shell did.
+
 ## [fix] Records: one row per species, and a bad id is a 404
 
 The LPF table joined ranges and egg counts on their raw keys. Ranges are keyed by the stored

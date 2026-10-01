@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { ageYears, isUuid, patientDisplayName } from "@/domain";
+import { ageYears, isUuid, patientDisclosureFor, patientLabel } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { formatBirthdate, formatDateTime, personName } from "@/lib/format";
@@ -21,18 +21,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-/** One patient and every session read for them, newest first. */
+/**
+ * One patient and every session read for them, newest first. Sex and birthdate
+ * appear only for a reader who may see them (`patientDisclosureFor`).
+ */
 export const dynamic = "force-dynamic";
 
 export default async function PatientPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = await params;
-  await requirePageAccess(ANY_CONSOLE_USER);
+  const actor = await requirePageAccess(ANY_CONSOLE_USER);
   // A malformed id names no record; Postgres would reject it as an error.
   if (!isUuid(patientId)) notFound();
 
   let record;
   try {
-    record = await (await getDatabase()).getPatientRecord(patientId);
+    record = await (
+      await getDatabase()
+    ).getPatientRecord(patientId, patientDisclosureFor(actor.access));
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Patient" variable={cause.variable} />;
@@ -42,10 +47,11 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
   if (!record) notFound();
 
   const { patient, registeredBy, sessions } = record;
-  const name = patientDisplayName(patient);
+  const name = patientLabel(patient);
+  const identity = patient.identity;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
       <Breadcrumbs items={[{ label: "Records", href: "/records" }, { label: name }]} />
 
       <header className="flex flex-col gap-1">
@@ -56,12 +62,18 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
       </header>
 
       <Card>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Fact label="Sex" value={patient.sex === "M" ? "Male" : "Female"} />
-          <Fact
-            label="Birthdate"
-            value={`${formatBirthdate(patient.birthdate)} (${ageYears(patient.birthdate, new Date())} y)`}
-          />
+        <CardContent className="grid grid-cols-5 gap-4">
+          {identity ? (
+            <>
+              <Fact label="Sex" value={identity.sex === "M" ? "Male" : "Female"} />
+              <Fact
+                label="Birthdate"
+                value={`${formatBirthdate(identity.birthdate)} (${ageYears(identity.birthdate, new Date())} y)`}
+              />
+            </>
+          ) : (
+            <Fact label="Record ID" value={patient.id} mono />
+          )}
           <Fact label="Barangay PSGC" value={patient.psgcBarangayCode} mono />
           <Fact label="Registered by" value={personName(registeredBy)} />
           <Fact label="Registered" value={formatDateTime(patient.createdAt)} />

@@ -25,9 +25,11 @@ export interface Profile {
   createdAt: Iso8601;
 }
 
-/** `public.patients` — the unit a medtech works from (`0001`, `0002`). */
-export interface Patient {
-  id: string;
+/**
+ * The columns of `public.patients` that identify a person (`0001`, `0002`). Read only
+ * for a reader whose disclosure is `"identified"` (`patientDisclosureFor`).
+ */
+export interface PatientIdentity {
   lastname: string;
   /** `''` for a codenamed patient (`0002` relaxed the non-blank CHECK). Never SQL null. */
   firstname: string;
@@ -36,6 +38,16 @@ export interface Patient {
   sex: "M" | "F";
   /** A date, not an age. Age is computed per encounter. */
   birthdate: string;
+}
+
+/** `public.patients` — the unit a medtech works from (`0001`, `0002`). */
+export interface Patient {
+  id: string;
+  /**
+   * Name, sex and birthdate, or `null` when they were not read because this reader
+   * may not see them. `null` never means the patient has none.
+   */
+  identity: PatientIdentity | null;
   /** Canonical zero-padded 10-digit PSGC barangay code. */
   psgcBarangayCode: string;
   /** Provenance only; visibility resolves through `patient_users`. */

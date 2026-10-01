@@ -1,4 +1,5 @@
-import type { PatientListItem, PatientRecord, Profile, SampleRecord } from "@/domain";
+import type { PatientDisclosure, PatientListItem, PatientRecord, Profile } from "@/domain";
+import type { SampleRecord } from "@/domain";
 import type { SampleRecordDetail, SessionRecord } from "@/domain";
 import type { RecordFilter } from "@/domain/filters";
 
@@ -25,6 +26,12 @@ export interface RecordQuery {
 }
 
 export interface PatientQuery {
+  /**
+   * Whether names, sex and birthdates are read at all. Derive it with
+   * `patientDisclosureFor`. When `"deidentified"` the adapter never selects those
+   * columns and ignores {@link search}, which would otherwise match on a name.
+   */
+  disclosure: PatientDisclosure;
   /** Matches surname, given name or codename, case-insensitively. */
   search?: string;
   /** Exact 10-digit PSGC barangay code. */
@@ -35,16 +42,19 @@ export interface PatientQuery {
 
 export interface DatabasePort {
   /** Patients, most recently registered first. */
-  listPatients(query?: PatientQuery): Promise<PatientListItem[]>;
+  listPatients(query: PatientQuery): Promise<PatientListItem[]>;
 
   /** One patient with their sessions and what each showed; `null` when absent or hidden. */
-  getPatientRecord(patientId: string): Promise<PatientRecord | null>;
+  getPatientRecord(patientId: string, disclosure: PatientDisclosure): Promise<PatientRecord | null>;
 
   /** One session with its live fields; `null` when absent or hidden. */
-  getSessionRecord(sessionId: string): Promise<SessionRecord | null>;
+  getSessionRecord(sessionId: string, disclosure: PatientDisclosure): Promise<SessionRecord | null>;
 
   /** One live field; `null` when absent, hidden, or deleted as a duplicate. */
-  getSampleRecord(sampleId: string): Promise<SampleRecordDetail | null>;
+  getSampleRecord(
+    sampleId: string,
+    disclosure: PatientDisclosure,
+  ): Promise<SampleRecordDetail | null>;
 
   /**
    * Every processed sample, composed into {@link SampleRecord}. Serves the

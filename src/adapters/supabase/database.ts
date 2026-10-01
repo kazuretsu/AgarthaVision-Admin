@@ -9,6 +9,7 @@ import {
 import type {
   Detection,
   Patient,
+  PatientDisclosure,
   PatientListItem,
   PatientRecord,
   PersonRef,
@@ -52,11 +53,12 @@ interface ProfileRefRow {
 
 interface PatientRow {
   id: string;
-  lastname: string;
-  firstname: string;
-  middle_name: string | null;
-  sex: string;
-  birthdate: string;
+  /** Present only when the identity columns were selected. */
+  lastname?: string;
+  firstname?: string;
+  middle_name?: string | null;
+  sex?: string;
+  birthdate?: string;
   psgc_barangay_code: string;
   created_by: string;
   created_at: string;
@@ -125,8 +127,19 @@ interface ProfileRow {
  */
 const DEFAULT_LIMIT = 1000;
 
-const PATIENT_COLUMNS =
-  "id, lastname, firstname, middle_name, sex, birthdate, psgc_barangay_code, created_by, created_at";
+const PATIENT_COLUMNS = "id, psgc_barangay_code, created_by, created_at";
+/** Who the patient is. Selected only for an `"identified"` reader. */
+const PATIENT_IDENTITY_COLUMNS = "lastname, firstname, middle_name, sex, birthdate";
+
+/**
+ * The patient columns a reader may receive. A de-identified reader's request
+ * never names the identity columns, so they do not leave the database for them.
+ */
+function patientColumns(disclosure: PatientDisclosure): string {
+  return disclosure === "identified"
+    ? `${PATIENT_COLUMNS}, ${PATIENT_IDENTITY_COLUMNS}`
+    : PATIENT_COLUMNS;
+}
 /**
  * The medtech who registered a patient. Named by constraint because `patients`
  * reaches `profiles` two ways — `created_by`, and the `patient_users` join table —
@@ -171,14 +184,19 @@ function toPersonRef(row: ProfileRefRow | null | undefined): PersonRef {
   return row ? { id: row.id, fullName: row.full_name } : null;
 }
 
-function toPatient(row: PatientRow): Patient {
+function toPatient(row: PatientRow, disclosure: PatientDisclosure): Patient {
   return {
     id: row.id,
-    lastname: row.lastname,
-    firstname: row.firstname,
-    middleName: row.middle_name,
-    sex: row.sex === "M" ? "M" : "F",
-    birthdate: row.birthdate,
+    identity:
+      disclosure === "identified"
+        ? {
+            lastname: row.lastname ?? "",
+            firstname: row.firstname ?? "",
+            middleName: row.middle_name ?? null,
+            sex: row.sex === "M" ? "M" : "F",
+            birthdate: row.birthdate ?? "",
+          }
+        : null,
     psgcBarangayCode: row.psgc_barangay_code,
     createdBy: row.created_by,
     createdAt: row.created_at,
@@ -292,16 +310,17 @@ function liveSampleDetails(rows: SampleRow[] | null | undefined): SampleDetail[]
 export class SupabaseDatabaseAdapter implements DatabasePort {
   constructor(private readonly client: SupabaseClient) {}
 
-  async listPatients(query: PatientQuery = {}): Promise<PatientListItem[]> {
-    const { search, barangayCode, limit = DEFAULT_LIMIT } = query;
+  async listPatients(query: PatientQuery): Promise<PatientListItem[]> {
+    const { disclosure, search, barangayCode, limit = DEFAULT_LIMIT } = query;
 
     let request = this.client
       .from("patients")
-      .select(`${PATIENT_COLUMNS}, ${PATIENT_REGISTRAR}, sessions ( started_at )`)
+      .select(`${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( started_at )`)
       .order("created_at", { ascending: false })
       .limit(limit);
 
-    const needle = search ? sanitiseSearch(search) : "";
+    // A name search is a question about a name: a de-identified reader may not ask it.
+    const needle = search && disclosure === "identified" ? sanitiseSearch(search) : "";
     if (needle.length > 0) {
       request = request.or(`lastname.ilike.*${needle}*,firstname.ilike.*${needle}*`);
     }
@@ -316,7 +335,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     return ((data as unknown as Row[] | null) ?? []).map((row) => {
       const starts = (row.sessions ?? []).map((session) => session.started_at).sort();
       return {
-        patient: toPatient(row),
+        patient: toPatient(row, disclosure),
         registeredBy: toPersonRef(row.profiles),
         sessionCount: starts.length,
         lastSessionAt: starts.at(-1) ?? null,
@@ -324,10 +343,15 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     });
   }
 
-  async getPatientRecord(patientId: string): Promise<PatientRecord | null> {
+  async getPatientRecord(
+    patientId: string,
+    disclosure: PatientDisclosure,
+  ): Promise<PatientRecord | null> {
     const { data, error } = await this.client
       .from("patients")
-      .select(`${PATIENT_COLUMNS}, ${PATIENT_REGISTRAR}, sessions ( ${SESSION_SUMMARY_TREE} )`)
+      .select(
+        `${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( ${SESSION_SUMMARY_TREE} )`,
+      )
       .eq("id", patientId)
       .maybeSingle();
 
@@ -344,14 +368,21 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       }))
       .sort((left, right) => right.session.startedAt.localeCompare(left.session.startedAt));
 
-    return { patient: toPatient(row), registeredBy: toPersonRef(row.profiles), sessions };
+    return {
+      patient: toPatient(row, disclosure),
+      registeredBy: toPersonRef(row.profiles),
+      sessions,
+    };
   }
 
-  async getSessionRecord(sessionId: string): Promise<SessionRecord | null> {
+  async getSessionRecord(
+    sessionId: string,
+    disclosure: PatientDisclosure,
+  ): Promise<SessionRecord | null> {
     const { data, error } = await this.client
       .from("sessions")
       .select(
-        `${SESSION_COLUMNS}, profiles ( id, full_name ), patients ( ${PATIENT_COLUMNS} ), samples ( ${SAMPLE_TREE} )`,
+        `${SESSION_COLUMNS}, profiles ( id, full_name ), patients ( ${patientColumns(disclosure)} ), samples ( ${SAMPLE_TREE} )`,
       )
       .eq("id", sessionId)
       .maybeSingle();
@@ -367,7 +398,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     const samples = liveSampleDetails(row.samples);
     return {
       session: toSession(row),
-      patient: toPatient(row.patients),
+      patient: toPatient(row.patients, disclosure),
       author: toPersonRef(row.profiles),
       samples,
       summary: summariseSession({
@@ -378,7 +409,10 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     };
   }
 
-  async getSampleRecord(sampleId: string): Promise<SampleRecordDetail | null> {
+  async getSampleRecord(
+    sampleId: string,
+    disclosure: PatientDisclosure,
+  ): Promise<SampleRecordDetail | null> {
     const { data: owner, error: ownerError } = await this.client
       .from("samples")
       .select("session_id, deleted_at")
@@ -388,7 +422,10 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     if (ownerError) throw new DatabaseReadError("getSampleRecord", ownerError);
     if (!owner || (owner as { deleted_at: string | null }).deleted_at !== null) return null;
 
-    const record = await this.getSessionRecord((owner as { session_id: string }).session_id);
+    const record = await this.getSessionRecord(
+      (owner as { session_id: string }).session_id,
+      disclosure,
+    );
     if (!record) return null;
 
     const index = record.samples.findIndex((detail) => detail.sample.id === sampleId);

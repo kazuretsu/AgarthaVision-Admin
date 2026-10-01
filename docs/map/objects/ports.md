@@ -14,7 +14,7 @@ or feature code (constraint #1). That only holds if **no vendor type appears in 
 signature** — otherwise swapping a provider is a refactor of everything that imports it,
 not an addition. Grep the three files for `supabase` and you should find it only in prose.
 
-`DatabasePort` is **read-only by construction** (`src/ports/db.ts:36`). There is no
+`DatabasePort` is **read-only by construction** (`src/ports/db.ts:43`). There is no
 `insert`, `update` or `delete` verb on it. That is how constraint #4 is enforced rather
 than merely stated: the console cannot mutate clinical data because it has no way to
 express the intent.
@@ -23,17 +23,17 @@ express the intent.
 
 | Port           | Members                                                                                                                      | File                      |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `DatabasePort` | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSampleRecords`, `getProfile`, `listProfiles` | `src/ports/db.ts:36`      |
+| `DatabasePort` | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSampleRecords`, `getProfile`, `listProfiles` | `src/ports/db.ts:43`      |
 | `StoragePort`  | `createSignedUrl`                                                                                                            | `src/ports/storage.ts:21` |
 | `AuthPort`     | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                                     | `src/ports/auth.ts:33`    |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
-provider raised it: `DatabaseReadError` (`src/ports/db.ts:63`), `StorageAccessError`
+provider raised it: `DatabaseReadError` (`src/ports/db.ts:73`), `StorageAccessError`
 (`src/ports/storage.ts:30`), and `NotAuthenticatedError` / `NotAuthorizedError` /
 `AuthenticationFailedError` (`src/ports/auth.ts:55-77`).
 
 `requireConsoleActor()` returns the user together with their `ConsoleAccess`
-(`src/domain/access.ts:19`) — super admin, or org admin with their organization — and
+(`src/domain/access.ts:23`) — super admin, or org admin with their organization — and
 throws rather than returning a reduced view for anyone else. There is no partial console,
 so a caller cannot forget to branch on a role and leak a cross-user query. The port
 imports that one domain type; it still names no vendor.

@@ -1,4 +1,4 @@
-import type { Patient } from "./entities";
+import type { Patient, PatientIdentity } from "./entities";
 
 /**
  * How a patient is named and aged, the way the Android app does it
@@ -11,7 +11,7 @@ import type { Patient } from "./entities";
  * codename alone, with no dangling comma.
  */
 export function patientDisplayName(
-  patient: Pick<Patient, "lastname" | "firstname" | "middleName">,
+  patient: Pick<PatientIdentity, "lastname" | "firstname" | "middleName">,
 ): string {
   const lastname = patient.lastname.trim();
   const firstname = patient.firstname.trim();
@@ -21,8 +21,19 @@ export function patientDisplayName(
 }
 
 /** True for a codenamed patient: no first name on record. */
-export function isCodenamed(patient: Pick<Patient, "firstname">): boolean {
+export function isCodenamed(patient: Pick<PatientIdentity, "firstname">): boolean {
   return patient.firstname.trim().length === 0;
+}
+
+/**
+ * How a page names a patient: their display name when the reader may see it,
+ * otherwise the first eight characters of the record id, which is what a clinic
+ * and AgarthaVision support quote to each other.
+ */
+export function patientLabel(patient: Pick<Patient, "id" | "identity">): string {
+  return patient.identity
+    ? patientDisplayName(patient.identity)
+    : `Patient ${patient.id.slice(0, 8)}`;
 }
 
 /**
