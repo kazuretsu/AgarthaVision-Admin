@@ -2,6 +2,15 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Records: a super admin sees no session label either
+
+A session label is pre-filled on the phone from the patient's initials and barangay, and a
+medtech may type anything over it, so it named patients to super admins on the patient,
+session and field pages. For a de-identified reader the adapter now drops the label, and
+the medtech's note with it, when it maps the row (`toSession`, `toSample`). Before, the note
+reached the server and was only hidden at render. `sessionLabel` names their session
+"Session" plus the first eight characters of its id.
+
 ## [fix] A page turns a signed-out or revoked visitor away itself
 
 A client-side navigation re-renders the page but not the `(dashboard)` layout, so the
@@ -9,6 +18,53 @@ page's `requirePageAccess()` is the only check that runs. It let the layout's tw
 escape as errors, and a session that ended or an access revoked since the last click
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
+
+## [fix] Records: super admins see patients de-identified
+
+A patient's name, sex and birthdate now reach only an organization admin of the patient's
+own laboratory. Each clinic controls its patients' data under RA 10173 and AgarthaVision
+processes it for them; a super admin runs the platform and needs no patient's identity.
+`patientDisclosureFor` decides it, every patient read in `DatabasePort` takes the result,
+and the Supabase adapter leaves the identity columns out of a de-identified request, so
+they never leave the database for a super admin. A name search is ignored for them, the
+medtech's free-text note is withheld, and a patient is named by the start of their record
+id. `Patient` carries the identity fields under `identity`, `null` when withheld.
+
+Record pages also drop their phone breakpoints, as the shell did.
+
+## [fix] Records: one row per species, and a bad id is a 404
+
+The LPF table joined ranges and egg counts on their raw keys. Ranges are keyed by the stored
+finding species (as the app groups them) and counts by the canonical name, so a finding
+stored as `ascaris_lumbricoides` split one species into a range-only row and a count-only
+row. `speciesRows` now joins on `canonicalSpecies` without recomputing any range, and the
+session page's field cards name species the way the sample page does.
+
+A patient, session or sample id that is not a well-formed uuid now 404s before any read;
+Postgres used to reject it and the page failed with a 500. Each detail page repeats the
+access check, and `records/loading.tsx` shows that a click registered while a session's
+frames are read and signed.
+
+## [feat] Browse records as patient → session → sample, in LPF as the app reports them
+
+The console was broken: every sample query still selected `samples.gps_*`, which the
+consolidated schema dropped, so the dashboard and records pages failed outright. The
+domain now mirrors the app's `0001`–`0006` on `development` — patients, sessions owned by
+patients, `deleted_at` on samples, `prediction_id` and `stage` on detections, per-field
+species findings — and the records page became a browser: patients, a patient's sessions,
+a session's findings and fields, and one field's frame and detections.
+
+Figures follow the app, not a local rule: every detection except `FALSE_POSITIVE` counts; a
+sample deleted as a duplicate appears nowhere and counts toward nothing; each species gets a
+min–max eggs-per-field range with a rare/few/moderate/numerous descriptor, never a mean,
+never EPG. `src/domain/clinical.test.ts` carries every case from the app's
+`LpfAggregationTest`. Each detection says whether its box is the model's, redrawn or added,
+and a frame with no stored predictions says "unknown" rather than guessing.
+
+Frames are signed with the visitor's own session: `0001` already grants admins read on the
+whole bucket, so the service-role path is gone and nothing reads that key. The dashboard
+works again but still shows EPG, and the EPG export route remains without a link; both move
+to LPF in their own changes.
 
 ## [fix] Desktop-only console, and the three tiers named as the product names them
 

@@ -35,7 +35,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── ports.md               The three interfaces and their error types.
 │       │   └── provider-registry.md   How a backend is selected, and why lazily.
 │       ├── processes/
-│       │   ├── epg-aggregation.md     Count → multiply → group. What counts, and why.
+│       │   ├── lpf-session-summary.md What counts, and the LPF range, as the app does it.
+│       │   ├── epg-aggregation.md     Legacy EPG, dashboard and export only.
 │       │   ├── research-matrix-export.md  Filter → rows → CSV/JSON. The column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
@@ -51,8 +52,10 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Summary cards, EPG trend, distribution, severity.
-    │       └── records/       Filterable table, plus export/route.ts (gate repeated).
-    ├── domain/                Entity types, enums, access rules, EPG and severity logic. No I/O.
+    │       └── records/       Patients list; patients/, sessions/, samples/ detail pages;
+    │                          loading.tsx; export/route.ts (legacy EPG export, gate repeated).
+    ├── domain/                Entities, read models, access rules, clinical (LPF) and
+    │                          patient rules, id checks; legacy EPG and severity. No I/O.
     ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
@@ -60,12 +63,15 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI. Ours to edit.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
+    │   ├── records/           LPF table, field image with box overlay, breadcrumbs.
     │   ├── theme-provider.tsx next-themes, class-based.
     │   └── charts/            Inline SVG. No charting dependency.
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
         ├── utils.ts           cn(): clsx + tailwind-merge.
+        ├── format.ts          Dates in Asia/Manila, person names.
+        ├── signed-urls.ts     Signs a page's frames; an unreadable one becomes null.
         ├── palette.ts         Validated chart colors, with the validator's findings.
         └── search-params.ts   Filter ⇄ query string, defensively parsed.
 ```

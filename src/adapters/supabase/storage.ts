@@ -5,23 +5,17 @@ import {
   type SignedUrl,
   type StoragePort,
 } from "@/ports/storage";
-import { createServiceClient } from "./client";
-import { serviceConfig } from "./env";
+import { createRequestClient } from "./client";
+import { storageConfig } from "./env";
 
 /**
  * Supabase Storage implementation of {@link StoragePort}.
  *
- * Unlike the database adapter, this one runs with the service-role key. That is
- * not a convenience: `0003_storage_rls.sql` scopes SELECT on the `samples`
- * bucket to `(storage.foldername(name))[1] = auth.uid()`, with no admin
- * exception, so an admin's own session cannot read a frame captured by any other
- * medtech. Until the admin read policy lands upstream, signing server-side is
- * the only way this console can render an image it is entitled to show.
- *
- * Two things keep that narrow. The key never leaves the server — this module is
- * imported only from server components and route handlers. And the caller is
- * expected to have passed `requirePageAccess()` or `requireRouteAccess()` first: this adapter mints a URL for
- * whatever key it is given and performs no authorisation of its own.
+ * Signs as the signed-in user. The app's `0001_init.sql` grants admins read on
+ * every object in the `samples` bucket (`"samples: admin read all"`), so the
+ * Storage policy — not this adapter — decides which frames a console user may
+ * see. An object the user may not read fails to sign, and the page shows the
+ * frame as unavailable rather than borrowing elevated credentials.
  */
 export class SupabaseStorageAdapter implements StoragePort {
   constructor(
@@ -41,8 +35,8 @@ export class SupabaseStorageAdapter implements StoragePort {
       .from(this.bucket)
       .createSignedUrl(key, expiresIn);
 
-    // A missing object surfaces as an error here, not as a null URL, so both
-    // shapes are treated as failure rather than trusting one of them.
+    // A missing or unreadable object surfaces as an error here, not as a null
+    // URL, so both shapes are treated as failure rather than trusting one of them.
     if (error || !data?.signedUrl) {
       throw new StorageAccessError(key, error);
     }
@@ -54,11 +48,11 @@ export class SupabaseStorageAdapter implements StoragePort {
   }
 }
 
-/** Builds the adapter against the server-only, service-role client. */
-export function createSupabaseStorage(): StoragePort {
-  const config = serviceConfig();
+/** Builds the adapter against a request-scoped, session-carrying client. */
+export async function createSupabaseStorage(): Promise<StoragePort> {
+  const config = storageConfig();
   return new SupabaseStorageAdapter(
-    createServiceClient(),
+    await createRequestClient(),
     config.samplesBucket,
     config.signedUrlTtlSeconds,
   );

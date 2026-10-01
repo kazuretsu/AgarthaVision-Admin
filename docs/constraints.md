@@ -19,13 +19,15 @@ vendor import statements; the only construction site for a provider is
 ### 2. Server-only secrets
 
 The service-role key is read on the server, at request time, and never reaches the browser.
+Today no code reads it at all: every read, image signing included, runs as the signed-in
+user.
 Only `NEXT_PUBLIC_`-prefixed variables may appear in client components. Env access goes
 through the accessor helpers, which throw a named error when a variable is missing —
 never at module load.
 
 **Enforced at:** `src/lib/env.ts` (lazy accessors, no top-level throw);
-`src/adapters/supabase/client.ts` (service client is created inside request-scoped
-functions); `.env.example` documents which variables are public and which are not.
+`src/adapters/supabase/client.ts` (builds only the request-scoped client);
+`.env.example` documents which variables are public and which are not.
 
 ### 3. Admin-only routes
 
@@ -66,14 +68,16 @@ is named.
 
 ### 6. Validated data only in reports
 
-Only human-validated records count toward official aggregation. A detection contributes to
-EPG only when its verdict is `CONFIRMED`; a sample counts only when it has been verified.
-Pending, failed and unverified inference output is excluded, and the UI says so wherever a
-report or an export is generated.
+Only human-validated records count. A sample row exists upstream only once a medtech
+verified it, and a sample deleted as a duplicate counts toward nothing. Every detection the
+medtech did not reject counts as an egg — `WRONG_CLASS` and `BOX_INCORRECT` are real eggs —
+which is the app's own rule; the console never disagrees with the app about one smear.
 
-**Enforced at:** `src/domain/epg.ts` (`isCountableDetection`, `isValidatedSample` filter
-before any sum); the disclosure line rendered on the dashboard and above the export
-controls. This is a clinical requirement, not a display preference.
+**Enforced at:** `src/domain/clinical.ts` (`isCountedDetection`, `isLiveSample`,
+`summariseSession`), with `src/domain/clinical.test.ts` holding the app's own test cases.
+The dashboard and export still apply the older `CONFIRMED`-only EPG rule in
+`src/domain/epg.ts` until they are rebuilt. This is a clinical requirement, not a display
+preference.
 
 ### 7. Migrations own the schema
 
@@ -150,3 +154,23 @@ command bodies, and no explanation that belongs on a shelf file. It is read once
 re-read. If it grows past roughly 60 lines, content has leaked into it.
 
 **Enforced at:** review of any diff touching `SESSION_INIT.md`.
+
+### 14. Patient identity stays with the clinic
+
+A patient's name, sex and birthdate reach an **organization admin** of the patient's own
+laboratory and nobody else in the console. A **super admin** reads records de-identified:
+the identity columns are never selected for them, a name search is ignored, and the
+session label and the medtech's free-text note on a field are withheld, because the label is
+pre-filled from the patient's initials and either can be typed over with a name. Each
+clinic is the controller of its patients' data under RA 10173 and AgarthaVision hosts it
+as the clinic's processor; running the platform needs no patient's identity, so
+proportionality (§11) keeps it out. Pages name a de-identified patient or session by the
+first eight characters of its record id.
+
+**Enforced at:** `src/domain/access.ts` (`patientDisclosureFor`, the rule);
+`src/ports/db.ts` (every patient read takes a `PatientDisclosure`);
+`src/adapters/supabase/database.ts` (`patientColumns`, which leaves the identity columns
+out of the request; `toSession` and `toSample`, which drop the label and the note). The
+app's own policies still let `profiles.role = 'admin'` read every
+patient row, so the console's rule is the only line today; narrowing that policy is the
+app's change to make.

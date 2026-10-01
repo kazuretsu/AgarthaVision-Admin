@@ -20,12 +20,8 @@ export interface SignedUrlOptions {
 
 export interface StoragePort {
   /**
-   * Mints a signed URL for one object key.
-   *
-   * Known upstream gap: Storage RLS on the `samples` bucket is owner-scoped with
-   * no admin exception (`0003_storage_rls.sql`), so this call must run through a
-   * server-side client with elevated credentials until the admin read policy
-   * lands. Image loading in this console depends on that policy being applied.
+   * Mints a signed URL for one object key, as the signed-in user. Throws
+   * {@link StorageAccessError} when that user may not read the object.
    */
   createSignedUrl(objectKey: string, options?: SignedUrlOptions): Promise<SignedUrl>;
 }

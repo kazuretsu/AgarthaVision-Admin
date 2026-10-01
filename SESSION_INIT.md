@@ -8,12 +8,10 @@ The **AgarthaVision Admin Console** — a desktop Next.js web app for the super 
 organization admins of the AgarthaVision soil-transmitted helminth (STH) diagnostic system. A medical technologist
 captures microscopy frames of a fecal smear through a phone on a microscope; an inference
 model detects and classifies _Ascaris lumbricoides_, _Trichuris trichiura_ and Hookworm
-eggs; the system computes Eggs Per Gram (EPG) with the DOH volumetric multiplier; a human
-validates every model output before it counts. The Android client is the medtech's tool.
-This console is the surveillance surface the Android app does not implement: a detailed
-records dashboard over all users' processed samples with a research-matrix export, and an
-administrative dashboard of summary cards, EPG trend, parasite distribution and severity
-split. It is read-only over clinical data.
+eggs; a human validates every model output; each session reports a per-species range of
+eggs per low-power field (LPF). The Android client is the medtech's tool. This console is
+the surface for the people who run the system: a records browser (patient → session →
+sample), a dashboard and a research export. It is read-only over clinical data.
 
 ## Repo / vault boundary
 
@@ -30,7 +28,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Adding or swapping a data/storage/auth provider | `docs/map/objects/provider-registry.md`, `docs/map/objects/ports.md` |
 | Touching anything under `src/adapters/`         | `docs/map/effects/CONTEXT.md`                                        |
 | Changing a domain entity or enum                | `docs/map/objects/domain-model.md`, `docs/constraints.md` (#5, #7)   |
-| Changing EPG, severity or aggregation logic     | `docs/map/processes/epg-aggregation.md`                              |
+| Changing what counts, LPF or session figures    | `docs/map/processes/lpf-session-summary.md`                          |
 | Changing the export columns or file format      | `docs/map/processes/research-matrix-export.md`                       |
 | Changing who can reach a route                  | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
 | Loading sample images                           | `docs/map/processes/signed-image-url.md`                             |

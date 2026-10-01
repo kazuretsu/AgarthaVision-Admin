@@ -14,14 +14,12 @@ export function makeSample(overrides: Partial<Sample> = {}): Sample {
     userId: "33333333-3333-4333-8333-333333333333",
     capturedAt: "2026-03-01T08:00:00.000Z",
     verifiedAt: "2026-03-01T08:00:12.400Z",
-    gpsLatitude: null,
-    gpsLongitude: null,
-    gpsAccuracy: null,
     storagePath: "33333333-3333-4333-8333-333333333333/11111111-1111-4111-8111-111111111111.jpg",
     inferenceModelVersion: "sth-yolo-1.4.0",
     needsReannotation: false,
     isManual: false,
     userNote: null,
+    deletedAt: null,
     ...overrides,
   };
 }
@@ -41,6 +39,8 @@ export function makeDetection(overrides: Partial<Detection> = {}): Detection {
     bboxH: 0.2,
     verdict: DetectionVerdict.Confirmed,
     expertClass: null,
+    predictionId: null,
+    stage: null,
     ...overrides,
   };
 }

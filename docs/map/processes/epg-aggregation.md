@@ -1,4 +1,13 @@
+---
+status: stale
+---
+
 # EPG aggregation
+
+**Scope now:** the dashboard and the research export only. The records browser does not use
+anything here — it shows LPF ranges and counts every non-rejected egg
+(`docs/map/processes/lpf-session-summary.md`). EPG is retracted (PB-16) and leaves the
+console when those two surfaces are rebuilt.
 
 Input: `SampleRecord[]` → Movement: count, multiply, group → Output: the figures on the
 administrative dashboard.
@@ -51,8 +60,7 @@ A surveillance gap is a different claim from a day on which no eggs were found.
 
 **Does not hit**
 
-- The records table's per-row figures, which come from `composeSampleRecord` and are shown
-  for every record regardless of status.
+- The records browser, which uses `src/domain/clinical.ts` instead.
 - Stored data. Nothing here is persisted; every figure is recomputed per request.
 
 ## Open

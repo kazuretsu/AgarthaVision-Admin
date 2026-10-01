@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessLabel, isAllowed, resolveConsoleAccess } from "./access";
+import { accessLabel, isAllowed, patientDisclosureFor, resolveConsoleAccess } from "./access";
 
 const membership = { organizationId: "org-1", organizationName: "Lab One" };
 
@@ -38,5 +38,15 @@ describe("accessLabel", () => {
   it("names both kinds", () => {
     expect(accessLabel({ kind: "super_admin" })).toBe("Super admin");
     expect(accessLabel(resolveConsoleAccess("medtech", membership)!)).toBe("Organization admin");
+  });
+});
+
+describe("patientDisclosureFor", () => {
+  it("shows an organization admin their own clinic's patients identified", () => {
+    expect(patientDisclosureFor(resolveConsoleAccess("medtech", membership)!)).toBe("identified");
+  });
+
+  it("keeps patient identity from a super admin", () => {
+    expect(patientDisclosureFor({ kind: "super_admin" })).toBe("deidentified");
   });
 });

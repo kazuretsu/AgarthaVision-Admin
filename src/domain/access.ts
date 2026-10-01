@@ -53,6 +53,22 @@ export function resolveConsoleAccess(
   return null;
 }
 
+/**
+ * Whether a reader is shown who a patient is: name, sex and birthdate.
+ *
+ * Each clinic is the controller of its patients' data under RA 10173, and
+ * AgarthaVision hosts it as the clinic's processor. An organization admin is the
+ * clinic's own staff and sees its patients identified. A super admin runs the
+ * platform — organizations, accounts, model quality, aggregate figures — none of
+ * which needs a name or a birthdate, so proportionality (§11) keeps them out:
+ * records reach a super admin de-identified, as the research export already does.
+ */
+export type PatientDisclosure = "identified" | "deidentified";
+
+export function patientDisclosureFor(access: ConsoleAccess): PatientDisclosure {
+  return access.kind === "org_admin" ? "identified" : "deidentified";
+}
+
 /** True when this access kind is one of the kinds a page or action allows. */
 export function isAllowed(access: ConsoleAccess, allowed: readonly ConsoleAccessKind[]): boolean {
   return allowed.includes(access.kind);
