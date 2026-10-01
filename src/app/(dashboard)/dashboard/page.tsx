@@ -62,7 +62,7 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      <section aria-label="System summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="System summary" className="grid grid-cols-4 gap-3">
         <StatTile
           label="Samples processed"
           value={summary.totalSamplesProcessed.toLocaleString()}
@@ -91,7 +91,7 @@ export default async function DashboardPage() {
         <EpgTrendChart points={trend} />
       </section>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-8">
         <section aria-label="Parasite distribution" className="flex flex-col gap-3">
           <h2 className="text-[15px] font-semibold text-stone-ink">Parasite distribution</h2>
           <SpeciesDistribution slices={distribution} />
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
         </section>
       </div>
 
-      <section aria-label="EPG summary" className="grid gap-3 sm:grid-cols-3">
+      <section aria-label="EPG summary" className="grid grid-cols-3 gap-3">
         <StatTile label="Average EPG" value={epg.averageEpg.toLocaleString()} />
         <StatTile label="Highest EPG" value={epg.highestEpg.toLocaleString()} />
         <StatTile label="Lowest EPG" value={epg.lowestEpg.toLocaleString()} />

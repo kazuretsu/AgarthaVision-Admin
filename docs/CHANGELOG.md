@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Desktop-only console, and the three tiers named as the product names them
+
+Super admins and organization admins use the console at a computer; medtechs use the mobile
+app. The shell no longer folds its sidebar into a row under the header below 768px: the
+sidebar and the organization name are always shown, the shell holds a 1024px minimum width
+and a narrower window scrolls sideways. Grids keep their desktop columns.
+
+The tiers are named Super admin, Organization admin and Medtech wherever a person reads
+them. The refusal shown after a correct password no longer assumes the person is a medtech:
+a deactivated organization admin sees it too, so it says who the console is for and who
+to ask.
+
 ## [feat] Console shell with role-aware navigation, shadcn on Base UI and dark mode
 
 The console now knows three people instead of one. A super admin (`profiles.role =

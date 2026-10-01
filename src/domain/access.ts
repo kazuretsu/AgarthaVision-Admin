@@ -1,13 +1,17 @@
 /**
  * Who may use the console, and what each kind of user may reach.
  *
- * Three people sign in with the same credentials (Feature Specs §1):
+ * Three tiers (Feature Specs §1), each with its own client:
  *
- * - **Super admin** — an application owner. `profiles.role = 'admin'`. Sees every
- *   organization.
- * - **Org admin** — one laboratory's administrator. A role on their organization
- *   membership, never on the profile, so it cannot outlive the membership.
- * - **Medtech** — uses the Android app. Has no console access at all.
+ * - **Super admin** — the AgarthaVision developers and owners. Platform-wide, in no
+ *   organization: `profiles.role = 'admin'`. Uses this console.
+ * - **Organization admin** — a clinic's own admin staff, who manage the data that
+ *   clinic's medtechs create. A role on their organization membership, never on the
+ *   profile, so it ends with the membership. Uses this console.
+ * - **Medtech** — the end user. Uses the mobile app only; has no console access.
+ *
+ * `profiles.role` is `'medtech'` for everyone who is not a super admin, organization
+ * admins included: it says "not a super admin", and the membership says the rest.
  *
  * These rules live here, in plain TypeScript, and run before every read and write
  * the console makes (D7). Database policies are the second line, not the only one:
@@ -56,5 +60,5 @@ export function isAllowed(access: ConsoleAccess, allowed: readonly ConsoleAccess
 
 /** The label the console header shows for each kind of access. */
 export function accessLabel(access: ConsoleAccess): string {
-  return access.kind === "super_admin" ? "Super admin" : "Org admin";
+  return access.kind === "super_admin" ? "Super admin" : "Organization admin";
 }

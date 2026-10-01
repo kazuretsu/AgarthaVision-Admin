@@ -50,9 +50,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const items = navFor(actor.access.kind);
   const organizationName = actor.access.kind === "org_admin" ? actor.access.organizationName : null;
 
+  // Desktop only: super admins and organization admins work at a computer, and
+  // medtechs use the mobile app. A narrower window scrolls sideways instead of
+  // rearranging the console.
   return (
-    <div className="flex min-h-full">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 border-r border-stone-hair bg-surface px-3 py-5 md:flex">
+    <div className="flex min-h-full min-w-[1024px]">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-6 border-r border-stone-hair bg-surface px-3 py-5">
         <Link href="/dashboard" className="px-3 text-[14px] font-bold text-stone-ink">
           AgarthaVision <span className="font-medium text-stone-mid">Admin</span>
         </Link>
@@ -60,29 +63,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-col gap-2 border-b border-stone-hair bg-surface px-4 py-2 md:px-6">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-[14px] font-bold text-stone-ink md:hidden">
-              AgarthaVision
-            </Link>
-            {organizationName ? (
-              <span className="hidden text-[13px] font-semibold text-stone-deep md:inline">
-                {organizationName}
-              </span>
-            ) : (
-              <span className="hidden text-[13px] text-stone-mid md:inline">All organizations</span>
-            )}
-            <div className="ml-auto">
-              <UserMenu
-                name={actor.user.fullName ?? actor.user.email ?? "Signed in"}
-                roleLabel={accessLabel(actor.access)}
-                organizationName={organizationName}
-                signOutAction={signOut}
-              />
-            </div>
-          </div>
-          <div className="md:hidden">
-            <SidebarNav items={items} orientation="horizontal" />
+        <header className="flex items-center gap-4 border-b border-stone-hair bg-surface px-6 py-2">
+          {organizationName ? (
+            <span className="text-[13px] font-semibold text-stone-deep">{organizationName}</span>
+          ) : (
+            <span className="text-[13px] text-stone-mid">All organizations</span>
+          )}
+          <div className="ml-auto">
+            <UserMenu
+              name={actor.user.fullName ?? actor.user.email ?? "Signed in"}
+              roleLabel={accessLabel(actor.access)}
+              organizationName={organizationName}
+              signOutAction={signOut}
+            />
           </div>
         </header>
         <div className="flex-1">{children}</div>
@@ -92,16 +85,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
 }
 
 /**
- * What a medtech with a live session sees: where they should go instead, and a
- * way out. No data and no navigation — a medtech is not a partial admin.
+ * What a signed-in person without console access sees: where to go instead, and
+ * a way out. No data and no navigation. Usually a medtech; it is also what a
+ * deactivated organization admin sees, so it does not assume which.
  */
 function NoConsoleAccess() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 px-6 py-16">
-      <h1 className="text-[20px] font-bold text-stone-ink">This console is for administrators</h1>
+      <h1 className="text-[20px] font-bold text-stone-ink">
+        This console is for super admins and organization admins
+      </h1>
       <p className="text-[14px] text-stone-deep">
-        Medical technologists use the AgarthaVision Android app. Sign in there with the same email
-        and password.
+        Medtechs use the AgarthaVision mobile app with the same email and password. If you manage a
+        laboratory, ask an AgarthaVision super admin to check your access.
       </p>
       <form action={signOut}>
         <Button type="submit" variant="outline">

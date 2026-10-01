@@ -15,7 +15,7 @@ const INVALID_CREDENTIALS = "These credentials cannot access the admin console."
  * already know the password.
  */
 const MEDTECH_NOTICE =
-  "This console is for laboratory administrators. Medical technologists use the AgarthaVision Android app with the same email and password.";
+  "This console is for super admins and organization admins. Medtechs use the AgarthaVision mobile app with the same email and password. If you manage a laboratory, ask an AgarthaVision super admin to check your access.";
 
 /**
  * Signs in, then admits only people with console access.

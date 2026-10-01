@@ -26,7 +26,7 @@ export default function LoginPage() {
         </p>
         <h1 className="text-[26px] leading-8 font-bold text-stone-ink">Admin Console</h1>
         <p className="text-[13px] text-stone-mid">
-          For laboratory administrators. Medical technologists use the Android app.
+          For super admins and organization admins. Medtechs use the mobile app.
         </p>
       </div>
 

@@ -29,9 +29,11 @@ functions); `.env.example` documents which variables are public and which are no
 
 ### 3. Admin-only routes
 
-Every console surface requires a session with console access: a **super admin**
-(`profiles.role = 'admin'`) or an **org admin** (an active org-admin membership). A medtech
-session is not a partial admin: it sees a notice pointing to the Android app and no data.
+Every console surface requires a session with console access: a **super admin** (the
+AgarthaVision developers and owners, `profiles.role = 'admin'`) or an **organization admin**
+(a clinic's admin staff, an active org-admin membership). Medtechs use the mobile app only. A
+medtech session is not a partial admin: it sees a notice pointing to the mobile app and no
+data.
 Access is read server-side on every request; a cookie, a JWT claim or `user_metadata` is
 never the authority. Hiding a sidebar link is presentation, not protection.
 

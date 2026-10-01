@@ -9,23 +9,11 @@ import type { NavItem } from "./nav";
 const ICONS = { dashboard: LayoutDashboard, records: Microscope } as const;
 
 /** The sidebar links, marking the section the visitor is in. */
-export function SidebarNav({
-  items,
-  orientation = "vertical",
-}: {
-  items: NavItem[];
-  orientation?: "vertical" | "horizontal";
-}) {
+export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav
-      aria-label="Console"
-      className={cn(
-        "flex gap-1",
-        orientation === "vertical" ? "flex-col" : "flex-row overflow-x-auto",
-      )}
-    >
+    <nav aria-label="Console" className="flex flex-col gap-1">
       {items.map((item) => {
         const Icon = ICONS[item.icon];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);

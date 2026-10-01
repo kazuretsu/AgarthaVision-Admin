@@ -37,6 +37,6 @@ describe("isAllowed", () => {
 describe("accessLabel", () => {
   it("names both kinds", () => {
     expect(accessLabel({ kind: "super_admin" })).toBe("Super admin");
-    expect(accessLabel(resolveConsoleAccess("medtech", membership)!)).toBe("Org admin");
+    expect(accessLabel(resolveConsoleAccess("medtech", membership)!)).toBe("Organization admin");
   });
 });

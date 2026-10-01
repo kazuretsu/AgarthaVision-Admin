@@ -6,16 +6,16 @@ commit: e89c2ad
 # Admin gate
 
 Input: an HTTP request → Movement: refresh session, resolve identity, resolve console access
-→ Output: a rendered console page, the "use the Android app" notice, or a redirect to
+→ Output: a rendered console page, the "use the mobile app" notice, or a redirect to
 `/login`.
 
 ## Who gets in
 
-| Person      | Source of truth                                | Console access                                   |
-| ----------- | ---------------------------------------------- | ------------------------------------------------ |
-| Super admin | `profiles.role = 'admin'`                      | Everything, every organization                   |
-| Org admin   | An active org-admin membership (organizations) | Their own organization's pages                   |
-| Medtech     | Anyone else                                    | None — told to use the Android app, sees no data |
+| Person             | Source of truth                                | Console access                                  |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------- |
+| Super admin        | `profiles.role = 'admin'`                      | Everything, every organization                  |
+| Organization admin | An active org-admin membership (organizations) | Their own organization's pages                  |
+| Medtech            | Anyone else                                    | None — told to use the mobile app, sees no data |
 
 The rule is `resolveConsoleAccess` (`src/domain/access.ts:37`). It is plain domain code so
 it runs before any read or write, whichever provider sits behind the ports (D7). The profile
