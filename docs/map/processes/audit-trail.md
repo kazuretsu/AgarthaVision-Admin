@@ -18,7 +18,7 @@ commit. The table has no client write policy, and a trigger refuses UPDATE, DELE
 TRUNCATE for every role, the owner included.
 
 **Exports are audited before the file leaves.** The download route calls
-`recordExport` (`src/app/(dashboard)/export/download/route.ts:49`) with the row count,
+`recordExport` (`src/app/(dashboard)/export/download/route.ts:84`) with the row count,
 format, period and column version. If that fails, the route answers 403 or 503 and serves
 nothing: an unrecorded download of patient data must not happen. The function
 (`supabase/migrations/admin/0003_audit_exports.sql:13`) files an org admin's export under

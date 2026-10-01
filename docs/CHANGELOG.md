@@ -32,6 +32,12 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Audit trail page repeats the access check
+
+`/audit` now calls `requirePageAccess()` like every other console page, so a revoked admin
+loses it on their next client-side navigation. Route line references in the export, audit,
+scoping and gate cards are brought up to date with the audited download route.
+
 ## [feat] Audit trail: see who did what in the console, and every export
 
 `/audit` lists every administrative change and every export, newest first, with who, when,

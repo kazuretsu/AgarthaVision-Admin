@@ -7,6 +7,7 @@ import {
   type OrganizationSummary,
   type Profile,
 } from "@/domain";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { MissingEnvironmentError } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
 import { parsePeriod } from "@/lib/period";
@@ -49,6 +50,10 @@ export default async function AuditPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // The layout is not re-rendered on a client-side navigation, so the page
+  // repeats the check: a revoked admin loses access on their next click.
+  await requirePageAccess(ANY_CONSOLE_USER);
+
   const params = await searchParams;
   const period = parsePeriod(params);
   const actorId = first(params.actor);

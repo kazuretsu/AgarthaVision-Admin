@@ -36,7 +36,7 @@ the insert to fail and checks the patient is still saved.
    app's own policies are untouched and a medtech sees exactly what they saw before.
 
 Pages call `scopeForRequest` (`src/lib/read-scope.ts:10`); the export route derives its
-scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:32`).
+scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:34`).
 
 **Scope is which laboratory; disclosure is whether you see who the patient is.** They are
 separate inputs to every patient read. An org admin reads their own laboratory identified.
