@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
+import { isUuid } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { requirePageAccess } from "@/lib/console-access";
 import { formatDate, personName } from "@/lib/format";
@@ -32,6 +33,8 @@ export default async function OrganizationPage({
 }) {
   await requirePageAccess(["super_admin"]);
   const { organizationId } = await params;
+  // A malformed id names no organization; Postgres would reject it as an error.
+  if (!isUuid(organizationId)) notFound();
 
   let organization;
   try {

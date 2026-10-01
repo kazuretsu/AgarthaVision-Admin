@@ -2,6 +2,19 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Organizations: 404 a malformed id, and test against the app's current schema
+
+`/organizations/abc` was a 500, because the id went straight to Postgres. It is now a 404,
+like the record pages, and the rename and status actions answer "no longer exists" for one.
+
+`bun run test:db` failed on the app's `development` branch, which is now at `0011`: `0007`
+calls `storage.filename()`, which the stubs lacked. The stub is added. Since `0011`, a
+profile outlives its login, so deleting a login no longer clears `admin_audit_log.actor_id`.
+The test now checks both paths: the login goes and, where `0011` is applied, the entries
+keep their actor; the profile goes and they keep their label. The organizations card's
+offboarding rule says the same. No migration changes; `admin/0001`–`0003` apply on the
+app's `0001`–`0006` and on `0001`–`0011`, and the tests pass on both.
+
 ## [fix] Records: a super admin sees no session label either
 
 A session label is pre-filled on the phone from the patient's initials and barangay, and a

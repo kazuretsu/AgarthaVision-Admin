@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: e5e0d2d
+verified: 2026-10-01
+commit: 219d9cc
 ---
 
 # Organizations
@@ -18,9 +18,12 @@ flag a user could keep after leaving. The shapes mirror Better Auth's organizati
 **Leaving keeps the author.** A medtech or organization admin who leaves is deactivated —
 their membership's `status` — never deleted. Their `profiles` row stays, and every patient,
 session and sample they recorded still points at it (`created_by`, `user_id`), so the
-record keeps naming its author after they are gone. Offboarding must never delete the
-login either: the app's `profiles.id` cascades from `auth.users`, so deleting a login takes
-the profile with it, or fails outright while records still reference it.
+record keeps naming its author after they are gone. Deleting their login is safe as well,
+once the app's `0011_profile_outlives_login.sql` is applied: `profiles.id` no longer
+cascades from `auth.users`, the login's `profiles.account_id` is cleared instead, and the
+profile, its membership and its audit entries keep naming them. Before `0011`, deleting a
+login took the profile with it, or failed outright while records referenced it. Deleting
+the `profiles` row itself is never offboarding.
 
 This is the first schema this repo owns (D4). It follows the migration convention: its own
 sequence under `supabase/migrations/admin/`, **additive only**, nothing the app owns is
@@ -55,7 +58,8 @@ the function is the second line, never the only one.
 a trigger (`:103`) refuses both — and TRUNCATE — even for the table owner. The single
 exception is the foreign key's own `on delete set null` when an actor's profile is removed,
 because refusing it would stop user deletion working, which an additive migration must not
-change. `actor_label` keeps who it was.
+change. `actor_label` keeps who it was. Since the app's `0011`, deleting a login leaves the
+profile, so the entries keep their `actor_id`.
 
 **Backfill** (`:363`): one "Starting laboratory" receives every existing non-admin user as a
 medtech and every existing patient, so nothing is orphaned when scoping arrives. Super
@@ -70,7 +74,8 @@ admins are members of nothing; they see everything.
   reasons a page can explain (`:16`).
 - Pages: `/organizations` and `/organizations/[id]`, super admins only
   (`requirePageAccess(["super_admin"])`). Server actions re-check the rule before writing
-  (`src/app/(dashboard)/organizations/actions.ts:22`).
+  (`src/app/(dashboard)/organizations/actions.ts:27`). A malformed organization id is a 404
+  on the page and "no longer exists" from an action, never a database error.
 
 ## If you change this
 

@@ -162,9 +162,19 @@ begin
     select * into f from fx;
     perform tests.act_as_owner();
     delete from auth.users where id = f.super_admin;
+    -- From the app's 0011 a profile outlives its login, so the entries keep naming the
+    -- actor. Before it, the login's delete cascades to the profile.
+    if exists (select 1 from information_schema.columns
+               where table_schema = 'public' and table_name = 'profiles'
+                 and column_name = 'account_id') then
+        perform tests.check(
+            exists (select 1 from public.admin_audit_log where actor_id = f.super_admin),
+            'the actor''s entries keep their actor when the login is deleted');
+    end if;
+    delete from public.profiles where id = f.super_admin;
     perform tests.check(
         exists (select 1 from public.admin_audit_log where actor_id is null and actor_label = 'super'),
-        'the actor''s entries survive with their label when the actor is deleted');
+        'the actor''s entries survive with their label when the profile is deleted');
 end
 $$;
 

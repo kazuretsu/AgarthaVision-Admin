@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminWrites } from "@/adapters/registry";
-import { canManageOrganizations, normaliseOrganizationName } from "@/domain";
+import { canManageOrganizations, isUuid, normaliseOrganizationName } from "@/domain";
 import { AdminWriteError, NotAuthenticatedError, NotAuthorizedError } from "@/ports";
 import { getConsoleActor } from "@/lib/console-access";
 import type { OrganizationFormState } from "./state";
@@ -15,6 +15,11 @@ import type { OrganizationFormState } from "./state";
 
 const NOT_PERMITTED: OrganizationFormState = {
   error: "Only a super admin can manage organizations.",
+  done: null,
+};
+
+const NOT_FOUND: OrganizationFormState = {
+  error: "That organization no longer exists.",
   done: null,
 };
 
@@ -36,7 +41,7 @@ function explain(cause: unknown): OrganizationFormState {
     const messages = {
       forbidden: NOT_PERMITTED.error,
       conflict: "Another organization already has that name.",
-      not_found: "That organization no longer exists.",
+      not_found: NOT_FOUND.error,
       invalid: "That value is not allowed.",
       failed: "The change could not be saved. Try again.",
     } as const;
@@ -73,6 +78,7 @@ export async function renameOrganization(
   if (refused) return refused;
 
   const id = String(formData.get("organizationId") ?? "");
+  if (!isUuid(id)) return NOT_FOUND;
   const parsed = normaliseOrganizationName(String(formData.get("name") ?? ""));
   if (!parsed.ok) return { error: parsed.error, done: null };
 
@@ -94,6 +100,7 @@ export async function setOrganizationStatus(
   if (refused) return refused;
 
   const id = String(formData.get("organizationId") ?? "");
+  if (!isUuid(id)) return NOT_FOUND;
   const status = formData.get("status") === "deactivated" ? "deactivated" : "active";
 
   try {

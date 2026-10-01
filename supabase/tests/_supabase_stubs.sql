@@ -71,4 +71,9 @@ language sql immutable as $$
     select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
 $$;
 
+create function storage.filename(name text) returns text
+language sql immutable as $$
+    select (string_to_array(name, '/'))[array_length(string_to_array(name, '/'), 1)]
+$$;
+
 insert into storage.buckets (id, name) values ('samples', 'samples');
