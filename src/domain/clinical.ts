@@ -160,6 +160,58 @@ export interface SessionSummary {
   isPositive: boolean;
 }
 
+/** One row of a session's findings table: a species, its LPF range and its eggs. */
+export interface SpeciesRow {
+  species: string;
+  lpf: LpfDensity | null;
+  eggs: number;
+}
+
+/**
+ * Joins a summary's two halves into one row per species.
+ *
+ * The halves are keyed differently on purpose: `lpf` by the finding's stored
+ * species string (the app's `groupBy { it.species }`, kept so the range matches
+ * the app's report), `eggCounts` by {@link detectionSpecies}. Joining on the raw
+ * keys would show `ascaris_lumbricoides` and `Ascaris lumbricoides` as two rows,
+ * one with the range and no eggs and one the other way round. The join is
+ * therefore on {@link canonicalSpecies}; the range itself is never recomputed.
+ *
+ * If two stored spellings of one species both carry a range, merging them would
+ * change the range, so each keeps its own row under its stored spelling. The eggs
+ * go on the row stored under the canonical name, or on a row of their own when
+ * none is. Species names stay unique, so they can key a list.
+ */
+export function speciesRows(summary: Pick<SessionSummary, "lpf" | "eggCounts">): SpeciesRow[] {
+  const lpfByCanonical = new Map<string, [string, LpfDensity][]>();
+  for (const entry of Object.entries(summary.lpf)) {
+    const canonical = canonicalSpecies(entry[0]);
+    lpfByCanonical.set(canonical, [...(lpfByCanonical.get(canonical) ?? []), entry]);
+  }
+  const eggs = new Map(summary.eggCounts.map((row) => [row.species, row.count]));
+
+  const rows: SpeciesRow[] = [];
+  for (const canonical of new Set([...lpfByCanonical.keys(), ...eggs.keys()])) {
+    const ranges = lpfByCanonical.get(canonical) ?? [];
+    if (ranges.length <= 1) {
+      rows.push({
+        species: canonical,
+        lpf: ranges[0]?.[1] ?? null,
+        eggs: eggs.get(canonical) ?? 0,
+      });
+      continue;
+    }
+    const count = eggs.get(canonical) ?? 0;
+    for (const [stored, lpf] of ranges) {
+      rows.push({ species: stored, lpf, eggs: stored === canonical ? count : 0 });
+    }
+    if (count > 0 && !ranges.some(([stored]) => stored === canonical)) {
+      rows.push({ species: canonical, lpf: null, eggs: count });
+    }
+  }
+  return rows.sort((left, right) => left.species.localeCompare(right.species));
+}
+
 /**
  * Summarises a session from its samples, detections and findings. Anything
  * attached to a deleted sample is dropped first, so a caller cannot forget to.

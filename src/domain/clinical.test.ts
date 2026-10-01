@@ -6,6 +6,7 @@ import {
   formatLpfRange,
   isBinomial,
   lpfDescriptor,
+  speciesRows,
   summariseSession,
 } from "./clinical";
 import { DetectionVerdict } from "./enums";
@@ -250,5 +251,56 @@ describe("boxProvenance (the table in 0004_predictions.sql)", () => {
         { hasPredictions: false, isManual: false },
       ),
     ).toBe("unknown");
+  });
+});
+
+describe("speciesRows", () => {
+  const range = (min: number, max: number) => ({ min, max, descriptor: lpfDescriptor(max) });
+
+  it("joins a range stored under an alias to the eggs counted under the canonical name", () => {
+    const rows = speciesRows({
+      lpf: { ascaris_lumbricoides: range(0, 4) },
+      eggCounts: [{ species: "Ascaris lumbricoides", count: 4 }],
+    });
+    expect(rows).toEqual([{ species: "Ascaris lumbricoides", lpf: range(0, 4), eggs: 4 }]);
+  });
+
+  it("keeps a range with no counted eggs, and eggs with no range", () => {
+    const rows = speciesRows({
+      lpf: { Hookworm: range(0, 1) },
+      eggCounts: [{ species: "Trichuris trichiura", count: 2 }],
+    });
+    expect(rows).toEqual([
+      { species: "Hookworm", lpf: range(0, 1), eggs: 0 },
+      { species: "Trichuris trichiura", lpf: null, eggs: 2 },
+    ]);
+  });
+
+  it("never merges two stored spellings that each carry a range", () => {
+    const rows = speciesRows({
+      lpf: { Ascaris: range(0, 2), "Ascaris lumbricoides": range(1, 3) },
+      eggCounts: [{ species: "Ascaris lumbricoides", count: 5 }],
+    });
+    expect(rows).toEqual([
+      { species: "Ascaris", lpf: range(0, 2), eggs: 0 },
+      { species: "Ascaris lumbricoides", lpf: range(1, 3), eggs: 5 },
+    ]);
+  });
+
+  it("gives the eggs a row of their own when no stored spelling is canonical", () => {
+    const rows = speciesRows({
+      lpf: { Ascaris: range(0, 2), ascaris_lumbricoides: range(1, 3) },
+      eggCounts: [{ species: "Ascaris lumbricoides", count: 5 }],
+    });
+    expect(rows.map((row) => row.species)).toEqual([
+      "Ascaris",
+      "Ascaris lumbricoides",
+      "ascaris_lumbricoides",
+    ]);
+    expect(new Set(rows.map((row) => row.species)).size).toBe(rows.length);
+  });
+
+  it("is empty for a wholly negative session", () => {
+    expect(speciesRows({ lpf: {}, eggCounts: [] })).toEqual([]);
   });
 });

@@ -5,6 +5,7 @@ export * from "./entities";
 export * from "./enums";
 export * from "./epg";
 export * from "./filters";
+export * from "./ids";
 export * from "./patients";
 export * from "./records";
 export * from "./research-matrix";

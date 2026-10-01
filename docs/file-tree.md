@@ -53,9 +53,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Summary cards, EPG trend, distribution, severity.
     │       └── records/       Patients list; patients/, sessions/, samples/ detail pages;
-    │                          export/route.ts (legacy EPG export, gate repeated).
+    │                          loading.tsx; export/route.ts (legacy EPG export, gate repeated).
     ├── domain/                Entities, read models, access rules, clinical (LPF) and
-    │                          patient rules; legacy EPG and severity. No I/O.
+    │                          patient rules, id checks; legacy EPG and severity. No I/O.
     ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { ageYears, patientDisplayName } from "@/domain";
+import { ageYears, isUuid, patientDisplayName } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { formatBirthdate, formatDateTime, personName } from "@/lib/format";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
@@ -25,6 +26,9 @@ export const dynamic = "force-dynamic";
 
 export default async function PatientPage({ params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = await params;
+  await requirePageAccess(ANY_CONSOLE_USER);
+  // A malformed id names no record; Postgres would reject it as an error.
+  if (!isUuid(patientId)) notFound();
 
   let record;
   try {

@@ -7,9 +7,11 @@ import {
   canonicalSpecies,
   detectionSpecies,
   isCountedDetection,
+  isUuid,
   patientDisplayName,
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { formatDateTime, personName } from "@/lib/format";
 import { signFrames } from "@/lib/signed-urls";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
@@ -48,6 +50,9 @@ const VERDICT_LABEL: Record<DetectionVerdict, string> = {
 
 export default async function SamplePage({ params }: { params: Promise<{ sampleId: string }> }) {
   const { sampleId } = await params;
+  await requirePageAccess(ANY_CONSOLE_USER);
+  // A malformed id names no record; Postgres would reject it as an error.
+  if (!isUuid(sampleId)) notFound();
 
   let record;
   let urls;

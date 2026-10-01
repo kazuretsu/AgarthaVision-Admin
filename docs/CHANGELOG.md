@@ -9,6 +9,19 @@ page's `requirePageAccess()` is the only check that runs. It let the layout's tw
 escape as errors, and a session that ended or an access revoked since the last click
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
+## [fix] Records: one row per species, and a bad id is a 404
+
+The LPF table joined ranges and egg counts on their raw keys. Ranges are keyed by the stored
+finding species (as the app groups them) and counts by the canonical name, so a finding
+stored as `ascaris_lumbricoides` split one species into a range-only row and a count-only
+row. `speciesRows` now joins on `canonicalSpecies` without recomputing any range, and the
+session page's field cards name species the way the sample page does.
+
+A patient, session or sample id that is not a well-formed uuid now 404s before any read;
+Postgres used to reject it and the page failed with a 500. Each detail page repeats the
+access check, and `records/loading.tsx` shows that a click registered while a session's
+frames are read and signed.
+
 ## [feat] Browse records as patient → session → sample, in LPF as the app reports them
 
 The console was broken: every sample query still selected `samples.gps_*`, which the

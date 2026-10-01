@@ -1,5 +1,5 @@
 import type { SessionSummary } from "@/domain";
-import { formatLpfRange } from "@/domain";
+import { canonicalSpecies, formatLpfRange, speciesRows } from "@/domain";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -18,11 +18,9 @@ import { SpeciesName } from "./SpeciesName";
  * and the eggs counted. A range, never a mean; no EPG and no WHO tier.
  */
 export function LpfTable({ summary }: { summary: SessionSummary }) {
-  const species = [
-    ...new Set([...Object.keys(summary.lpf), ...summary.eggCounts.map((row) => row.species)]),
-  ].sort((left, right) => left.localeCompare(right));
+  const rows = speciesRows(summary);
 
-  if (species.length === 0) {
+  if (rows.length === 0) {
     return (
       <p className="rounded-[12px] border border-stone-hair bg-surface p-4 text-[13px] text-stone-deep">
         No parasites found in the {summary.fieldCount} field{summary.fieldCount === 1 ? "" : "s"}{" "}
@@ -31,11 +29,12 @@ export function LpfTable({ summary }: { summary: SessionSummary }) {
     );
   }
 
-  const eggs = new Map(summary.eggCounts.map((row) => [row.species, row.count]));
-
   return (
     <Table>
-      <TableCaption>Findings per species across {summary.fieldCount} fields</TableCaption>
+      <TableCaption>
+        Findings per species across {summary.fieldCount} field
+        {summary.fieldCount === 1 ? "" : "s"}
+      </TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead>Species</TableHead>
@@ -45,21 +44,18 @@ export function LpfTable({ summary }: { summary: SessionSummary }) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {species.map((name) => {
-          const density = summary.lpf[name];
-          return (
-            <TableRow key={name}>
-              <TableCell className="font-medium text-stone-ink">
-                <SpeciesName species={name} />
-              </TableCell>
-              <TableCell className="tnum">{density ? formatLpfRange(density) : "—"}</TableCell>
-              <TableCell>
-                {density?.descriptor ? <Badge variant="neutral">{density.descriptor}</Badge> : "—"}
-              </TableCell>
-              <TableCell className="tnum text-right">{eggs.get(name) ?? 0}</TableCell>
-            </TableRow>
-          );
-        })}
+        {rows.map((row) => (
+          <TableRow key={row.species}>
+            <TableCell className="font-medium text-stone-ink">
+              <SpeciesName species={row.species} />
+            </TableCell>
+            <TableCell className="tnum">{row.lpf ? formatLpfRange(row.lpf) : "—"}</TableCell>
+            <TableCell>
+              {row.lpf?.descriptor ? <Badge variant="neutral">{row.lpf.descriptor}</Badge> : "—"}
+            </TableCell>
+            <TableCell className="tnum text-right">{row.eggs}</TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );
@@ -75,7 +71,7 @@ export function LpfInline({ summary }: { summary: SessionSummary }) {
     <ul className="flex flex-col gap-0.5">
       {entries.map(([species, density]) => (
         <li key={species}>
-          <SpeciesName species={species} />{" "}
+          <SpeciesName species={canonicalSpecies(species)} />{" "}
           <span className="tnum text-stone-mid">
             {formatLpfRange(density)}
             {density.descriptor ? ` · ${density.descriptor}` : ""}

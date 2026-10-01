@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { isCountedDetection, patientDisplayName } from "@/domain";
+import { canonicalSpecies, isCountedDetection, isUuid, patientDisplayName } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { formatDateTime, personName } from "@/lib/format";
 import { signFrames } from "@/lib/signed-urls";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
@@ -25,6 +26,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = await params;
+  await requirePageAccess(ANY_CONSOLE_USER);
+  // A malformed id names no record; Postgres would reject it as an error.
+  if (!isUuid(sessionId)) notFound();
 
   let record;
   let urls;
@@ -97,10 +101,9 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
               const counted = detail.detections.filter(isCountedDetection);
               const fieldEggs = new Map<string, number>();
               for (const finding of detail.findings) {
-                fieldEggs.set(
-                  finding.species,
-                  (fieldEggs.get(finding.species) ?? 0) + finding.eggCount,
-                );
+                // Named the way the sample page and the LPF table name it.
+                const species = canonicalSpecies(finding.species);
+                fieldEggs.set(species, (fieldEggs.get(species) ?? 0) + finding.eggCount);
               }
               return (
                 <li key={detail.sample.id}>
