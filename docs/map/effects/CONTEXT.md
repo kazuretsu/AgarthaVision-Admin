@@ -15,9 +15,8 @@ is right and this table is stale.**
 | `src/domain/entities.ts`, `enums.ts`                   | `../objects/domain-model.md` · `../../constraints.md` (#5, #7)                          |
 | `src/domain/clinical.ts`, `patients.ts`                | `../processes/lpf-session-summary.md` · `../../constraints.md` (#6)                     |
 | `src/domain/dashboard.ts`, `src/components/dashboard/` | `../processes/dashboard-figures.md`                                                     |
-| `src/domain/epg.ts`                                    | `../processes/epg-aggregation.md` — export only                                         |
-| `src/domain/research-matrix.ts`                        | `../processes/research-matrix-export.md` — the column set is a contract                 |
-| `src/domain/filters.ts`, `src/lib/search-params.ts`    | `../processes/research-matrix-export.md` — the export reuses the page's filter          |
+| `src/domain/research-export.ts`                        | `../processes/research-export.md` — the column set is a contract (v2)                   |
+| `src/lib/period.ts`                                    | `../processes/dashboard-figures.md` · `../processes/research-export.md` — shared period |
 | `src/app/(dashboard)/layout.tsx`                       | `../processes/admin-gate.md`                                                            |
 | `src/domain/access.ts`, `src/lib/console-access.ts`    | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
 | `src/components/shell/nav.ts`                          | `../processes/admin-gate.md` — `visibleTo` must match each page's `requirePageAccess`   |
@@ -61,5 +60,5 @@ Nothing in this repo references these, so nothing here would break loudly if the
 - **The AgarthaVision Android client and its Supabase project.** The real schema authority.
   A migration there is a change here.
 - **ClickUp.** Task IDs appear in every commit subject; no code reads them.
-- **Downstream consumers of the research-matrix export.** The column labels are a contract
+- **Downstream consumers of the research export.** The column labels are a contract
   with analysts this repo cannot see.

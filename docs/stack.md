@@ -24,7 +24,7 @@ As-built. Versions are what `bun.lock` resolved, not what a range permits.
 - **Node 22** is the runtime under Bun for the Next.js build.
 - **Next 16 renamed `middleware.ts` to `proxy.ts`.** The unauthenticated bounce lives in
   `proxy.ts` at the repo root of `src/`.
-- **No charting library.** The EPG trend, distribution bars and severity split are
+- **No charting library.** The weekly trend and the species bars are
   hand-crafted inline SVG, mirroring the Android client's design rule. One less dependency
   and no runtime bundle cost.
 - **shadcn on Base UI (D1).** `src/components/ui/` holds shadcn-style components written

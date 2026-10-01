@@ -18,6 +18,8 @@ export interface SmearRecord {
   sessionId: string;
   patientId: string;
   startedAt: string;
+  /** The patient's PSGC barangay code — where the smear counts on the map. */
+  barangayCode: string;
   summary: SessionSummary;
 }
 

@@ -19,6 +19,38 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Export page lays out for a desktop
+
+The export page drops its phone padding breakpoint, as every other console page did. The
+file itself is unchanged: it carries no names, sex or birthdates, so it is already the
+de-identified view a super admin may take.
+
+## [fix] Research export: the 20,000 refusal works, and the count matches the file
+
+The refusal could never fire: one PostgREST response stops at 1000 rows, so a busy period
+downloaded the newest 1000 sessions as if they were all. `listSmears` now pages (see the
+dashboard fix), the download asks for `RESEARCH_EXPORT_LIMIT + 1`, and the export page reads
+with the same limit, so its "N smears examined" matches the file and a period the download
+would refuse is flagged first. A failed read is a 502 or 503 with no database detail instead
+of a bare 500. CSVs carry a UTF-8 byte-order mark so Excel keeps the en dash in `0–2 LPF`,
+and an open-ended file is named for today in Manila rather than in UTC.
+
+## [feat] Research export in LPF, one row per smear, with no names or birthdates
+
+The SRS research matrix exported AI and validated EPG per sample; EPG was retracted with
+it. `/export` now shows how many smears a period holds and downloads one row per examined
+smear, as CSV or JSON: session and patient record IDs, Manila date, barangay PSGC code,
+fields examined, result, eggs counted, and for each of the three species its LPF min, max,
+descriptor and eggs, plus other species in one cell. The rows come from the same
+`SessionSummary` the records browser shows. The column set is version 2 and the version is
+in the file name. CSV cells that would run as a spreadsheet formula are neutralised. A
+period over 20,000 sessions is refused rather than silently cut short.
+
+This removes the last of EPG: `epg.ts`, the record filters, the sample-level
+`SampleRecord`, `listSampleRecords` and the old `/records/export` route are deleted with
+their tests, and so are the EPG and research-matrix cards. Exports are not yet written to
+the audit trail, which does not exist yet.
+
 ## [fix] Dashboard lays out for a desktop
 
 The summary cards sit in one row of five and the trend shares its row with the species mix

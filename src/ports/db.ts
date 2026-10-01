@@ -1,6 +1,5 @@
 import type { PatientDisclosure, PatientListItem, PatientRecord, Profile } from "@/domain";
-import type { SampleRecord, SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
-import type { RecordFilter } from "@/domain/filters";
+import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
 
 /**
  * The database port.
@@ -16,13 +15,6 @@ import type { RecordFilter } from "@/domain/filters";
  * Every method returns only what the caller may see. The adapter reads as the
  * signed-in user, so row-level security decides visibility; it never widens it.
  */
-
-export interface RecordQuery {
-  /** Filters the caller wants applied. The adapter pushes down what it can. */
-  filter?: RecordFilter;
-  /** Hard cap on rows returned. Adapters must apply a sane default. */
-  limit?: number;
-}
 
 export interface PatientQuery {
   /**
@@ -63,14 +55,8 @@ export interface DatabasePort {
     disclosure: PatientDisclosure,
   ): Promise<SampleRecordDetail | null>;
 
-  /** Every session in the period with its summary, for the dashboard. */
+  /** Every session in the period with its summary, for the dashboard and the export. */
   listSmears(query?: SmearQuery): Promise<SmearRecord[]>;
-
-  /**
-   * Every processed sample, composed into {@link SampleRecord}. Serves the
-   * dashboard and export until they move to the session model.
-   */
-  listSampleRecords(query?: RecordQuery): Promise<SampleRecord[]>;
 
   /** One profile by id, or `null` when it is absent or unreadable. */
   getProfile(userId: string): Promise<Profile | null>;

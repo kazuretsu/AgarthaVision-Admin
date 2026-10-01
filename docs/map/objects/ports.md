@@ -21,14 +21,14 @@ express the intent.
 
 ## Shape
 
-| Port           | Members                                                                                                                      | File                      |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `DatabasePort` | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSampleRecords`, `getProfile`, `listProfiles` | `src/ports/db.ts:43`      |
-| `StoragePort`  | `createSignedUrl`                                                                                                            | `src/ports/storage.ts:21` |
-| `AuthPort`     | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                                     | `src/ports/auth.ts:33`    |
+| Port           | Members                                                                                                               | File                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `DatabasePort` | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles` | `src/ports/db.ts:36`      |
+| `StoragePort`  | `createSignedUrl`                                                                                                     | `src/ports/storage.ts:21` |
+| `AuthPort`     | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                              | `src/ports/auth.ts:33`    |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
-provider raised it: `DatabaseReadError` (`src/ports/db.ts:73`), `StorageAccessError`
+provider raised it: `DatabaseReadError` (`src/ports/db.ts:60`), `StorageAccessError`
 (`src/ports/storage.ts:30`), and `NotAuthenticatedError` / `NotAuthorizedError` /
 `AuthenticationFailedError` (`src/ports/auth.ts:55-77`).
 

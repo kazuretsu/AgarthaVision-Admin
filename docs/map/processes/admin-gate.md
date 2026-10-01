@@ -48,8 +48,8 @@ method is the one seam the organizations work fills; nothing else in the gate ch
    this call is the protection.
 7. **Repeat it in route handlers.** A handler does not render inside the layout and
    inherits nothing. `requireRouteAccess` (`src/lib/console-access.ts:50`) returns 401, 403
-   or 503 as JSON; `records/export` calls it first
-   (`src/app/(dashboard)/records/export/route.ts:22`).
+   or 503 as JSON; `export/download` calls it first
+   (`src/app/(dashboard)/export/download/route.ts:32`).
 
 `getConsoleActor` is wrapped in React's `cache()` (`src/lib/console-access.ts:19`), so the
 layout and the page share one lookup per request.
