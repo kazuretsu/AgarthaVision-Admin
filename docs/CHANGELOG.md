@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Audit trail: ignore a malformed person or action filter
+
+`?actor=` was checked against a loose pattern, so a 36-character string of hex digits and
+dashes in the wrong layout reached Postgres and the page was a 500. It is now checked with
+`isUuid`, as every record id is. `?action=` was checked with `in`, which also accepts
+inherited names such as `constructor`; it now has to be a listed action.
+
 ## [fix] Organizations: 404 a malformed id, and test against the app's current schema
 
 `/organizations/abc` was a 500, because the id went straight to Postgres. It is now a 404,
@@ -31,6 +38,32 @@ page's `requirePageAccess()` is the only check that runs. It let the layout's tw
 escape as errors, and a session that ended or an access revoked since the last click
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
+
+## [fix] Audit trail lays out for a desktop
+
+The audit page drops its phone padding breakpoint like every other console page. Entries
+name organizations, people who acted and export periods, never a patient, so the trail
+needs no de-identification of its own. The map cards' line references point at the
+current code again.
+
+## [fix] Audit trail page repeats the access check
+
+`/audit` now calls `requirePageAccess()` like every other console page, so a revoked admin
+loses it on their next client-side navigation. Route line references in the export, audit,
+scoping and gate cards are brought up to date with the audited download route.
+
+## [feat] Audit trail: see who did what in the console, and every export
+
+`/audit` lists every administrative change and every export, newest first, with who, when,
+the action and one line describing it; filters for person, action, date and — for super
+admins — organization. Org admins read only their organization's entries, in the console's
+own query and in RLS. An action the build does not recognise is shown as recorded.
+
+`admin/0003_audit_exports.sql` adds `console_record_export`, which files an org admin's
+export under their own organization whatever is passed. The export route now records each
+download before serving it and refuses to serve the file if the entry cannot be written.
+SQL tests cover the misfiling attempt, a medtech's refusal, and that org admins can neither
+edit, delete nor read another laboratory's entries.
 
 ## [fix] Lab scoping keeps patients de-identified for a super admin who narrows
 

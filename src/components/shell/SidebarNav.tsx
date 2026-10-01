@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, FileDown, LayoutDashboard, Microscope } from "lucide-react";
+import { Building2, FileDown, History, LayoutDashboard, Microscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "./nav";
 
@@ -11,6 +11,7 @@ const ICONS = {
   records: Microscope,
   export: FileDown,
   organizations: Building2,
+  audit: History,
 } as const;
 
 /** The sidebar links, marking the section the visitor is in. */

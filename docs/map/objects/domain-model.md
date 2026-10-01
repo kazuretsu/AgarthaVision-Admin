@@ -47,7 +47,7 @@ Facts that trip people up:
   provenance only.
 - **`patients` reaches `profiles` two ways** (`created_by`, and the `patient_users` join),
   so an embed must name the constraint: `profiles!patients_created_by_fkey`
-  (`src/adapters/supabase/database.ts:148`).
+  (`src/adapters/supabase/database.ts:174`).
 
 Enums live in `src/domain/enums.ts`. `DetectionVerdict` is UPPERCASE in Postgres and
 lowercase in Room; `parseDetectionVerdict` accepts either. Species are free text and have no
@@ -59,7 +59,7 @@ migration behind it.
 - Owned by: upstream migrations own every field.
 - Consumed by: `src/domain/clinical.ts`, `patients.ts`, `dashboard.ts`, `research-export.ts`.
 - Produced by: `src/adapters/supabase/database.ts`, the only place snake_case and camelCase
-  meet (`toPatient` at `:187` and its siblings).
+  meet (`toPatient` at `:252` and its siblings).
 - Looks like but is not: Room entities in the Android client, which carry columns Postgres
   does not (`status`, `is_repeat`, `predictions_json`).
 

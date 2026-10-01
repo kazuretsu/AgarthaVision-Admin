@@ -44,6 +44,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── lpf-session-summary.md What counts, and the LPF range, as the app does it.
 │       │   ├── dashboard-figures.md   Per-smear counting, and why not to sum the map's rows.
 │       │   ├── lab-scoping.md         Who sees which laboratory's records, enforced twice.
+│       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
@@ -62,7 +63,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── records/       Patients list; patients/, sessions/, samples/ detail pages;
     │                          loading.tsx.
     │       ├── export/        Research export page; download/route.ts (gate repeated).
-    │       └── organizations/ Super admin: list, detail, and the audited server actions.
+    │       ├── organizations/ Super admin: list, detail, and the audited server actions.
+    │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
     │                          patient, dashboard and research-export rules, id checks.
     │                          No I/O.

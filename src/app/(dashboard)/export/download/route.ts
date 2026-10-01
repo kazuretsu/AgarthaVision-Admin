@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getDatabase } from "@/adapters/registry";
+import { getAdminWrites, getDatabase } from "@/adapters/registry";
+import { AdminWriteError } from "@/ports";
 import {
   RESEARCH_EXPORT_LIMIT,
   RESEARCH_EXPORT_VERSION,
@@ -74,6 +75,28 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = buildResearchExport(smears);
+
+  // Recorded before the file leaves. If the audit entry cannot be written, the
+  // export is refused: an unrecorded download of patient data must not happen.
+  try {
+    await (
+      await getAdminWrites()
+    ).recordExport(scope.kind === "organization" ? scope.organizationId : null, {
+      rows: rows.length,
+      format,
+      from: period.from ?? null,
+      to: period.to ?? null,
+      columns_version: RESEARCH_EXPORT_VERSION,
+    });
+  } catch (cause) {
+    if (cause instanceof AdminWriteError) {
+      return NextResponse.json(
+        { error: "The export could not be recorded, so it was not produced." },
+        { status: cause.reason === "forbidden" ? 403 : 503 },
+      );
+    }
+    throw cause;
+  }
   // Today in Manila, the frame every other date in the file uses.
   const span = [period.from ?? "start", period.to ?? clinicalDate(new Date().toISOString())].join(
     "_to_",

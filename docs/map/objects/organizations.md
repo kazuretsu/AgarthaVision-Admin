@@ -90,6 +90,10 @@ admins are members of nothing; they see everything.
 
 - Clinical data. No function here writes a patient, session, sample or detection.
 
+## Reading the log
+
+`/audit` and `admin/0003` (exports) are described in `docs/map/processes/audit-trail.md`.
+
 ## See
 
 `supabase/migrations/admin/0001_organizations.sql`, `src/domain/organizations.ts`,

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isLiveSample, parseDetectionVerdict, summariseSession } from "@/domain";
+import { isLiveSample, isUuid, parseDetectionVerdict, summariseSession } from "@/domain";
 import type {
   Detection,
   Patient,
@@ -15,6 +15,7 @@ import type {
   SessionRecord,
   SmearRecord,
   SpeciesFinding,
+  AuditEntry,
 } from "@/domain";
 import { sortMembers } from "@/domain";
 import type {
@@ -26,6 +27,7 @@ import type {
 } from "@/domain";
 import {
   DatabaseReadError,
+  type AuditQuery,
   type DatabasePort,
   type PatientQuery,
   type SmearQuery,
@@ -617,6 +619,54 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
         })),
       ),
     };
+  }
+
+  async listAuditEntries(query: AuditQuery): Promise<AuditEntry[]> {
+    const { scope, actorId, action, from, to, limit = DEFAULT_LIMIT } = query;
+    const organizationId = scopedOrganization(scope);
+
+    let request = this.client
+      .from("admin_audit_log")
+      .select(
+        "id, at, actor_id, actor_label, action, target_type, target_id, organization_id, details, organizations ( name )",
+      )
+      .order("at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit);
+
+    if (organizationId) request = request.eq("organization_id", organizationId);
+    if (isUuid(actorId)) request = request.eq("actor_id", actorId);
+    if (action) request = request.eq("action", action);
+    if (from) request = request.gte("at", `${from}T00:00:00+08:00`);
+    if (to) request = request.lte("at", `${to}T23:59:59.999+08:00`);
+
+    const { data, error } = await request;
+    if (error) throw new DatabaseReadError("listAuditEntries", error);
+
+    type Row = {
+      id: number;
+      at: string;
+      actor_id: string | null;
+      actor_label: string | null;
+      action: string;
+      target_type: string;
+      target_id: string | null;
+      organization_id: string | null;
+      details: Record<string, unknown> | null;
+      organizations: { name: string } | null;
+    };
+    return ((data as unknown as Row[] | null) ?? []).map((row) => ({
+      id: row.id,
+      at: row.at,
+      actorId: row.actor_id,
+      actorLabel: row.actor_label,
+      action: row.action,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      organizationId: row.organization_id,
+      organizationName: row.organizations?.name ?? null,
+      details: row.details ?? {},
+    }));
   }
 
   async getProfile(userId: string): Promise<Profile | null> {
