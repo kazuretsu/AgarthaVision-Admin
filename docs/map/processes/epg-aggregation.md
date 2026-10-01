@@ -4,10 +4,10 @@ status: stale
 
 # EPG aggregation
 
-**Scope now:** the dashboard and the research export only. The records browser does not use
-anything here — it shows LPF ranges and counts every non-rejected egg
-(`docs/map/processes/lpf-session-summary.md`). EPG is retracted (PB-16) and leaves the
-console when those two surfaces are rebuilt.
+**Scope now:** the research export only. The records browser and the dashboard do not use
+anything here (`lpf-session-summary.md`, `dashboard-figures.md`). The severity bands, the
+EPG trend and every dashboard aggregate described below were deleted; EPG is retracted
+(PB-16) and leaves the console when the export is rebuilt.
 
 Input: `SampleRecord[]` → Movement: count, multiply, group → Output: the figures on the
 administrative dashboard.

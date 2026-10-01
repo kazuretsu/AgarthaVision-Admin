@@ -83,12 +83,14 @@ role, theme choice (light, dark, system) and sign out. Components are shadcn on 
 mobile app. The shell holds a 1024px minimum width and a narrower window scrolls sideways.
 Pages lay out for a desktop and do not collapse into a phone layout.
 
-### Administrative dashboard
+### Dashboard
 
-Summary cards, a per-species EPG trend line chart with crosshair, tooltip, legend, direct
-labels and a table view, parasite distribution bars, the light/moderate/heavy intensity
-split on the reserved status palette, and average/highest/lowest EPG. Every aggregate
-counts human-validated records only.
+Counted per smear on the app's rule, for a chosen period (Manila calendar days, held in the
+URL): patients with a smear read, smears examined, positive smears, positive rate, and
+fields verified. A weekly bar chart shows smears examined with the positive share filled in
+and the rate above each bar, with a table view. Species bars show the share of positive
+smears carrying each species. No EPG and no WHO intensity tier. If a period holds more than
+5,000 sessions the page says the figures are partial.
 
 ### Records browser
 

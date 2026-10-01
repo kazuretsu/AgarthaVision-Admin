@@ -75,8 +75,9 @@ which is the app's own rule; the console never disagrees with the app about one 
 
 **Enforced at:** `src/domain/clinical.ts` (`isCountedDetection`, `isLiveSample`,
 `summariseSession`), with `src/domain/clinical.test.ts` holding the app's own test cases.
-The dashboard and export still apply the older `CONFIRMED`-only EPG rule in
-`src/domain/epg.ts` until they are rebuilt. This is a clinical requirement, not a display
+The dashboard counts per smear on the same rule (`src/domain/dashboard.ts`). The export
+still applies the older `CONFIRMED`-only EPG rule in `src/domain/epg.ts` until it is
+rebuilt. This is a clinical requirement, not a display
 preference.
 
 ### 7. Migrations own the schema

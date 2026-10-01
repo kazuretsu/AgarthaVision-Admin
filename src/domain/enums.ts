@@ -77,17 +77,6 @@ export enum ValidationStatus {
   Validated = "validated",
 }
 
-/** Infection-intensity band for an EPG value. See `src/domain/severity.ts`. */
-export enum EpgSeverity {
-  /** No eggs counted. */
-  None = "none",
-  Light = "light",
-  Moderate = "moderate",
-  Heavy = "heavy",
-  /** Species carries no published intensity band, so no band is asserted. */
-  Unclassified = "unclassified",
-}
-
 /** Canonical labels and the aliases seen in `class_label` values upstream. */
 const SPECIES_ALIASES: Record<EggSpecies, readonly string[]> = {
   [EggSpecies.Ascaris]: ["ascaris lumbricoides", "ascaris", "ascaris_lumbricoides"],

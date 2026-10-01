@@ -6,12 +6,7 @@ import {
   deriveValidationStatus,
   effectiveSpecies,
   epgFromCount,
-  epgPerSpecies,
-  epgTrend,
   isCountableDetection,
-  speciesDistribution,
-  summariseDashboard,
-  summariseEpg,
 } from "./epg";
 import { makeDetection, makeRecord, makeSample } from "./test-fixtures";
 
@@ -122,101 +117,5 @@ describe("composeSampleRecord", () => {
   it("leaves processing time null when the sample was never verified", () => {
     const record = makeRecord({ verifiedAt: null });
     expect(record.processingTimeMs).toBeNull();
-  });
-});
-
-describe("epgPerSpecies", () => {
-  it("attributes confirmed eggs to the expert-corrected species", () => {
-    const record = makeRecord({}, [
-      makeDetection(),
-      makeDetection({ classLabel: "Hookworm" }),
-      makeDetection({ classLabel: "Hookworm", verdict: DetectionVerdict.FalsePositive }),
-    ]);
-    const result = epgPerSpecies([record]);
-    expect(result[EggSpecies.Ascaris]).toBe(24);
-    expect(result[EggSpecies.Hookworm]).toBe(24);
-    expect(result[EggSpecies.Trichuris]).toBe(0);
-  });
-
-  it("excludes pending and flagged records from aggregation", () => {
-    const pending = makeRecord({ verifiedAt: null });
-    const flagged = makeRecord({ needsReannotation: true });
-    const result = epgPerSpecies([pending, flagged]);
-    expect(result[EggSpecies.Ascaris]).toBe(0);
-  });
-});
-
-describe("summariseEpg", () => {
-  it("reports average, highest and lowest over validated records only", () => {
-    const light = makeRecord({ id: "a" }, [makeDetection()]);
-    const heavy = makeRecord({ id: "b" }, [makeDetection(), makeDetection(), makeDetection()]);
-    const pending = makeRecord({ id: "c", verifiedAt: null }, [
-      makeDetection(),
-      makeDetection(),
-      makeDetection(),
-      makeDetection(),
-      makeDetection(),
-    ]);
-    const summary = summariseEpg([light, heavy, pending]);
-    expect(summary.sampleCount).toBe(2);
-    expect(summary.highestEpg).toBe(72);
-    expect(summary.lowestEpg).toBe(24);
-    expect(summary.averageEpg).toBe(48);
-  });
-
-  it("returns zeroes rather than NaN when nothing is validated", () => {
-    expect(summariseEpg([])).toEqual({
-      sampleCount: 0,
-      averageEpg: 0,
-      highestEpg: 0,
-      lowestEpg: 0,
-    });
-  });
-});
-
-describe("summariseDashboard", () => {
-  it("counts pending validation separately and rates positivity over validated only", () => {
-    const positive = makeRecord({ id: "a" });
-    const negative = makeRecord({ id: "b" }, [
-      makeDetection({ verdict: DetectionVerdict.FalsePositive }),
-    ]);
-    const pending = makeRecord({ id: "c", verifiedAt: null });
-    const summary = summariseDashboard([positive, negative, pending]);
-    expect(summary.totalSamplesProcessed).toBe(3);
-    expect(summary.pendingValidation).toBe(1);
-    expect(summary.positiveSamples).toBe(1);
-    expect(summary.positivityRate).toBeCloseTo(0.5, 10);
-  });
-});
-
-describe("epgTrend", () => {
-  it("buckets by capture day, sorts ascending, and omits days with no data", () => {
-    const day1 = makeRecord({ id: "a", capturedAt: "2026-03-02T09:00:00.000Z" });
-    const day2 = makeRecord({ id: "b", capturedAt: "2026-03-01T09:00:00.000Z" }, [
-      makeDetection({ classLabel: "Trichuris trichiura" }),
-    ]);
-    const trend = epgTrend([day1, day2]);
-    expect(trend.map((point) => point.date)).toEqual(["2026-03-01", "2026-03-02"]);
-    expect(trend[0].epgBySpecies[EggSpecies.Trichuris]).toBe(24);
-    expect(trend[1].totalEpg).toBe(24);
-  });
-});
-
-describe("speciesDistribution", () => {
-  it("ranks species by confirmed egg count and shares sum to one", () => {
-    const record = makeRecord({}, [
-      makeDetection(),
-      makeDetection(),
-      makeDetection({ classLabel: "Hookworm" }),
-    ]);
-    const distribution = speciesDistribution([record]);
-    expect(distribution[0].species).toBe(EggSpecies.Ascaris);
-    expect(distribution[0].eggCount).toBe(2);
-    const total = distribution.reduce((sum, slice) => sum + slice.share, 0);
-    expect(total).toBeCloseTo(1, 10);
-  });
-
-  it("returns an empty distribution rather than dividing by zero", () => {
-    expect(speciesDistribution([])).toEqual([]);
   });
 });

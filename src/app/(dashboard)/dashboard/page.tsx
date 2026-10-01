@@ -1,113 +1,142 @@
+import Link from "next/link";
 import { getDatabase } from "@/adapters/registry";
-import {
-  epgTrend,
-  severitySplit,
-  speciesDistribution,
-  summariseDashboard,
-  summariseEpg,
-} from "@/domain";
+import { summariseDashboard } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
-import { StatTile } from "@/components/StatTile";
-import { EpgTrendChart } from "@/components/charts/EpgTrendChart";
-import { SeveritySplit } from "@/components/charts/SeveritySplit";
-import { SpeciesDistribution } from "@/components/charts/SpeciesDistribution";
+import { describePeriod, parsePeriod } from "@/lib/period";
+import { DataUnavailable } from "@/components/records/DataUnavailable";
+import { SpeciesMix } from "@/components/dashboard/SpeciesMix";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { TrendChart } from "@/components/dashboard/TrendChart";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 /**
- * Administrative dashboard (SDD §3.2).
+ * The landing dashboard, counted per smear on the app's rule.
  *
- * Every aggregate below counts validated records only. Pending and flagged
- * samples are excluded by the domain functions, not filtered here — one
- * definition, applied in one place, so this page and an export cannot disagree
- * about the same period.
+ * Every figure comes from `summariseDashboard`: a smear is examined once a live
+ * field was verified and positive when a live field carries a counted detection —
+ * the rule `barangay_prevalence()` uses, so this page and the map agree. No EPG
+ * and no WHO intensity tier; both were retracted for direct smear.
  */
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+/** Sessions read for one dashboard. Reaching it means the figures would be partial. */
+const SMEAR_LIMIT = 5000;
+
+function percent(rate: number | null): string {
+  return rate === null ? "—" : `${(rate * 100).toFixed(1)}%`;
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   // The layout is not re-rendered on a client-side navigation, so the page
   // repeats the check: a revoked admin loses access on their next click.
   await requirePageAccess(ANY_CONSOLE_USER);
 
-  let records;
+  const period = parsePeriod(await searchParams);
+
+  let smears;
   try {
-    records = await (await getDatabase()).listSampleRecords();
+    smears = await (
+      await getDatabase()
+    ).listSmears({ startedFrom: period.from, startedTo: period.to, limit: SMEAR_LIMIT + 1 });
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
-      return (
-        <main className="mx-auto w-full max-w-6xl px-6 py-10">
-          <h1 className="text-[22px] font-bold text-stone-ink">Dashboard</h1>
-          <p className="mt-3 text-[14px] text-stone-deep">
-            <code className="font-mono text-[13px]">{cause.variable}</code> is not set, so no data
-            could be read.
-          </p>
-        </main>
-      );
+      return <DataUnavailable title="Dashboard" variable={cause.variable} />;
     }
     throw cause;
   }
 
-  const summary = summariseDashboard(records);
-  const epg = summariseEpg(records);
-  const trend = epgTrend(records);
-  const distribution = speciesDistribution(records);
-  const split = severitySplit(records);
+  // One past the limit was asked for, so "more than the limit" is observable.
+  const truncated = smears.length > SMEAR_LIMIT;
+  if (truncated) smears = smears.slice(0, SMEAR_LIMIT);
+  const figures = summariseDashboard(smears);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-[22px] font-bold text-stone-ink">Dashboard</h1>
-        <p className="text-[13px] text-stone-mid">
-          Aggregates cover human-validated samples only. Pending and flagged records are excluded
-          from every figure on this page.
-        </p>
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[22px] font-bold text-stone-ink">Dashboard</h1>
+          <p className="text-[13px] text-stone-mid">
+            Smears read {describePeriod(period)}. A smear is one session; it counts once a field was
+            verified, and is positive when any egg was counted.
+          </p>
+        </div>
+        <form className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-[12px] font-medium text-stone-deep">From</span>
+            <Input type="date" name="from" defaultValue={period.from} className="w-40" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[12px] font-medium text-stone-deep">To</span>
+            <Input type="date" name="to" defaultValue={period.to} className="w-40" />
+          </label>
+          <Button type="submit" variant="outline">
+            Apply
+          </Button>
+          {period.from || period.to ? (
+            <Link href="/dashboard" className="px-2 text-[13px] text-stone-mid hover:text-maroon">
+              All time
+            </Link>
+          ) : null}
+        </form>
       </header>
 
-      <section aria-label="System summary" className="grid grid-cols-4 gap-3">
-        <StatTile
-          label="Samples processed"
-          value={summary.totalSamplesProcessed.toLocaleString()}
-          note="All records in scope"
+      {truncated ? (
+        <p role="status" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
+          This period holds more than {SMEAR_LIMIT.toLocaleString()} sessions, so these figures
+          cover only the most recent ones. Narrow the period for complete figures.
+        </p>
+      ) : null}
+
+      <section aria-label="Summary" className="grid grid-cols-5 gap-3">
+        <StatCard
+          label="Patients"
+          value={figures.patients.toLocaleString()}
+          note="With a smear read"
         />
-        <StatTile
-          label="Pending validation"
-          value={summary.pendingValidation.toLocaleString()}
-          note="Excluded from aggregation"
-          tone="muted"
+        <StatCard label="Smears examined" value={figures.smearsExamined.toLocaleString()} />
+        <StatCard label="Positive smears" value={figures.positiveSmears.toLocaleString()} />
+        <StatCard
+          label="Positive rate"
+          value={percent(figures.positiveRate)}
+          note={`of ${figures.smearsExamined.toLocaleString()} examined`}
         />
-        <StatTile
-          label="Positive samples"
-          value={summary.positiveSamples.toLocaleString()}
-          note="At least one confirmed egg"
-        />
-        <StatTile
-          label="Positivity rate"
-          value={`${Math.round(summary.positivityRate * 100)}%`}
-          note={`of ${epg.sampleCount.toLocaleString()} validated`}
+        <StatCard
+          label="Fields verified"
+          value={figures.fieldsVerified.toLocaleString()}
+          note="Deleted duplicates excluded"
         />
       </section>
 
-      <section aria-label="EPG trend" className="flex flex-col gap-3">
-        <h2 className="text-[15px] font-semibold text-stone-ink">Eggs per gram over time</h2>
-        <EpgTrendChart points={trend} />
-      </section>
-
-      <div className="grid grid-cols-2 gap-8">
-        <section aria-label="Parasite distribution" className="flex flex-col gap-3">
-          <h2 className="text-[15px] font-semibold text-stone-ink">Parasite distribution</h2>
-          <SpeciesDistribution slices={distribution} />
-        </section>
-
-        <section aria-label="Infection intensity" className="flex flex-col gap-3">
-          <h2 className="text-[15px] font-semibold text-stone-ink">Infection intensity</h2>
-          <SeveritySplit split={split} />
-        </section>
+      <div className="grid grid-cols-[2fr_1fr] gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Smears per week</CardTitle>
+            <CardDescription>Weeks start on Monday, Philippine time.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TrendChart points={figures.trend} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Species in positive smears</CardTitle>
+            <CardDescription>
+              Share of positive smears carrying each species. A smear with two species counts for
+              both.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SpeciesMix rows={figures.speciesMix} />
+          </CardContent>
+        </Card>
       </div>
-
-      <section aria-label="EPG summary" className="grid grid-cols-3 gap-3">
-        <StatTile label="Average EPG" value={epg.averageEpg.toLocaleString()} />
-        <StatTile label="Highest EPG" value={epg.highestEpg.toLocaleString()} />
-        <StatTile label="Lowest EPG" value={epg.lowestEpg.toLocaleString()} />
-      </section>
     </main>
   );
 }
