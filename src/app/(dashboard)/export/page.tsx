@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { getDatabase } from "@/adapters/registry";
-import { RESEARCH_EXPORT_COLUMNS, RESEARCH_EXPORT_LIMIT, isExamined } from "@/domain";
+import {
+  RESEARCH_EXPORT_COLUMNS,
+  RESEARCH_EXPORT_LIMIT,
+  isExamined,
+  type OrganizationSummary,
+} from "@/domain";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { MissingEnvironmentError } from "@/lib/env";
 import { describePeriod, parsePeriod } from "@/lib/period";
+import { scopeForRequest } from "@/lib/read-scope";
+import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,19 +33,25 @@ export default async function ExportPage({
   // repeats the check: a revoked admin loses access on their next click.
   await requirePageAccess(ANY_CONSOLE_USER);
 
-  const period = parsePeriod(await searchParams);
+  const params = await searchParams;
+  const period = parsePeriod(params);
+  const { actor, scope } = await scopeForRequest(params.org);
 
   let smears;
+  let organizations: OrganizationSummary[] = [];
   try {
-    smears = await (
-      await getDatabase()
-    ).listSmears({
+    const db = await getDatabase();
+    [smears, organizations] = await Promise.all([
       // The download's own limit, so this count and the file agree, and a period
       // the download would refuse is flagged here first.
-      startedFrom: period.from,
-      startedTo: period.to,
-      limit: RESEARCH_EXPORT_LIMIT + 1,
-    });
+      db.listSmears({
+        scope,
+        startedFrom: period.from,
+        startedTo: period.to,
+        limit: RESEARCH_EXPORT_LIMIT + 1,
+      }),
+      actor.access.kind === "super_admin" ? db.listOrganizations() : Promise.resolve([]),
+    ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Export" variable={cause.variable} />;
@@ -51,6 +64,9 @@ export default async function ExportPage({
   const query = new URLSearchParams();
   if (period.from) query.set("from", period.from);
   if (period.to) query.set("to", period.to);
+  if (scope.kind === "organization" && actor.access.kind === "super_admin") {
+    query.set("org", scope.organizationId);
+  }
   const href = (format: "csv" | "json") => {
     const params = new URLSearchParams(query);
     params.set("format", format);
@@ -83,12 +99,15 @@ export default async function ExportPage({
               <span className="text-[12px] font-medium text-stone-deep">To</span>
               <Input type="date" name="to" defaultValue={period.to} className="w-40" />
             </label>
+            {actor.access.kind === "super_admin" ? (
+              <OrganizationFilter organizations={organizations} scope={scope} />
+            ) : null}
             <Button type="submit" variant="outline">
               Apply
             </Button>
-            {period.from || period.to ? (
+            {period.from || period.to || params.org ? (
               <Link href="/export" className="px-2 text-[13px] text-stone-mid hover:text-maroon">
-                All time
+                Reset
               </Link>
             ) : null}
           </form>

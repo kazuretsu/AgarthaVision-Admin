@@ -4,6 +4,7 @@ import { getDatabase } from "@/adapters/registry";
 import { ageYears, isUuid, patientDisclosureFor, patientLabel, sessionLabel } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
+import { scopeForRequest } from "@/lib/read-scope";
 import { formatBirthdate, formatDateTime, personName } from "@/lib/format";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
@@ -32,12 +33,13 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
   const actor = await requirePageAccess(ANY_CONSOLE_USER);
   // A malformed id names no record; Postgres would reject it as an error.
   if (!isUuid(patientId)) notFound();
+  const { scope } = await scopeForRequest();
 
   let record;
   try {
     record = await (
       await getDatabase()
-    ).getPatientRecord(patientId, patientDisclosureFor(actor.access));
+    ).getPatientRecord(patientId, scope, patientDisclosureFor(actor.access));
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Patient" variable={cause.variable} />;

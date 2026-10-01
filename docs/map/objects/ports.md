@@ -14,6 +14,8 @@ or feature code (constraint #1). That only holds if **no vendor type appears in 
 signature** — otherwise swapping a provider is a refactor of everything that imports it,
 not an addition. Grep the three files for `supabase` and you should find it only in prose.
 
+Every clinical read on `DatabasePort` takes a required `ReadScope` (`src/domain/scope.ts`)
+and must return nothing outside it on its own — see `docs/map/processes/lab-scoping.md`.
 `DatabasePort` is **read-only by construction** (`src/ports/db.ts:43`). There is no
 `insert`, `update` or `delete` verb on it. That is how constraint #4 is enforced rather
 than merely stated: the console cannot mutate clinical data because it has no way to

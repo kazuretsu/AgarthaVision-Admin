@@ -43,6 +43,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       ├── processes/
 │       │   ├── lpf-session-summary.md What counts, and the LPF range, as the app does it.
 │       │   ├── dashboard-figures.md   Per-smear counting, and why not to sum the map's rows.
+│       │   ├── lab-scoping.md         Who sees which laboratory's records, enforced twice.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
@@ -71,7 +72,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   └── supabase/          client, env, database (paged reads in paging.ts), admin-write, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI (incl. alert dialog). Ours to edit.
-    │   ├── organizations/     Create, rename and deactivate forms.
+    │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           LPF table, field image with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
@@ -79,6 +80,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
+        ├── read-scope.ts      The actor and the ReadScope their reads run in.
         ├── utils.ts           cn(): clsx + tailwind-merge.
         ├── format.ts          Dates in Asia/Manila, person names.
         ├── signed-urls.ts     Signs a page's frames; an unreadable one becomes null.

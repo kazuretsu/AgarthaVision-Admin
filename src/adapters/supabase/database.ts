@@ -22,6 +22,7 @@ import type {
   OrganizationDetail,
   OrganizationStatus,
   OrganizationSummary,
+  ReadScope,
 } from "@/domain";
 import {
   DatabaseReadError,
@@ -198,6 +199,18 @@ const SESSION_SUMMARY_TREE = `${SESSION_COLUMNS},
 const ORGANIZATION_COLUMNS = "id, name, status, created_at, deactivated_at";
 
 /**
+ * The owning laboratory, as an inner join: embedded with `!inner` and filtered, a
+ * patient outside the scope drops out of the result entirely rather than coming
+ * back with an empty embed. This is the console's own scoping (D7); RLS applies
+ * the same boundary underneath.
+ */
+const OWNER = "patient_organizations!inner ( organization_id )";
+
+function scopedOrganization(scope: ReadScope): string | null {
+  return scope.kind === "organization" ? scope.organizationId : null;
+}
+
+/**
  * A member's own profile. `organization_members` reaches `profiles` twice
  * (`user_id` and `added_by`), so the embed names its constraint.
  */
@@ -369,13 +382,19 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   constructor(private readonly client: SupabaseClient) {}
 
   async listPatients(query: PatientQuery): Promise<PatientListItem[]> {
-    const { disclosure, search, barangayCode, limit = DEFAULT_LIMIT } = query;
+    const { scope, disclosure, search, barangayCode, limit = DEFAULT_LIMIT } = query;
+    const organizationId = scopedOrganization(scope);
 
     let request = this.client
       .from("patients")
-      .select(`${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( started_at )`)
+      .select(
+        `${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( started_at )${organizationId ? `, ${OWNER}` : ""}`,
+      )
       .order("created_at", { ascending: false })
       .limit(limit);
+
+    if (organizationId)
+      request = request.eq("patient_organizations.organization_id", organizationId);
 
     // A name search is a question about a name: a de-identified reader may not ask it.
     const needle = search && disclosure === "identified" ? sanitiseSearch(search) : "";
@@ -403,15 +422,20 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
 
   async getPatientRecord(
     patientId: string,
+    scope: ReadScope,
     disclosure: PatientDisclosure,
   ): Promise<PatientRecord | null> {
-    const { data, error } = await this.client
+    const organizationId = scopedOrganization(scope);
+    let request = this.client
       .from("patients")
       .select(
-        `${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( ${SESSION_SUMMARY_TREE} )`,
+        `${patientColumns(disclosure)}, ${PATIENT_REGISTRAR}, sessions ( ${SESSION_SUMMARY_TREE} )${organizationId ? `, ${OWNER}` : ""}`,
       )
-      .eq("id", patientId)
-      .maybeSingle();
+      .eq("id", patientId);
+    if (organizationId)
+      request = request.eq("patient_organizations.organization_id", organizationId);
+
+    const { data, error } = await request.maybeSingle();
 
     if (error) throw new DatabaseReadError("getPatientRecord", error);
     if (!data) return null;
@@ -435,15 +459,24 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
 
   async getSessionRecord(
     sessionId: string,
+    scope: ReadScope,
     disclosure: PatientDisclosure,
   ): Promise<SessionRecord | null> {
-    const { data, error } = await this.client
+    const organizationId = scopedOrganization(scope);
+    const patient = organizationId
+      ? `patients!inner ( ${patientColumns(disclosure)}, ${OWNER} )`
+      : `patients ( ${patientColumns(disclosure)} )`;
+    let request = this.client
       .from("sessions")
       .select(
-        `${SESSION_COLUMNS}, profiles ( id, full_name ), patients ( ${patientColumns(disclosure)} ), samples ( ${SAMPLE_TREE} )`,
+        `${SESSION_COLUMNS}, profiles ( id, full_name ), ${patient}, samples ( ${SAMPLE_TREE} )`,
       )
-      .eq("id", sessionId)
-      .maybeSingle();
+      .eq("id", sessionId);
+    if (organizationId) {
+      request = request.eq("patients.patient_organizations.organization_id", organizationId);
+    }
+
+    const { data, error } = await request.maybeSingle();
 
     if (error) throw new DatabaseReadError("getSessionRecord", error);
     if (!data) return null;
@@ -469,6 +502,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
 
   async getSampleRecord(
     sampleId: string,
+    scope: ReadScope,
     disclosure: PatientDisclosure,
   ): Promise<SampleRecordDetail | null> {
     const { data: owner, error: ownerError } = await this.client
@@ -480,8 +514,10 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     if (ownerError) throw new DatabaseReadError("getSampleRecord", ownerError);
     if (!owner || (owner as { deleted_at: string | null }).deleted_at !== null) return null;
 
+    // Scoped through its session: a field is in scope exactly when its smear is.
     const record = await this.getSessionRecord(
       (owner as { session_id: string }).session_id,
+      scope,
       disclosure,
     );
     if (!record) return null;
@@ -499,8 +535,9 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     };
   }
 
-  async listSmears(query: SmearQuery = {}): Promise<SmearRecord[]> {
-    const { startedFrom, startedTo, limit = SMEAR_LIMIT } = query;
+  async listSmears(query: SmearQuery): Promise<SmearRecord[]> {
+    const { scope, startedFrom, startedTo, limit = SMEAR_LIMIT } = query;
+    const organizationId = scopedOrganization(scope);
 
     type Row = SessionRow & {
       samples?: SampleRow[] | null;
@@ -515,9 +552,17 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       (from, to) => {
         let request = this.client
           .from("sessions")
-          .select(`${SESSION_SUMMARY_TREE}, patients ( psgc_barangay_code )`)
+          .select(
+            organizationId
+              ? `${SESSION_SUMMARY_TREE}, patients!inner ( psgc_barangay_code, ${OWNER} )`
+              : `${SESSION_SUMMARY_TREE}, patients ( psgc_barangay_code )`,
+          )
           .order("started_at", { ascending: false })
           .order("id", { ascending: false });
+
+        if (organizationId) {
+          request = request.eq("patients.patient_organizations.organization_id", organizationId);
+        }
 
         // Dates are Manila calendar days, the frame the app records in.
         if (startedFrom) request = request.gte("started_at", `${startedFrom}T00:00:00+08:00`);

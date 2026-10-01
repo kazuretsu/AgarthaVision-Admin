@@ -14,6 +14,7 @@ import {
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
+import { scopeForRequest } from "@/lib/read-scope";
 import { formatDateTime, personName } from "@/lib/format";
 import { signFrames } from "@/lib/signed-urls";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
@@ -56,11 +57,12 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
   const disclosure = patientDisclosureFor(actor.access);
   // A malformed id names no record; Postgres would reject it as an error.
   if (!isUuid(sampleId)) notFound();
+  const { scope } = await scopeForRequest();
 
   let record;
   let urls;
   try {
-    record = await (await getDatabase()).getSampleRecord(sampleId, disclosure);
+    record = await (await getDatabase()).getSampleRecord(sampleId, scope, disclosure);
     if (!record) notFound();
     urls = await signFrames([record.sample.storagePath]);
   } catch (cause) {
