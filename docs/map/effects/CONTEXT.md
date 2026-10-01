@@ -9,6 +9,7 @@ is right and this table is stale.**
 | `src/ports/*`                                          | `../objects/ports.md` · `../../constraints.md` (#1, #4)                                 |
 | `src/adapters/registry.ts`                             | `../objects/provider-registry.md`                                                       |
 | `src/adapters/supabase/database.ts`                    | `../objects/domain-model.md` · `../objects/ports.md`                                    |
+| `src/adapters/supabase/paging.ts`, any `.limit()`      | `../processes/dashboard-figures.md` — one response stops at the server's row cap        |
 | `src/adapters/supabase/storage.ts`                     | `../processes/signed-image-url.md`                                                      |
 | `src/adapters/supabase/auth.ts`                        | `../processes/admin-gate.md` · `../../constraints.md` (#3)                              |
 | `src/domain/entities.ts`, `enums.ts`                   | `../objects/domain-model.md` · `../../constraints.md` (#5, #7)                          |
@@ -33,6 +34,11 @@ is right and this table is stale.**
 render inside it. A route handler under the same folder does not render inside it and
 inherits nothing. `records/export` calls `requireRouteAccess()` for exactly this reason; a new
 handler that forgets to is an open dataset.
+
+**`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
+(1000 on Supabase by default) and does not say so. A read that can exceed it goes through
+`readPages` (`src/adapters/supabase/paging.ts`); a "more than N" check on a single
+response's length can never fire.
 
 **One dropped column fails the whole query.** The consolidated schema removed
 `samples.gps_*`, `sessions.notes`, `sessions.ended_at` and `reports.epg_per_species`.

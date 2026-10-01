@@ -31,6 +31,7 @@ import {
   type SmearQuery,
 } from "@/ports/db";
 import { createRequestClient } from "./client";
+import { readPages } from "./paging";
 
 /**
  * Supabase implementation of {@link DatabasePort}.
@@ -457,21 +458,30 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   async listSmears(query: SmearQuery = {}): Promise<SmearRecord[]> {
     const { startedFrom, startedTo, limit = SMEAR_LIMIT } = query;
 
-    let request = this.client
-      .from("sessions")
-      .select(SESSION_SUMMARY_TREE)
-      .order("started_at", { ascending: false })
-      .limit(limit);
-
-    // Dates are Manila calendar days, the frame the app records in.
-    if (startedFrom) request = request.gte("started_at", `${startedFrom}T00:00:00+08:00`);
-    if (startedTo) request = request.lte("started_at", `${startedTo}T23:59:59.999+08:00`);
-
-    const { data, error } = await request;
-    if (error) throw new DatabaseReadError("listSmears", error);
-
     type Row = SessionRow & { samples?: SampleRow[] | null };
-    return ((data as unknown as Row[] | null) ?? []).map((row) => ({
+
+    // Paged: one response stops at the server's row cap, not at `limit`. `id`
+    // breaks ties in `started_at`, so the order is total and pages do not overlap.
+    const rows = await readPages<Row>(
+      "listSmears",
+      limit,
+      (from, to) => {
+        let request = this.client
+          .from("sessions")
+          .select(SESSION_SUMMARY_TREE)
+          .order("started_at", { ascending: false })
+          .order("id", { ascending: false });
+
+        // Dates are Manila calendar days, the frame the app records in.
+        if (startedFrom) request = request.gte("started_at", `${startedFrom}T00:00:00+08:00`);
+        if (startedTo) request = request.lte("started_at", `${startedTo}T23:59:59.999+08:00`);
+
+        return request.range(from, to);
+      },
+      (row) => row.id,
+    );
+
+    return rows.map((row) => ({
       sessionId: row.id,
       patientId: row.patient_id,
       startedAt: row.started_at,

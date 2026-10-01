@@ -19,8 +19,11 @@ does not dilute the denominator.
 
 ## Steps
 
-1. `listSmears` (`src/adapters/supabase/database.ts:412`) reads each session in the period
-   with only what a summary needs. Period bounds are Manila calendar days (`:422`).
+1. `listSmears` (`src/adapters/supabase/database.ts:413`) reads each session in the period
+   with only what a summary needs. Period bounds are Manila calendar days (`:430`). It
+   reads in pages through `readPages` (`src/adapters/supabase/paging.ts`): PostgREST stops
+   every response at the project's `db-max-rows` (1000 by default) whatever `.limit()` asks
+   for, so a single read silently came back with at most 1000 sessions.
 2. `summariseDashboard` (`src/domain/dashboard.ts:69`) counts distinct patients, examined
    and positive smears, the positive rate, and verified fields; the species mix counts each
    species once per positive smear, so a polyparasitic smear counts for each species it
@@ -29,8 +32,9 @@ does not dilute the denominator.
 3. Weeks with nothing examined are **absent, not zero** (`:104`): a gap in surveillance is a
    different claim from a week of negative smears.
 4. The page (`src/app/(dashboard)/dashboard/page.tsx`) caps the read at 5,000 sessions
-   (`:25`) and says so when the cap is reached (`:51`), because a figure from a truncated
-   set is silently wrong.
+   (`:26`). It asks for one more than that (`:47`), so "more than 5,000" is observable,
+   and says so when it is (`:56`), because a figure from a truncated set is silently wrong.
+   Before paging, the 1000-row server cap meant this warning could never fire.
 
 ## Agreeing with the map
 

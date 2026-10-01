@@ -60,7 +60,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── ports/                 Pure interfaces: db, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
-    │   └── supabase/          client, env, database, storage, auth.
+    │   └── supabase/          client, env, database (paged reads in paging.ts), storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI. Ours to edit.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.

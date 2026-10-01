@@ -44,7 +44,7 @@ export default async function DashboardPage({
   try {
     smears = await (
       await getDatabase()
-    ).listSmears({ startedFrom: period.from, startedTo: period.to, limit: SMEAR_LIMIT });
+    ).listSmears({ startedFrom: period.from, startedTo: period.to, limit: SMEAR_LIMIT + 1 });
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Dashboard" variable={cause.variable} />;
@@ -52,8 +52,10 @@ export default async function DashboardPage({
     throw cause;
   }
 
+  // One past the limit was asked for, so "more than the limit" is observable.
+  const truncated = smears.length > SMEAR_LIMIT;
+  if (truncated) smears = smears.slice(0, SMEAR_LIMIT);
   const figures = summariseDashboard(smears);
-  const truncated = smears.length >= SMEAR_LIMIT;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-6">

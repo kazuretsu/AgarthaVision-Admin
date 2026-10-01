@@ -19,6 +19,14 @@ escape as errors, and a session that ended or an access revoked since the last c
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
 
+## [fix] Dashboard: read every session in the period, not the newest 1000
+
+`.limit(5000)` could not raise PostgREST's response cap (`db-max-rows`, 1000 by default on
+Supabase), so "All time" and any busy period quietly counted only the newest 1000 sessions,
+and the "figures are partial" notice could never appear. `listSmears` now reads in pages
+(`readPages`, `src/adapters/supabase/paging.ts`) with `id` as a tie-break so pages cannot
+overlap, and the page asks for 5,001 so a period over 5,000 is detected.
+
 ## [feat] Dashboard counted per smear in LPF terms, matching the app and the map
 
 The dashboard showed an EPG trend and a WHO light/moderate/heavy split — both retracted for

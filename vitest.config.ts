@@ -13,7 +13,7 @@ export default defineConfig({
     passWithNoTests: true,
     coverage: {
       provider: "v8",
-      include: ["src/domain/**", "src/adapters/registry.ts"],
+      include: ["src/domain/**", "src/adapters/registry.ts", "src/adapters/supabase/paging.ts"],
     },
   },
   resolve: {
