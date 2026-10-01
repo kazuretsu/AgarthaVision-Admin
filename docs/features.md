@@ -95,8 +95,8 @@ counts human-validated records only.
 Records follow the app's clinical hierarchy: **Patient → Session (one smear) → Sample (one
 field) → Detections**. `/records` lists patients, searchable by name or codename and by
 barangay PSGC code, with the query in the URL. A super admin sees patients de-identified: no
-name, sex, age or birthdate, no name search, and no medtech's note; a patient is named by
-the start of their record id (constraint #14). A patient page lists every session with who
+name, sex, age or birthdate, no name search, no session label and no medtech's note; a
+patient or session is named by the start of its record id (constraint #14). A patient page lists every session with who
 read it, the fields examined, a positive/negative result, the per-species LPF range and the
 eggs counted. A session page shows the findings table the way the app's Session Detail does
 and every live field as a frame with its boxes drawn over it. A sample page shows one field:

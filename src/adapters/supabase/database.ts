@@ -203,18 +203,23 @@ function toPatient(row: PatientRow, disclosure: PatientDisclosure): Patient {
   };
 }
 
-function toSession(row: SessionRow): Session {
+/**
+ * A session label is pre-filled from the patient's initials and barangay and a
+ * medtech's note is free text; either can name the patient. A de-identified
+ * reader gets neither, so they never reach a page that could render them.
+ */
+function toSession(row: SessionRow, disclosure: PatientDisclosure): Session {
   return {
     id: row.id,
     userId: row.user_id,
     patientId: row.patient_id,
     deviceId: row.device_id,
     startedAt: row.started_at,
-    label: row.label,
+    label: disclosure === "identified" ? row.label : null,
   };
 }
 
-function toSample(row: SampleRow): Sample {
+function toSample(row: SampleRow, disclosure: PatientDisclosure): Sample {
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -225,7 +230,7 @@ function toSample(row: SampleRow): Sample {
     inferenceModelVersion: row.inference_model_version,
     needsReannotation: row.needs_reannotation,
     isManual: row.is_manual,
-    userNote: row.user_note,
+    userNote: disclosure === "identified" ? row.user_note : null,
     deletedAt: row.deleted_at,
   };
 }
@@ -267,9 +272,9 @@ function toProfile(row: ProfileRow): Profile {
   };
 }
 
-function toSampleDetail(row: SampleRow): SampleDetail {
+function toSampleDetail(row: SampleRow, disclosure: PatientDisclosure): SampleDetail {
   return {
-    sample: toSample(row),
+    sample: toSample(row, disclosure),
     detections: (row.detections ?? []).map(toDetection),
     findings: (row.sample_species_findings ?? []).map(toFinding),
     hasPredictions: (row.predictions ?? []).length > 0,
@@ -300,9 +305,12 @@ function summariseSessionRow(row: SessionRow & { samples?: SampleRow[] | null })
 }
 
 /** Live samples in capture order; a deleted duplicate is never shown. */
-function liveSampleDetails(rows: SampleRow[] | null | undefined): SampleDetail[] {
+function liveSampleDetails(
+  rows: SampleRow[] | null | undefined,
+  disclosure: PatientDisclosure,
+): SampleDetail[] {
   return (rows ?? [])
-    .map(toSampleDetail)
+    .map((row) => toSampleDetail(row, disclosure))
     .filter((detail) => isLiveSample(detail.sample))
     .sort((left, right) => left.sample.capturedAt.localeCompare(right.sample.capturedAt));
 }
@@ -362,7 +370,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     const row = data as unknown as Row;
     const sessions = (row.sessions ?? [])
       .map((session) => ({
-        session: toSession(session),
+        session: toSession(session, disclosure),
         author: toPersonRef(session.profiles),
         summary: summariseSessionRow(session),
       }))
@@ -395,9 +403,9 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     // A session whose patient the caller cannot read is not a session they may open.
     if (!row.patients) return null;
 
-    const samples = liveSampleDetails(row.samples);
+    const samples = liveSampleDetails(row.samples, disclosure);
     return {
-      session: toSession(row),
+      session: toSession(row, disclosure),
       patient: toPatient(row.patients, disclosure),
       author: toPersonRef(row.profiles),
       samples,
@@ -476,7 +484,8 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     };
     const records = ((data as unknown as Row[] | null) ?? []).map((row) =>
       composeSampleRecord({
-        sample: toSample(row),
+        // Legacy EPG export path, removed with EPG by the research export.
+        sample: toSample(row, "identified"),
         detections: (row.detections ?? []).map(toDetection),
         owner: toPersonRef(row.profiles),
         sessionLabel: row.sessions?.label ?? null,

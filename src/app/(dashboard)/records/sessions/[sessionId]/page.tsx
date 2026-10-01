@@ -7,6 +7,7 @@ import {
   isUuid,
   patientDisclosureFor,
   patientLabel,
+  sessionLabel,
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -53,7 +54,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
 
   const { session, patient, author, samples, summary } = record;
   const patientName = patientLabel(patient);
-  const title = session.label ?? "Untitled session";
+  const title = sessionLabel(session, patientDisclosureFor(actor.access));
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">

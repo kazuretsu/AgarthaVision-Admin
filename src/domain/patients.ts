@@ -1,4 +1,5 @@
-import type { Patient, PatientIdentity } from "./entities";
+import type { PatientDisclosure } from "./access";
+import type { Patient, PatientIdentity, Session } from "./entities";
 
 /**
  * How a patient is named and aged, the way the Android app does it
@@ -34,6 +35,19 @@ export function patientLabel(patient: Pick<Patient, "id" | "identity">): string 
   return patient.identity
     ? patientDisplayName(patient.identity)
     : `Patient ${patient.id.slice(0, 8)}`;
+}
+
+/**
+ * How a page names a session. The app pre-fills a label from the patient's
+ * initials and barangay, and the medtech may type anything over it, so a
+ * de-identified reader gets the record id instead, the same way as a patient.
+ */
+export function sessionLabel(
+  session: Pick<Session, "id" | "label">,
+  disclosure: PatientDisclosure,
+): string {
+  if (disclosure === "deidentified") return `Session ${session.id.slice(0, 8)}`;
+  return session.label ?? "Untitled session";
 }
 
 /**

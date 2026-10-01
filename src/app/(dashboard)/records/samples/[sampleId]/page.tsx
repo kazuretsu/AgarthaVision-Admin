@@ -10,6 +10,7 @@ import {
   isUuid,
   patientDisclosureFor,
   patientLabel,
+  sessionLabel,
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -72,7 +73,7 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
   const { sample, detections, findings, session, patient, author, fieldNumber, fieldCount } =
     record;
   const patientName = patientLabel(patient);
-  const sessionTitle = session.label ?? "Untitled session";
+  const sessionTitle = sessionLabel(session, disclosure);
   const counted = detections.filter(isCountedDetection).length;
 
   return (

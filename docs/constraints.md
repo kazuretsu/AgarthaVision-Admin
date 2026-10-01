@@ -160,15 +160,17 @@ re-read. If it grows past roughly 60 lines, content has leaked into it.
 A patient's name, sex and birthdate reach an **organization admin** of the patient's own
 laboratory and nobody else in the console. A **super admin** reads records de-identified:
 the identity columns are never selected for them, a name search is ignored, and the
-medtech's free-text note on a field is withheld because it can name the patient. Each
+session label and the medtech's free-text note on a field are withheld, because the label is
+pre-filled from the patient's initials and either can be typed over with a name. Each
 clinic is the controller of its patients' data under RA 10173 and AgarthaVision hosts it
 as the clinic's processor; running the platform needs no patient's identity, so
-proportionality (§11) keeps it out. Pages name a de-identified patient by the first eight
-characters of the record id.
+proportionality (§11) keeps it out. Pages name a de-identified patient or session by the
+first eight characters of its record id.
 
 **Enforced at:** `src/domain/access.ts` (`patientDisclosureFor`, the rule);
 `src/ports/db.ts` (every patient read takes a `PatientDisclosure`);
 `src/adapters/supabase/database.ts` (`patientColumns`, which leaves the identity columns
-out of the request). The app's own policies still let `profiles.role = 'admin'` read every
+out of the request; `toSession` and `toSample`, which drop the label and the note). The
+app's own policies still let `profiles.role = 'admin'` read every
 patient row, so the console's rule is the only line today; narrowing that policy is the
 app's change to make.

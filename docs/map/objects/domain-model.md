@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: c5c0fbe
+verified: 2026-10-01
+commit: 58be5a5
 ---
 
 # Domain model
@@ -25,7 +25,7 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 | ---------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
 | `Profile`        | `0001`                         | `role` CHECK `('medtech','admin')`; `full_name` is never filled by the signup trigger |
 | `Patient`        | `0001`, `0002`                 | name, sex, birthdate under `identity`, `null` for a de-identified reader (#14)        |
-| `Session`        | `0001`                         | one smear, owned by a patient; `user_id` is the **author**                            |
+| `Session`        | `0001`                         | one smear, owned by a patient; `user_id` is the **author**; `label` `null` if de-id'd |
 | `Sample`         | `0001`                         | `deleted_at` is the duplicate tombstone — see below                                   |
 | `Detection`      | `0001`, `0004`, `0005`, `0006` | `prediction_id` (0004), `stage` (0005); `species_touched` dropped (0006)              |
 | `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range                             |

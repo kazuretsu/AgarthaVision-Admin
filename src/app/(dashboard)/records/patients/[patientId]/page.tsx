@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { ageYears, isUuid, patientDisclosureFor, patientLabel } from "@/domain";
+import { ageYears, isUuid, patientDisclosureFor, patientLabel, sessionLabel } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { formatBirthdate, formatDateTime, personName } from "@/lib/format";
@@ -108,7 +108,7 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
                       href={`/records/sessions/${session.id}`}
                       className="font-semibold text-stone-ink hover:text-maroon"
                     >
-                      {session.label ?? "Untitled session"}
+                      {sessionLabel(session, patientDisclosureFor(actor.access))}
                     </Link>
                   </TableCell>
                   <TableCell className="tnum">{formatDateTime(session.startedAt)}</TableCell>

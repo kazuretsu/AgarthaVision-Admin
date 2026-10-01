@@ -2,6 +2,15 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Records: a super admin sees no session label either
+
+A session label is pre-filled on the phone from the patient's initials and barangay, and a
+medtech may type anything over it, so it named patients to super admins on the patient,
+session and field pages. For a de-identified reader the adapter now drops the label, and
+the medtech's note with it, when it maps the row (`toSession`, `toSample`). Before, the note
+reached the server and was only hidden at render. `sessionLabel` names their session
+"Session" plus the first eight characters of its id.
+
 ## [fix] A page turns a signed-out or revoked visitor away itself
 
 A client-side navigation re-renders the page but not the `(dashboard)` layout, so the
@@ -9,6 +18,7 @@ page's `requirePageAccess()` is the only check that runs. It let the layout's tw
 escape as errors, and a session that ended or an access revoked since the last click
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
+
 ## [fix] Records: super admins see patients de-identified
 
 A patient's name, sex and birthdate now reach only an organization admin of the patient's

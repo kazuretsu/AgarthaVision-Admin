@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ageYears, clinicalDate, isCodenamed, patientDisplayName, patientLabel } from "./patients";
+import {
+  ageYears,
+  clinicalDate,
+  isCodenamed,
+  patientDisplayName,
+  patientLabel,
+  sessionLabel,
+} from "./patients";
 
 describe("patientDisplayName", () => {
   it("writes surname, given name and middle initial", () => {
@@ -59,5 +66,22 @@ describe("patientLabel", () => {
 
   it("gives a de-identified patient their short record id, not a name", () => {
     expect(patientLabel({ id, identity: null })).toBe("Patient 1a2b3c4d");
+  });
+});
+
+describe("sessionLabel", () => {
+  const id = "5e6f7a8b-0000-4000-8000-000000000000";
+
+  it("uses the app's label for an identified reader", () => {
+    expect(sessionLabel({ id, label: "C.G.-0730600000-001" }, "identified")).toBe(
+      "C.G.-0730600000-001",
+    );
+    expect(sessionLabel({ id, label: null }, "identified")).toBe("Untitled session");
+  });
+
+  it("never shows a de-identified reader the label, which carries initials", () => {
+    expect(sessionLabel({ id, label: "C.G.-0730600000-001" }, "deidentified")).toBe(
+      "Session 5e6f7a8b",
+    );
   });
 });
