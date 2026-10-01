@@ -11,19 +11,20 @@ Input: an HTTP request → Movement: refresh session, resolve identity, resolve 
 
 ## Who gets in
 
-| Person             | Source of truth                                | Console access                                  |
-| ------------------ | ---------------------------------------------- | ----------------------------------------------- |
-| Super admin        | `profiles.role = 'admin'`                      | Everything, every organization                  |
-| Organization admin | An active org-admin membership (organizations) | Their own organization's pages                  |
-| Medtech            | Anyone else                                    | None — told to use the mobile app, sees no data |
+| Person             | Source of truth                                          | Console access                                  |
+| ------------------ | -------------------------------------------------------- | ----------------------------------------------- |
+| Super admin        | `profiles.role = 'admin'`                                | Everything, every organization                  |
+| Organization admin | An active org-admin membership in an active organization | Their own organization's pages                  |
+| Medtech            | Anyone else                                              | None — told to use the mobile app, sees no data |
 
 The rule is `resolveConsoleAccess` (`src/domain/access.ts:41`). It is plain domain code so
 it runs before any read or write, whichever provider sits behind the ports (D7). The profile
 role wins: a super admin who also holds a membership stays a super admin.
 
-Organizations are not built yet, so `findOrgAdminMembership`
-(`src/adapters/supabase/auth.ts:70`) returns `null` and nobody is an org admin today. That
-method is the one seam the organizations work fills; nothing else in the gate changes.
+`findOrgAdminMembership` (`src/adapters/supabase/auth.ts:78`) reads the user's own
+`organization_members` row (`docs/map/objects/organizations.md`). Only an active `org_admin`
+membership in an active organization counts, so deactivating either locks the org admin
+out on their next request.
 
 ## Steps
 

@@ -1,4 +1,4 @@
-import type { AuthPort, DatabasePort, StoragePort } from "@/ports";
+import type { AdminWritePort, AuthPort, DatabasePort, StoragePort } from "@/ports";
 import { optionalEnv } from "@/lib/env";
 
 /**
@@ -83,6 +83,19 @@ export async function getAuth(): Promise<AuthPort> {
     case "supabase": {
       const { createSupabaseAuth } = await import("./supabase/auth");
       return createSupabaseAuth();
+    }
+  }
+}
+
+/**
+ * The administrative write port for this request. Server-side only. Follows the
+ * database provider: the writes live in the same database as the reads.
+ */
+export async function getAdminWrites(): Promise<AdminWritePort> {
+  switch (databaseProvider()) {
+    case "supabase": {
+      const { createSupabaseAdminWrite } = await import("./supabase/admin-write");
+      return createSupabaseAdminWrite();
     }
   }
 }

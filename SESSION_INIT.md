@@ -30,6 +30,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Changing a domain entity or enum                | `docs/map/objects/domain-model.md`, `docs/constraints.md` (#5, #7)   |
 | Changing what counts, LPF or session figures    | `docs/map/processes/lpf-session-summary.md`                          |
 | Changing the export columns or file format      | `docs/map/processes/research-export.md`                              |
+| Organizations, memberships or the audit log     | `docs/map/objects/organizations.md`, `docs/constraints.md` (#4, #7)  |
 | Changing who can reach a route                  | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
 | Loading sample images                           | `docs/map/processes/signed-image-url.md`                             |
 | Wondering what a command does                   | `docs/commands.md`                                                   |

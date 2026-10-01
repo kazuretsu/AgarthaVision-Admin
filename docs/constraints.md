@@ -47,12 +47,16 @@ features may call). `src/proxy.ts` refreshes the session and is not a gate.
 
 ### 4. Read-mostly console
 
-The console reads clinical data. It does not create, edit, delete or re-validate samples,
-detections or verdicts — that is the Android client's human-in-the-loop workflow. The only
-writes this app performs are authentication session cookies.
+The console reads clinical data. It does not create, edit, delete or re-validate
+patients, sessions, samples, detections or verdicts — that is the Android client's
+human-in-the-loop workflow. Its only writes are administrative (organizations today;
+memberships, assignments and shares later), each through a narrow port that records it in
+the audit trail (D2). Nothing is deleted: organizations and members are deactivated.
 
 **Enforced at:** `src/ports/db.ts` exposes query methods only — there is no `insert`,
-`update` or `delete` in the port surface, so no feature can call one.
+`update` or `delete` in it, so no feature can write clinical data. Administrative writes
+exist only on `src/ports/admin-write.ts`, and each is a security-definer function in
+`supabase/migrations/admin/` that audits itself; the tables have no write policies.
 
 ### 5. Schema parity with AgarthaVision
 
@@ -82,12 +86,16 @@ preference.
 
 ### 7. Migrations own the schema
 
-This repo contains no migrations and creates no tables. The authority for columns,
-constraints, RLS and CHECKs is `supabase/migrations/*.sql` in the AgarthaVision repo. When
-that schema changes, `src/domain/` follows in the same pass; this console never leads.
+The app repo's `supabase/migrations/*.sql` own the clinical schema; when it changes,
+`src/domain/` follows and this console never leads. This repo owns only the console's own
+objects (D4), in `supabase/migrations/admin/NNNN_*.sql` with its own sequence. Admin
+migrations are **additive only**: new tables, functions, triggers and permissive policies,
+never an `ALTER` or `DROP` of anything the app owns. A change to an app-owned table goes to
+the app repo instead. Both kinds are applied by hand, once, in the SQL editor.
 
-**Enforced at:** review — a PR that adds a column reference with no upstream migration
-behind it is rejected. `docs/map/objects/domain-model.md` records the upstream migration
+**Enforced at:** review; `bun run test:db` applies the app's migrations then the admin ones
+to a local database and runs `supabase/tests/`, which include checks that the app's own
+writes still succeed. `docs/map/objects/domain-model.md` records the upstream migration
 number each field came from.
 
 ### 8. Commit format

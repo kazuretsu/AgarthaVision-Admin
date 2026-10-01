@@ -21,11 +21,12 @@ express the intent.
 
 ## Shape
 
-| Port           | Members                                                                                                               | File                      |
-| -------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `DatabasePort` | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles` | `src/ports/db.ts:36`      |
-| `StoragePort`  | `createSignedUrl`                                                                                                     | `src/ports/storage.ts:21` |
-| `AuthPort`     | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                              | `src/ports/auth.ts:33`    |
+| Port             | Members                                                                                                               | File                       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `DatabasePort`   | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles` | `src/ports/db.ts:36`       |
+| `AdminWritePort` | `createOrganization`, `renameOrganization`, `setOrganizationStatus` — each audited                                    | `src/ports/admin-write.ts` |
+| `StoragePort`    | `createSignedUrl`                                                                                                     | `src/ports/storage.ts:21`  |
+| `AuthPort`       | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                              | `src/ports/auth.ts:33`     |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:60`), `StorageAccessError`

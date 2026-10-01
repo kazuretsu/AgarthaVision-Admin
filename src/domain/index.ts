@@ -3,6 +3,7 @@ export * from "./access";
 export * from "./clinical";
 export * from "./dashboard";
 export * from "./entities";
+export * from "./organizations";
 export * from "./enums";
 export * from "./ids";
 export * from "./patients";

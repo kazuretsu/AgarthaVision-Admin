@@ -60,13 +60,22 @@ key — necessary because upstream Storage RLS has no admin exception yet.
 
 Supabase Auth behind `AuthPort`. Identity comes from `getUser()`; access comes from
 `profiles.role` (super admin) or an org-admin membership (organization admin), read
-server-side on every request, never from a token claim. Org-admin memberships arrive with organizations —
-until then only super admins get in. The `(dashboard)` segment layout resolves the actor
+server-side on every request, never from a token claim. An organization admin whose
+membership or organization is deactivated is turned away on their next request. The `(dashboard)` segment layout resolves the actor
 once, so every page under it is guarded on creation; narrower pages add
 `requirePageAccess()`, and route handlers repeat the check with `requireRouteAccess()`. A
 medtech who signs in is signed back out and told to use the mobile app; a medtech with a
 live session sees that notice and no data. `src/proxy.ts` refreshes tokens and is
 deliberately not the authorisation point.
+
+### Organizations
+
+Super admins create, rename, deactivate and reactivate laboratory organizations at
+`/organizations`, and see each one's org admins, medtechs and patient count. Names are
+unique ignoring case and spacing. Deactivation asks for confirmation, deletes nothing, and
+locks the laboratory's org admins out until reactivated. Every change is written to the
+audit log in the same transaction by the database, which checks the caller again. Existing
+users and patients start in one "Starting laboratory". Org admins and medtechs get a 404.
 
 ### Console shell
 

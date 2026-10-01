@@ -2,6 +2,19 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Organizations: 404 a malformed id, and test against the app's current schema
+
+`/organizations/abc` was a 500, because the id went straight to Postgres. It is now a 404,
+like the record pages, and the rename and status actions answer "no longer exists" for one.
+
+`bun run test:db` failed on the app's `development` branch, which is now at `0011`: `0007`
+calls `storage.filename()`, which the stubs lacked. The stub is added. Since `0011`, a
+profile outlives its login, so deleting a login no longer clears `admin_audit_log.actor_id`.
+The test now checks both paths: the login goes and, where `0011` is applied, the entries
+keep their actor; the profile goes and they keep their label. The organizations card's
+offboarding rule says the same. No migration changes; `admin/0001`–`0003` apply on the
+app's `0001`–`0006` and on `0001`–`0011`, and the tests pass on both.
+
 ## [fix] Records: a super admin sees no session label either
 
 A session label is pre-filled on the phone from the patient's initials and barangay, and a
@@ -18,6 +31,33 @@ page's `requirePageAccess()` is the only check that runs. It let the layout's tw
 escape as errors, and a session that ended or an access revoked since the last click
 landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
 `/login` and gives a revoked one a 404, as a full load would.
+
+## [fix] Organizations: tier names, desktop layout, and leaving keeps the author
+
+Organization pages say Organization admin where they said Org admin, and lay out for a
+desktop. The organizations card now states the offboarding rule: a member who leaves is
+deactivated, never deleted, so their profile and their authorship of every record stay.
+
+## [feat] Laboratory organizations, managed by super admins, with an append-only audit log
+
+The first schema this repo owns (D4): `supabase/migrations/admin/0001_organizations.sql`,
+additive only. Organizations; memberships keyed by user, so a user belongs to one laboratory
+and "org admin" is a role on the membership; `patient_organizations`, the owning laboratory
+of each patient; and `admin_audit_log`. Reads are RLS policies scoped to the super admin or
+the reader's own organization. Writes have no table policy: each is a security-definer
+function that checks the caller and appends the audit row in the same transaction. The
+audit log refuses UPDATE, DELETE and TRUNCATE for every role, allowing only the foreign
+key's own set-null when an actor's profile is deleted, so user deletion still works. A
+backfill puts every existing medtech and patient in one "Starting laboratory".
+
+The console gains `AdminWritePort` (D2), checks `canManageOrganizations` before every write,
+and gives super admins `/organizations` to create, rename, deactivate (with confirmation)
+and reactivate. The gate now recognises org admins from their own membership, and a
+deactivated membership or organization locks them out on their next request.
+
+`bun run test:db` applies the app's migrations and ours to a throwaway local Postgres and
+runs `supabase/tests/`: the backfill, super-admin-only writes, scoped reads, the audit log's
+immutability, and that a medtech still registers a patient afterwards.
 
 ## [fix] Export page lays out for a desktop
 
