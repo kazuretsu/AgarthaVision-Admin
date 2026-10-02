@@ -171,9 +171,25 @@ begin
             exists (select 1 from public.admin_audit_log where actor_id = f.super_admin),
             'the actor''s entries keep their actor when the login is deleted');
     end if;
-    delete from public.profiles where id = f.super_admin;
+    -- A super admin's grant names their profile (app 0014) and is never deleted (C8), so
+    -- the profile cannot be removed while the grant exists.
+    perform tests.expect_error(format('delete from public.profiles where id = %L', f.super_admin),
+        '23503', 'a super admin''s profile cannot be deleted from under their grant');
+end
+$$;
+
+do $$
+declare
+    v_gone uuid;
+begin
+    perform tests.act_as_owner();
+    v_gone := tests.create_user('gone@example.test');
+    insert into public.admin_audit_log (actor_id, actor_label, action, target_type)
+    values (v_gone, 'gone', 'organization.create', 'organization');
+    delete from auth.users where id = v_gone;
+    delete from public.profiles where id = v_gone;
     perform tests.check(
-        exists (select 1 from public.admin_audit_log where actor_id is null and actor_label = 'super'),
+        exists (select 1 from public.admin_audit_log where actor_id is null and actor_label = 'gone'),
         'the actor''s entries survive with their label when the profile is deleted');
 end
 $$;

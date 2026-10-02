@@ -8,15 +8,15 @@ import type { ConsoleAccess } from "@/domain/access";
  * or a provider session object.
  */
 
-/** `profiles.role`. Only `admin` means anything to the console: it is a super admin. */
-export type UserRole = "medtech" | "admin";
-
 export interface AuthenticatedUser {
   id: string;
   email: string | null;
   fullName: string | null;
-  /** Read from `profiles.role`. A client claim is never the authority. */
-  role: UserRole;
+  /**
+   * An active grant in `super_admins`, read through `is_admin()`: the same check every
+   * database policy makes. Never `profiles.role`, a JWT claim or `user_metadata`.
+   */
+  isSuperAdmin: boolean;
 }
 
 /** A signed-in user together with what they may do in the console. */

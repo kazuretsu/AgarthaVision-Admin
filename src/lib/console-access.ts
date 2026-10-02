@@ -14,7 +14,7 @@ import { MissingEnvironmentError } from "@/lib/env";
  * link is presentation, this call is the protection.
  *
  * `cache()` scopes the lookup to one request, so the layout and the page share a
- * single read of `profiles.role` rather than paying for it twice.
+ * single access lookup rather than paying for it twice.
  */
 export const getConsoleActor = cache(async (): Promise<ConsoleActor> => {
   return (await getAuth()).requireConsoleActor();

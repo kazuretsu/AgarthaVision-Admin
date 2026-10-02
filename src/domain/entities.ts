@@ -20,8 +20,8 @@ export interface Profile {
   id: string;
   /** Nullable. `handle_new_user()` never fills it. */
   fullName: string | null;
-  /** `not null default 'medtech'`, CHECK in `('medtech','admin')`. */
-  role: "medtech" | "admin";
+  // `role` is not mirrored: app 0014 retired it and it decides nothing. A super admin
+  // is an active grant in `super_admins`, read through `is_admin()` (ports/auth.ts).
   createdAt: Iso8601;
 }
 

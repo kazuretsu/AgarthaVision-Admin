@@ -67,7 +67,7 @@ admins are members of nothing; they see everything.
 
 ## In the console
 
-- Org-admin detection: `findOrgAdminMembership` (`src/adapters/supabase/auth.ts:78`) reads
+- Org-admin detection: `findOrgAdminMembership` (`src/adapters/supabase/auth.ts:74`) reads
   the user's own membership; only an active `org_admin` in an active organization counts.
 - Writes go through `AdminWritePort` (`src/ports/admin-write.ts`), implemented by one RPC
   call per method (`src/adapters/supabase/admin-write.ts:35`), with SQLSTATEs mapped to
