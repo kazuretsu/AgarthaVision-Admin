@@ -142,7 +142,6 @@ interface MemberRow {
 interface ProfileRow {
   id: string;
   full_name: string | null;
-  role: string | null;
   created_at: string;
 }
 
@@ -374,9 +373,6 @@ function toProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
     fullName: row.full_name,
-    // The CHECK constraint allows only these two, but the column is plain text.
-    // Anything else is treated as the lesser privilege rather than trusted.
-    role: row.role === "admin" ? "admin" : "medtech",
     createdAt: row.created_at,
   };
 }
@@ -720,7 +716,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   async getProfile(userId: string): Promise<Profile | null> {
     const { data, error } = await this.client
       .from("profiles")
-      .select("id, full_name, role, created_at")
+      .select("id, full_name, created_at")
       .eq("id", userId)
       .maybeSingle();
 
@@ -731,7 +727,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   async listProfiles(): Promise<Profile[]> {
     const { data, error } = await this.client
       .from("profiles")
-      .select("id, full_name, role, created_at")
+      .select("id, full_name, created_at")
       .order("full_name", { ascending: true, nullsFirst: false });
 
     if (error) throw new DatabaseReadError("listProfiles", error);

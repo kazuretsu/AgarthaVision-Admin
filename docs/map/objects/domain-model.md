@@ -23,7 +23,7 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 
 | Type             | Source of truth                | Notes                                                                                                       |
 | ---------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `Profile`        | `0001`                         | `role` CHECK `('medtech','admin')`; `full_name` is never filled by the signup trigger                       |
+| `Profile`        | `0001`                         | `full_name` is never filled by the signup trigger; `role` is retired (`0014`) and not mirrored              |
 | `Patient`        | `0001`, `0002`                 | name, sex, birthdate under `identity`, `null` for a de-identified reader (#14)                              |
 | `Session`        | `0001`                         | one smear, owned by a patient; `user_id` is the **author**; `label` `null` for a de-identified reader (#14) |
 | `Sample`         | `0001`                         | `deleted_at` is the duplicate tombstone — see below; `userNote` `null` for a de-identified reader           |

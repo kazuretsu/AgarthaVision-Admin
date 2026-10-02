@@ -36,7 +36,7 @@ provider raised it: `DatabaseReadError` (`src/ports/db.ts:115`), `StorageAccessE
 `AuthenticationFailedError` (`src/ports/auth.ts:55-77`).
 
 `requireConsoleActor()` returns the user together with their `ConsoleAccess`
-(`src/domain/access.ts:23`) — super admin, or org admin with their organization — and
+(`src/domain/access.ts:22`) — super admin, or org admin with their organization — and
 throws rather than returning a reduced view for anyone else. There is no partial console,
 so a caller cannot forget to branch on a role and leak a cross-user query. The port
 imports that one domain type; it still names no vendor.

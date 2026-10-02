@@ -4,6 +4,9 @@ create schema tests;
 grant usage on schema tests to authenticated, anon;
 
 -- A user with a profile, as signup would make one; `p_role = 'admin'` makes a super admin.
+-- A super admin is an active `super_admins` row (app 0014), the only thing `is_admin()`
+-- reads. `profiles.role` is left at its default, so a test passes only if nothing still
+-- reads the retired column.
 create function tests.create_user(p_email text, p_role text default 'medtech')
 returns uuid
 language plpgsql
@@ -12,8 +15,10 @@ declare
     v_id uuid;
 begin
     insert into auth.users (email) values (p_email) returning id into v_id;
-    update public.profiles set role = p_role, full_name = split_part(p_email, '@', 1)
-    where id = v_id;
+    update public.profiles set full_name = split_part(p_email, '@', 1) where id = v_id;
+    if p_role = 'admin' then
+        insert into public.super_admins (user_id) values (v_id);
+    end if;
     return v_id;
 end;
 $$;

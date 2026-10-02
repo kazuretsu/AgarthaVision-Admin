@@ -4,14 +4,13 @@
  * Three tiers (Feature Specs §1), each with its own client:
  *
  * - **Super admin** — the AgarthaVision developers and owners. Platform-wide, in no
- *   organization: `profiles.role = 'admin'`. Uses this console.
+ *   organization: an active grant in `super_admins` (D22). Uses this console.
  * - **Organization admin** — a clinic's own admin staff, who manage the data that
  *   clinic's medtechs create. A role on their organization membership, never on the
  *   profile, so it ends with the membership. Uses this console.
  * - **Medtech** — the end user. Uses the mobile app only; has no console access.
  *
- * `profiles.role` is `'medtech'` for everyone who is not a super admin, organization
- * admins included: it says "not a super admin", and the membership says the rest.
+ * `profiles.role` is retired (app 0014) and decides nothing.
  *
  * These rules live here, in plain TypeScript, and run before every read and write
  * the console makes (D7). Database policies are the second line, not the only one:
@@ -34,15 +33,15 @@ export interface OrgAdminMembership {
 /**
  * Resolves console access from the two facts the auth adapter reads server-side.
  *
- * The profile role wins: a super admin who also holds a membership is still a
+ * Being a super admin wins: a super admin who also holds a membership is still a
  * super admin, because narrowing them to one laboratory would hide the rest of
  * the system from the people who run it.
  */
 export function resolveConsoleAccess(
-  profileRole: "medtech" | "admin",
+  isSuperAdmin: boolean,
   membership: OrgAdminMembership | null,
 ): ConsoleAccess | null {
-  if (profileRole === "admin") return { kind: "super_admin" };
+  if (isSuperAdmin) return { kind: "super_admin" };
   if (membership) {
     return {
       kind: "org_admin",

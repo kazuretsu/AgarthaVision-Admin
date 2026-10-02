@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-01
-commit: 704ff09
+verified: 2026-10-02
+commit: 0e56473
 ---
 
 # Admin gate
@@ -11,17 +11,23 @@ Input: an HTTP request → Movement: refresh session, resolve identity, resolve 
 
 ## Who gets in
 
-| Person             | Source of truth                                          | Console access                                  |
-| ------------------ | -------------------------------------------------------- | ----------------------------------------------- |
-| Super admin        | `profiles.role = 'admin'`                                | Everything, every organization                  |
-| Organization admin | An active org-admin membership in an active organization | Their own organization's pages                  |
-| Medtech            | Anyone else                                              | None — told to use the mobile app, sees no data |
+| Person             | Source of truth                                           | Console access                                  |
+| ------------------ | --------------------------------------------------------- | ----------------------------------------------- |
+| Super admin        | An active `super_admins` grant, read through `is_admin()` | Everything, every organization                  |
+| Organization admin | An active org-admin membership in an active organization  | Their own organization's pages                  |
+| Medtech            | Anyone else                                               | None — told to use the mobile app, sees no data |
 
-The rule is `resolveConsoleAccess` (`src/domain/access.ts:41`). It is plain domain code so
-it runs before any read or write, whichever provider sits behind the ports (D7). The profile
-role wins: a super admin who also holds a membership stays a super admin.
+The rule is `resolveConsoleAccess` (`src/domain/access.ts:40`). It is plain domain code so
+it runs before any read or write, whichever provider sits behind the ports (D7). Being a
+super admin wins: a super admin who also holds a membership stays a super admin.
 
-`findOrgAdminMembership` (`src/adapters/supabase/auth.ts:78`) reads the user's own
+`isSuperAdmin` (`src/adapters/supabase/auth.ts:63`) calls the app's `is_admin()` (app
+`0014`, D22) as the signed-in user: the same function every database policy calls, so the
+console and the database never disagree. `super_admins` itself is closed to every client.
+`profiles.role` is retired and the console never reads it. A revoked grant turns the super
+admin away on their next request.
+
+`findOrgAdminMembership` (`src/adapters/supabase/auth.ts:74`) reads the user's own
 `organization_members` row (`docs/map/objects/organizations.md`). Only an active `org_admin`
 membership in an active organization counts, so deactivating either locks the org admin
 out on their next request.
@@ -31,11 +37,12 @@ out on their next request.
 1. **Refresh.** `src/proxy.ts:46` touches `supabase.auth.getUser()` on every matched
    request to trigger the refresh-and-set-cookie cycle. A Server Component cannot write
    cookies. **This is refresh only — it is not the authorisation point.**
-2. **Resolve identity.** `getCurrentUser` (`src/adapters/supabase/auth.ts:82`) calls
+2. **Resolve identity.** `getCurrentUser` (`src/adapters/supabase/auth.ts:96`) calls
    `getUser()`, not `getSession()`, which only decodes a cookie the browser can set.
-3. **Resolve role.** From `profiles.role`, read server-side (`:45`), never from a JWT claim
-   or `user_metadata`. A missing or unreadable profile resolves to `medtech` (`:38`, `:61`).
-4. **Resolve access.** `toActor` (`:74`) looks up the membership (skipped for a super admin)
+3. **Resolve super admin.** `toAuthenticatedUser` (`:42`) reads the name from `profiles`
+   and asks `is_admin()` in parallel (`:63`), never a JWT claim, `user_metadata` or
+   `profiles.role`. An error or anything but `true` resolves to not a super admin (`:65`).
+4. **Resolve access.** `toActor` (`:88`) looks up the membership (skipped for a super admin)
    and applies `resolveConsoleAccess`. No access throws `NotAuthorizedError`.
 5. **Gate the segment.** The `(dashboard)` layout calls `getConsoleActor()`
    (`src/app/(dashboard)/layout.tsx:29`): no session redirects to `/login` (`:31`); no access
@@ -78,8 +85,8 @@ addresses are real accounts.
 
 ## Consumes / produces
 
-Consumes `AuthPort` (`docs/map/objects/ports.md`) and `profiles`
-(`docs/map/objects/domain-model.md`). Produces a `ConsoleActor`, the notice, or a redirect.
+Consumes `AuthPort` (`docs/map/objects/ports.md`), `profiles`
+(`docs/map/objects/domain-model.md`) and the app's `is_admin()`. Produces a `ConsoleActor`, the notice, or a redirect.
 
 ## If you change this
 
@@ -95,6 +102,8 @@ Consumes `AuthPort` (`docs/map/objects/ports.md`) and `profiles`
 
 - Row visibility. RLS decides what a query returns; this gate decides who may ask.
 - `src/proxy.ts`, which never reads a role.
+- `super_admins` and `is_admin()`, which the app owns. Granting and revoking are a separate
+  ticket (14zcqntjwjg).
 
 ## See
 

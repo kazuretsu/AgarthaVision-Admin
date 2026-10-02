@@ -59,9 +59,11 @@ key — necessary because upstream Storage RLS has no admin exception yet.
 ### Authentication and the admin gate
 
 Supabase Auth behind `AuthPort`. Identity comes from `getUser()`; access comes from
-`profiles.role` (super admin) or an org-admin membership (organization admin), read
-server-side on every request, never from a token claim. An organization admin whose
-membership or organization is deactivated is turned away on their next request. The `(dashboard)` segment layout resolves the actor
+an active `super_admins` grant through `is_admin()` (super admin) or an org-admin
+membership (organization admin), read server-side on every request, never from a token
+claim or the retired `profiles.role`. A super admin whose grant is revoked, and an
+organization admin whose membership or organization is deactivated, are turned away on
+their next request. The `(dashboard)` segment layout resolves the actor
 once, so every page under it is guarded on creation; narrower pages add
 `requirePageAccess()`, and route handlers repeat the check with `requireRouteAccess()`. A
 medtech who signs in is signed back out and told to use the mobile app; a medtech with a

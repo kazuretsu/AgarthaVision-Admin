@@ -32,12 +32,15 @@ never at module load.
 ### 3. Admin-only routes
 
 Every console surface requires a session with console access: a **super admin** (the
-AgarthaVision developers and owners, `profiles.role = 'admin'`) or an **organization admin**
+AgarthaVision developers and owners, an active grant in `super_admins` read through
+`is_admin()`, D22) or an **organization admin**
 (a clinic's admin staff, an active org-admin membership). Medtechs use the mobile app only. A
 medtech session is not a partial admin: it sees a notice pointing to the mobile app and no
 data.
 Access is read server-side on every request; a cookie, a JWT claim or `user_metadata` is
-never the authority. Hiding a sidebar link is presentation, not protection.
+never the authority, and neither is the retired `profiles.role`. The console asks the same
+`is_admin()` every database policy asks, so the two never disagree about who is a super
+admin. Hiding a sidebar link is presentation, not protection.
 
 **Enforced at:** `src/domain/access.ts` (`resolveConsoleAccess`, the rule itself);
 `src/app/(dashboard)/layout.tsx` (server-side gate before any child renders);

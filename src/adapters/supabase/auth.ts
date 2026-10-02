@@ -8,17 +8,17 @@ import {
   type AuthenticatedUser,
   type ConsoleActor,
   type Credentials,
-  type UserRole,
 } from "@/ports/auth";
 import { createRequestClient } from "./client";
 
 /**
  * Supabase Auth implementation of {@link AuthPort}.
  *
- * Identity comes from Supabase Auth; access does not. `profiles.role` decides
- * who is a super admin, and an active org-admin membership decides who is an org
- * admin — never a JWT claim, never `user_metadata`, both of which a user can
- * influence. The lookups cost a round trip per request and are worth it.
+ * Identity comes from Supabase Auth; access does not. An active grant in
+ * `super_admins`, read through `is_admin()`, decides who is a super admin, and an
+ * active org-admin membership decides who is an org admin — never a JWT claim, never
+ * `user_metadata`, both of which a user can influence, and never the retired
+ * `profiles.role`. The lookups cost a round trip per request and are worth it.
  *
  * A medtech is a refusal, not a downgrade. There is no partial console:
  * `requireConsoleActor()` throws rather than returning a reduced view, so a
@@ -32,41 +32,37 @@ interface MembershipRow {
   organizations: { name: string; status: string } | null;
 }
 
-interface ProfileRoleRow {
+interface ProfileNameRow {
   full_name: string | null;
-  role: string | null;
-}
-
-/**
- * `profiles.role` is `text` with a CHECK, not a Postgres enum, so an unexpected
- * value is possible in principle. Anything that is not exactly `admin` resolves
- * to the lesser privilege.
- */
-function toRole(value: string | null | undefined): UserRole {
-  return value === "admin" ? "admin" : "medtech";
 }
 
 export class SupabaseAuthAdapter implements AuthPort {
   constructor(private readonly client: SupabaseClient) {}
 
   private async toAuthenticatedUser(user: User): Promise<AuthenticatedUser> {
-    const { data, error } = await this.client
-      .from("profiles")
-      .select("full_name, role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    // A missing or unreadable profile is not an admin. `0001_init.sql` creates
-    // the row via handle_new_user(), so absence means something is wrong
-    // upstream — and the safe reading of "wrong" is the lesser privilege.
-    const profile = error ? null : (data as ProfileRoleRow | null);
+    const [profile, superAdmin] = await Promise.all([
+      this.client.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+      this.isSuperAdmin(user.id),
+    ]);
+    const name = profile.error ? null : (profile.data as ProfileNameRow | null);
 
     return {
       id: user.id,
       email: user.email ?? null,
-      fullName: profile?.full_name ?? null,
-      role: toRole(profile?.role),
+      fullName: name?.full_name ?? null,
+      isSuperAdmin: superAdmin,
     };
+  }
+
+  /**
+   * `is_admin()` (app `0014`) is the check every database policy makes, so the console
+   * and the database never disagree about who is a super admin. `super_admins` itself
+   * is closed to every client; this security definer function is the one way to ask.
+   * Anything but an explicit `true` — an error, a null — is the lesser privilege.
+   */
+  private async isSuperAdmin(userId: string): Promise<boolean> {
+    const { data, error } = await this.client.rpc("is_admin", { user_id: userId });
+    return !error && data === true;
   }
 
   /**
@@ -91,8 +87,8 @@ export class SupabaseAuthAdapter implements AuthPort {
 
   private async toActor(user: AuthenticatedUser): Promise<ConsoleActor> {
     // A super admin needs no membership lookup; skip the round trip.
-    const membership = user.role === "admin" ? null : await this.findOrgAdminMembership(user.id);
-    const access = resolveConsoleAccess(user.role, membership);
+    const membership = user.isSuperAdmin ? null : await this.findOrgAdminMembership(user.id);
+    const access = resolveConsoleAccess(user.isSuperAdmin, membership);
     if (!access) throw new NotAuthorizedError(user);
     return { user, access };
   }

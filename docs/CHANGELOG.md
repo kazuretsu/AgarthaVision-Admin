@@ -2,6 +2,23 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [refactor] The console recognises super admins from the super_admins table
+
+The gate asks the app's `is_admin()` (app `0014`, D22) instead of reading `profiles.role`,
+so the console and every database policy give the same answer. `super_admins` is closed to
+clients; the security definer function is the one way to ask. An error from the call is no
+grant. `AuthenticatedUser.role` becomes `isSuperAdmin`, `resolveConsoleAccess` takes that
+boolean, and `Profile` no longer mirrors the retired `role`. Nothing changes on screen for
+anyone whose status didn't change; a revoked super admin is turned away on their next request.
+
+`bun run test:db` now needs an app checkout with `0014`. The helpers make a super admin with a
+`super_admins` row and leave `profiles.role` at its default, so a test that still depended on
+the column would fail. `app_0014_super_admin_gate.test.sql` covers an active grant with
+`role = 'medtech'`, a revoked one with `role = 'admin'`, a revoke taking effect, and the table
+staying out of a client's reach. A unit test pins the adapter on `is_admin()`. The profile
+delete step in `admin_0001` moves to a user with no grant: a super admin's grant now keeps
+their profile, and the test checks that too.
+
 ## [security] A super admin's patient reads go through the de-identified views
 
 Every patient, session and sample read a super admin makes now comes from the app's
