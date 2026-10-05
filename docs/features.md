@@ -33,8 +33,9 @@ by `canonicalSpecies`, as the app names them.
 Pure logic, all of it unit-tested and none of it touching I/O:
 
 - **Access** — who is a super admin, an org admin, or neither.
-- **Clinical** — the app's counting rule, the live-sample rule, the per-species LPF range
-  and descriptor, and box provenance, with the app's own LPF test cases.
+- **Clinical** — the app's counting rule, the live-sample rule, the per-species LPF range,
+  descriptor and estimated parasite burden level, and box provenance, with the app's own LPF
+  test cases.
 - **Patients** — display names (codenames included) and age in the Manila frame.
 - **Dashboard** — per-smear counting on the prevalence rule, species mix, weekly trend.
 - **Research export** — the version 2 column contract, CSV with formula neutralising, JSON.
@@ -127,8 +128,9 @@ database over all of them. A new search or page shows a skeleton in place of the
 the search form stays. A page past the end goes to the last page. A super admin sees patients de-identified: no
 name, sex, age or birthdate, no name search, no session label and no medtech's note; a
 patient or session is named by the start of its record id (constraint #14). A patient page lists every session with who
-read it, the fields examined, a positive/negative result, the per-species LPF range and the
-eggs counted. A session page shows the findings table the way the app's Session Detail does
+read it, the fields examined, a positive/negative result, the per-species LPF range with its
+descriptor and estimated burden ("0–4 LPF · Few · Low Burden") and the eggs counted. A session
+page shows the findings table the way the app's Session Detail does, burden level included,
 and every live field as a frame with its boxes drawn over it. A sample page shows one field:
 the frame, the eggs recorded per species, and each detection with its verdict, whether its
 box is the model's, redrawn or added by the medtech, and its stage.

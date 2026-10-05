@@ -4,8 +4,10 @@ import {
   boxProvenance,
   canonicalSpecies,
   formatLpfRange,
+  formatLpfReading,
   isBinomial,
   lpfDescriptor,
+  parasiteBurdenLevel,
   speciesRows,
   summariseSession,
 } from "./clinical";
@@ -103,6 +105,49 @@ describe("formatLpfRange", () => {
   });
 });
 
+describe("parasiteBurdenLevel (parity with ParasiteBurdenLevel.forDescriptor)", () => {
+  it("maps every descriptor band", () => {
+    expect(parasiteBurdenLevel("rare")).toBe("low");
+    expect(parasiteBurdenLevel("few")).toBe("low");
+    expect(parasiteBurdenLevel("moderate")).toBe("moderate");
+    expect(parasiteBurdenLevel("numerous")).toBe("high");
+  });
+
+  it("has no burden for a species never seen", () => {
+    expect(parasiteBurdenLevel(null)).toBeNull();
+  });
+
+  // The app's "ParasiteBurdenLevel maps correctly from LpfDensity" case: the
+  // worst field decides, through the descriptor.
+  it("reads the worst field, as LpfDensity.burdenLevel does", () => {
+    const burden = (max: number) => parasiteBurdenLevel(lpfDescriptor(max));
+    expect(burden(0)).toBeNull();
+    expect(burden(2)).toBe("low");
+    expect(burden(5)).toBe("low");
+    expect(burden(10)).toBe("moderate");
+    expect(burden(12)).toBe("high");
+  });
+});
+
+describe("formatLpfReading", () => {
+  it("writes the app's Session Detail line", () => {
+    expect(formatLpfReading("rare")).toBe("Rare · Low Burden");
+    expect(formatLpfReading("few")).toBe("Few · Low Burden");
+    expect(formatLpfReading("moderate")).toBe("Moderate · Moderate Burden");
+    expect(formatLpfReading("numerous")).toBe("Numerous · High Burden");
+  });
+
+  it("writes nothing for a species never seen", () => {
+    expect(formatLpfReading(null)).toBeNull();
+  });
+
+  it("never names a WHO tier or an infection intensity", () => {
+    for (const descriptor of ["rare", "few", "moderate", "numerous"] as const) {
+      expect(formatLpfReading(descriptor)).not.toMatch(/WHO|DOH|intensity|light|heavy/i);
+    }
+  });
+});
+
 describe("canonicalSpecies", () => {
   it("maps the app's aliases onto canonical names", () => {
     expect(canonicalSpecies("ascaris")).toBe("Ascaris lumbricoides");
@@ -182,6 +227,12 @@ describe("summariseSession", () => {
       findings: [finding("a", "Hookworm", 2), finding("dup", "Hookworm", 2)],
     });
     expect(summary.lpf.Hookworm).toMatchObject({ min: 0, max: 2 });
+  });
+
+  it("gives a session never read no species, so no descriptor and no burden", () => {
+    const summary = summariseSession({ samples: [], detections: [], findings: [] });
+    expect(summary.fieldCount).toBe(0);
+    expect(summary.lpf).toEqual({});
   });
 
   it("calls a session with only rejected detections negative", () => {

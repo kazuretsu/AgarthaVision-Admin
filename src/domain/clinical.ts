@@ -19,6 +19,7 @@ import { DetectionVerdict } from "./enums";
  *   and a deleted sample counts toward nothing;
  * - range: `LpfAggregation.kt::aggregateLpfPerSpecies`;
  * - descriptor: `LpfDensity.kt::LpfDescriptor.forMax`;
+ * - burden level: `LpfDensity.kt::ParasiteBurdenLevel.forDescriptor`;
  * - species names: `EggSpecies.kt::fromClassLabel`.
  *
  * Pure functions only. Nothing here reads a port, an environment variable or a
@@ -135,6 +136,51 @@ export function aggregateLpfPerSpecies(
 /** `0–4 LPF`, the app's `lpf_range_value` string. */
 export function formatLpfRange(density: Pick<LpfDensity, "min" | "max">): string {
   return `${density.min}–${density.max} LPF`;
+}
+
+/**
+ * The estimated parasite burden: a direct-smear severity estimate per LPF, read
+ * off the descriptor and so off the worst field. Not a WHO or DOH tier, whose
+ * light / moderate / heavy bands are Kato-Katz eggs-per-gram only (PB-16).
+ */
+export type ParasiteBurdenLevel = "low" | "moderate" | "high";
+
+/**
+ * The burden a descriptor implies, or null when the species was never seen.
+ * Identical to `LpfDensity.kt::ParasiteBurdenLevel.forDescriptor`. Derived, never
+ * stored, so it cannot drift from the range.
+ */
+export function parasiteBurdenLevel(descriptor: LpfDescriptor | null): ParasiteBurdenLevel | null {
+  switch (descriptor) {
+    case null:
+      return null;
+    case "rare":
+    case "few":
+      return "low";
+    case "moderate":
+      return "moderate";
+    case "numerous":
+      return "high";
+  }
+}
+
+/** The app's `parasite_burden_*` strings. */
+const BURDEN_LABELS: Record<ParasiteBurdenLevel, string> = {
+  low: "Low Burden",
+  moderate: "Moderate Burden",
+  high: "High Burden",
+};
+
+/**
+ * `Moderate · Moderate Burden`: the capitalised descriptor, a middle dot and the
+ * burden, as the app's Session Detail writes it. Null when the species was never
+ * seen, so a caller shows nothing rather than a reading of an absent organism.
+ */
+export function formatLpfReading(descriptor: LpfDescriptor | null): string | null {
+  const burden = parasiteBurdenLevel(descriptor);
+  if (descriptor === null || burden === null) return null;
+  const name = descriptor.charAt(0).toUpperCase() + descriptor.slice(1);
+  return `${name} · ${BURDEN_LABELS[burden]}`;
 }
 
 /** Eggs counted for one species across a session. */
