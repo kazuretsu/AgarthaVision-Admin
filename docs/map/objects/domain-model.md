@@ -32,7 +32,7 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 | `Report`         | `0001`                         | `lpf_per_species` stored as issued; no `epg_per_species`                                                    |
 
 Read models for the records browser live in `src/domain/records.ts`: `PatientListItem`
-(`:15`), `PatientRecord` (`:30`), `SessionRecord` (`:46`), `SampleRecordDetail` (`:55`).
+(`:15`), `PatientRecord` (`:37`), `SessionRecord` (`:53`), `SampleRecordDetail` (`:62`).
 Each carries a `SessionSummary` computed by `docs/map/processes/lpf-session-summary.md`.
 
 Facts that trip people up:
@@ -47,7 +47,7 @@ Facts that trip people up:
   provenance only.
 - **`patients` reaches `profiles` two ways** (`created_by`, and the `patient_users` join),
   so an embed must name the constraint: `profiles!patients_created_by_fkey`
-  (`src/adapters/supabase/database.ts:217`).
+  (`src/adapters/supabase/database.ts:224`).
 
 Enums live in `src/domain/enums.ts`. `DetectionVerdict` is UPPERCASE in Postgres and
 lowercase in Room; `parseDetectionVerdict` accepts either. Species are free text and have no
@@ -59,7 +59,7 @@ migration behind it.
 - Owned by: upstream migrations own every field.
 - Consumed by: `src/domain/clinical.ts`, `patients.ts`, `dashboard.ts`, `research-export.ts`.
 - Produced by: `src/adapters/supabase/database.ts`, the only place snake_case and camelCase
-  meet (`toPatient` at `:252` and its siblings).
+  meet (`toPatient` at `:303` and its siblings).
 - Looks like but is not: Room entities in the Android client, which carry columns Postgres
   does not (`status`, `is_repeat`, `predictions_json`).
 

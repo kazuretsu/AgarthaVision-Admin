@@ -33,8 +33,8 @@ infection intensity. No surface in the console shows EPG.
 ## Steps
 
 1. The adapter reads a session with its samples and their detections, findings and
-   prediction ids (`sampleTree`, `src/adapters/supabase/database.ts:226`), or only what a
-   summary needs for a patient's session list (`sessionSummaryTree`, `:237`).
+   prediction ids (`sampleTree`, `src/adapters/supabase/database.ts:233`), or only what a
+   summary needs for a patient's session list (`sessionSummaryTree`, `:244`).
 2. `summariseSession` (`src/domain/clinical.ts:265`) keeps live samples, counts eggs per
    species, ranges the findings over the live field count, and decides positivity.
 3. `speciesRows` (`src/domain/clinical.ts:231`) joins the two halves for display. The LPF
