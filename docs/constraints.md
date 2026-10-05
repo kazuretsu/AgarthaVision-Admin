@@ -59,7 +59,7 @@ an org admin may read is decided twice: by the `ReadScope` every clinical read r
 The console reads clinical data. It does not create, edit, delete or re-validate
 patients, sessions, samples, detections or verdicts — that is the Android client's
 human-in-the-loop workflow. Its only writes are administrative (organizations, invitations and the
-memberships they create, and a medtech's deactivation; assignments and shares later), each through a narrow port
+memberships they create, a medtech's deactivation, and patient assignments; shares later), each through a narrow port
 that records it in the audit trail (D2). An account is made only by accepting an
 invitation, and its role and organization come from the stored invitation. Nothing is deleted: organizations and members are deactivated.
 

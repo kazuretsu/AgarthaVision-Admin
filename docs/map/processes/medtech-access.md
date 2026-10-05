@@ -33,6 +33,10 @@ The people are read with `console_organization_people`
 the email lives in the auth provider's table, which no client may read. It refuses anyone but
 a super admin or that laboratory's org admin.
 
+A medtech's name opens `/medtechs/[userId]` (a super admin's link carries `?org=`): their email,
+joined date, status (with deactivate/reactivate) and the laboratory's patients assigned to them
+(`docs/map/processes/patient-assignment.md`). A medtech of another laboratory is a 404.
+
 ## Deactivate and reactivate
 
 `setMemberStatus` (`src/app/(dashboard)/medtechs/actions.ts:52`):

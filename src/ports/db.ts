@@ -3,7 +3,9 @@ import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
 import type {
   AuditEntry,
   Invitation,
+  MemberPatient,
   OrganizationDetail,
+  PatientAssignment,
   Person,
   OrganizationSummary,
   ReadScope,
@@ -121,6 +123,15 @@ export interface DatabasePort {
    * Throws {@link DatabaseReadError} for a laboratory the caller may not read.
    */
   listPeople(organizationId: string): Promise<Person[]>;
+
+  /**
+   * Who is assigned to one patient. Throws {@link DatabaseReadError} for a patient
+   * the caller may not read.
+   */
+  listPatientAssignments(patientId: string): Promise<PatientAssignment[]>;
+
+  /** The laboratory's patients one member is assigned to, newest link first. */
+  listMemberPatients(userId: string): Promise<MemberPatient[]>;
 
   /** One invitation by id; `null` when absent or hidden. */
   getInvitation(invitationId: string): Promise<Invitation | null>;

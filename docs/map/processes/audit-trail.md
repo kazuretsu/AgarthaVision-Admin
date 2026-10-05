@@ -38,6 +38,8 @@ their own organization whatever the console passes (`:30`), so an entry cannot b
 | `invitation.accept`       | `console_accept_invitation`       |
 | `member.deactivate`       | `console_set_member_status`       |
 | `member.reactivate`       | `console_set_member_status`       |
+| `assignment.add`          | `console_assign_patient`          |
+| `assignment.remove`       | `console_unassign_patient`        |
 
 ## Reading
 

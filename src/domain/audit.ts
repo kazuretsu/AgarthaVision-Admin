@@ -34,6 +34,8 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "invitation.accept": "Accepted an invitation",
   "member.deactivate": "Deactivated a medtech",
   "member.reactivate": "Reactivated a medtech",
+  "assignment.add": "Assigned a patient to a medtech",
+  "assignment.remove": "Removed a patient from a medtech",
 };
 
 /** The action's label; an action this build does not know is shown as recorded. */
@@ -84,6 +86,15 @@ export function describeAuditEntry(entry: AuditEntry): string {
       return `Deactivated ${text(d.name) ?? "a medtech"} in ${entry.organizationName ?? "an organization"}`;
     case "member.reactivate":
       return `Reactivated ${text(d.name) ?? "a medtech"} in ${entry.organizationName ?? "an organization"}`;
+    case "assignment.add":
+    case "assignment.remove": {
+      // The patient by record id only: super admins read this trail (constraint #14).
+      const patient = entry.targetId ? `patient ${entry.targetId.slice(0, 8)}` : "a patient";
+      const medtech = text(d.medtech) ?? "a medtech";
+      return entry.action === "assignment.add"
+        ? `Assigned ${patient} to ${medtech}`
+        : `Removed ${patient} from ${medtech}`;
+    }
     default:
       return auditActionLabel(entry.action);
   }
