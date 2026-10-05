@@ -49,6 +49,11 @@ sits under a loading file, or suspends before its not-found check. The same hold
 or a meta refresh) rather than as a 307, which is fine for the list's page-past-the-end
 redirect but not for anything a non-browser client must follow.
 
+**A `loading.tsx` does not show when only the query string changes.** A new search or page
+on the same route keeps the previous page on screen until the next one is ready. The records
+list wraps its table in a Suspense boundary keyed by its query (`PatientList`), so the
+skeleton shows there; do the same for any list that pages or filters through the URL.
+
 **`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
 (1000 on Supabase by default) and does not say so. A read that can exceed it goes through
 `readPages` (`src/adapters/supabase/paging.ts`); a "more than N" check on a single

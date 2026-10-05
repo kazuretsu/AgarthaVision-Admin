@@ -77,7 +77,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
-    │   ├── records/           LPF table, field image with box overlay, breadcrumbs.
+    │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
+    │                          with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
     │   ├── theme-provider.tsx next-themes, class-based.
     └── lib/

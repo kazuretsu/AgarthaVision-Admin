@@ -10,6 +10,10 @@ so: a laboratory past that could not see or search its oldest patients. The list
 and pages with shadcn's `pagination` (ported from the registry source, the twelfth
 component in `ui/`). Search, barangay and laboratory filters run in the database over every
 patient in scope and are kept in the page links; a page past the end goes to the last page.
+The list (`src/components/records/PatientList.tsx`) renders inside a Suspense boundary keyed by
+its query, so a new search or page shows `PatientListFallback`'s skeleton in its place while
+the search form stays on screen; without the key, the previous page stayed up with no sign
+the click registered.
 
 `DatabasePort.listPatients` takes `offset` and `limit` and returns a `PatientPage`
 (`items`, `total`). The adapter reads with `.range()` and an exact count, ordered by

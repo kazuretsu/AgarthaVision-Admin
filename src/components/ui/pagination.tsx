@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
  *
  * One adaptation: a page link is a `next/link` styled with `buttonVariants`, not a
  * Base UI `Button` rendering an `<a>`. A page change is a navigation, so it keeps
- * link semantics (see `button.tsx`), and as a client navigation it shows the
- * list's loading skeleton instead of reloading the document.
+ * link semantics (see `button.tsx`), and is a client navigation rather than a
+ * document reload.
  */
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (

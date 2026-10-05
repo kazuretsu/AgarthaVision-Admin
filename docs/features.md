@@ -123,7 +123,8 @@ field) → Detections**. `/records` lists patients, searchable by name or codena
 barangay PSGC code, with the query in the URL. The list is read 50 patients at a time
 (`?page=`) and says how many match in all ("Showing 51–100 of 1,234 patients"), so every
 patient is reachable however many a laboratory holds; search and filters run in the
-database over all of them. A page past the end goes to the last page. A super admin sees patients de-identified: no
+database over all of them. A new search or page shows a skeleton in place of the list while
+the search form stays. A page past the end goes to the last page. A super admin sees patients de-identified: no
 name, sex, age or birthdate, no name search, no session label and no medtech's note; a
 patient or session is named by the start of its record id (constraint #14). A patient page lists every session with who
 read it, the fields examined, a positive/negative result, the per-species LPF range and the
