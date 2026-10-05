@@ -4,7 +4,7 @@ import type {
   Detection,
   Patient,
   PatientDisclosure,
-  PatientListItem,
+  PatientPage,
   PatientRecord,
   PersonRef,
   Profile,
@@ -33,7 +33,7 @@ import {
   type SmearQuery,
 } from "@/ports/db";
 import { createRequestClient } from "./client";
-import { readPages } from "./paging";
+import { PAGE_SIZE, readPages } from "./paging";
 
 /**
  * Supabase implementation of {@link DatabasePort}.
@@ -153,6 +153,14 @@ const DEFAULT_LIMIT = 1000;
 
 /** Default cap for the dashboard's one-row-per-session read; callers may pass their own. */
 const SMEAR_LIMIT = 5000;
+
+/** Patients per page of the records list, when the caller does not say. */
+const PATIENT_PAGE_LIMIT = 50;
+
+/** PostgREST's answer to a `.range()` that starts past the last row. */
+function isRangeNotSatisfiable(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === "PGRST103";
+}
 
 const PATIENT_COLUMNS = "id, psgc_barangay_code, created_by, created_at";
 /** Who the patient is. Selected only for an `"identified"` reader. */
@@ -423,36 +431,54 @@ function liveSampleDetails(
 export class SupabaseDatabaseAdapter implements DatabasePort {
   constructor(private readonly client: SupabaseClient) {}
 
-  async listPatients(query: PatientQuery): Promise<PatientListItem[]> {
-    const { scope, disclosure, search, barangayCode, limit = DEFAULT_LIMIT } = query;
+  async listPatients(query: PatientQuery): Promise<PatientPage> {
+    const { scope, disclosure, search, barangayCode } = query;
+    const offset = Math.max(0, Math.floor(query.offset ?? 0));
+    const limit = Math.min(Math.max(1, Math.floor(query.limit ?? PATIENT_PAGE_LIMIT)), PAGE_SIZE);
     const organizationId = scopedOrganization(scope);
     const sources = SOURCES[disclosure];
-
-    let request = this.client
-      .from(sources.patients)
-      .select(
-        `${sources.patientColumns}, ${PATIENT_REGISTRAR}, ${embed("sessions", sources.sessions)} ( started_at )${organizationId ? `, ${OWNER}` : ""}`,
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (organizationId)
-      request = request.eq("patient_organizations.organization_id", organizationId);
-
     // A name search is a question about a name: a de-identified reader may not ask it.
     const needle = search && disclosure === "identified" ? sanitiseSearch(search) : "";
-    if (needle.length > 0) {
-      request = request.or(`lastname.ilike.*${needle}*,firstname.ilike.*${needle}*`);
-    }
-    if (barangayCode && /^[0-9]{10}$/.test(barangayCode)) {
-      request = request.eq("psgc_barangay_code", barangayCode);
-    }
+    const barangay = barangayCode && /^[0-9]{10}$/.test(barangayCode) ? barangayCode : "";
 
-    const { data, error } = await request;
-    if (error) throw new DatabaseReadError("listPatients", error);
+    // The page and the count-only read below must filter identically, so both are
+    // built here. An organization scope filters through the `!inner` owner embed,
+    // which PostgREST also applies to the count.
+    const filtered = (columns: string, options: { count: "exact"; head?: boolean }) => {
+      let request = this.client
+        .from(sources.patients)
+        .select(`${columns}${organizationId ? `, ${OWNER}` : ""}`, options);
+      if (organizationId)
+        request = request.eq("patient_organizations.organization_id", organizationId);
+      if (needle.length > 0) {
+        request = request.or(`lastname.ilike.*${needle}*,firstname.ilike.*${needle}*`);
+      }
+      if (barangay) request = request.eq("psgc_barangay_code", barangay);
+      return request;
+    };
+
+    const { data, error, count } = await filtered(
+      `${sources.patientColumns}, ${PATIENT_REGISTRAR}, ${embed("sessions", sources.sessions)} ( started_at )`,
+      { count: "exact" },
+    )
+      // `id` breaks ties, so a patient sits on exactly one page.
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      // An offset past the last row is refused (416) and loses the count with it.
+      // Ask for the count alone, so the caller can send the reader to the last page.
+      if (isRangeNotSatisfiable(error)) {
+        const head = await filtered("id", { count: "exact", head: true });
+        if (head.error) throw new DatabaseReadError("listPatients", head.error);
+        return { items: [], total: head.count ?? 0 };
+      }
+      throw new DatabaseReadError("listPatients", error);
+    }
 
     type Row = PatientRow & { sessions?: { started_at: string }[] | null };
-    return ((data as unknown as Row[] | null) ?? []).map((row) => {
+    const items = ((data as unknown as Row[] | null) ?? []).map((row) => {
       const starts = (row.sessions ?? []).map((session) => session.started_at).sort();
       return {
         patient: toPatient(row, disclosure),
@@ -461,6 +487,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
         lastSessionAt: starts.at(-1) ?? null,
       };
     });
+    return { items, total: count ?? offset + items.length };
   }
 
   async getPatientRecord(

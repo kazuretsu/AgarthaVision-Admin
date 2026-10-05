@@ -28,6 +28,7 @@ is right and this table is stale.**
 | `src/domain/audit.ts`, any new admin write                                         | `../processes/audit-trail.md` — a write must audit itself; add its action                          |
 | `src/ports/admin-write.ts`, `src/adapters/supabase/admin-write.ts`                 | `../objects/organizations.md` — every write audits itself                                          |
 | `SESSION_INIT.md`                                                                  | `../../constraints.md` (#13)                                                                       |
+| `src/components/ui/*`, `components.json`, tokens in `globals.css`                  | `../objects/ui-components.md` · `../../constraints.md` (#15) — add primitives with the shadcn CLI  |
 | `.husky/*`, `package.json` scripts                                                 | `../../commands.md` · `../../constraints.md` (#9)                                                  |
 | `.env.example`                                                                     | `../objects/provider-registry.md` · `../../stack.md` · `../../constraints.md` (#2, #12)            |
 
@@ -38,10 +39,27 @@ render inside it. A route handler under the same folder does not render inside i
 inherits nothing. `records/export` calls `requireRouteAccess()` for exactly this reason; a new
 handler that forgets to is an open dataset.
 
+**A route-level `loading.tsx` turns every 404 under it into a 200.** It starts streaming the
+response before the page runs, so `notFound()` can only swap the content, not the status.
+Record pages therefore have none: the list's lives in `records/(list)/`, and the detail pages
+read first and suspend only their frames. Put a new loading state inside the page, below its
+not-found check. `src/app/not-found-status.test.ts` fails if any page that calls `notFound()`
+sits under a loading file, or suspends before its not-found check. The same holds for
+`redirect()`: under the records list's loading state it arrives in the browser (the router,
+or a meta refresh) rather than as a 307, which is fine for the list's page-past-the-end
+redirect but not for anything a non-browser client must follow.
+
+**A `loading.tsx` does not show when only the query string changes.** A new search or page
+on the same route keeps the previous page on screen until the next one is ready. The records
+list wraps its table in a Suspense boundary keyed by its query (`PatientList`), so the
+skeleton shows there; do the same for any list that pages or filters through the URL.
+
 **`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
 (1000 on Supabase by default) and does not say so. A read that can exceed it goes through
 `readPages` (`src/adapters/supabase/paging.ts`); a "more than N" check on a single
-response's length can never fire.
+response's length can never fire. A list a person pages through instead reads one page with
+`.range()` and `count: "exact"` (`listPatients`); a range past the last row is refused
+(`PGRST103`) and loses the count, so the adapter asks for the count alone.
 
 **One dropped column fails the whole query.** The consolidated schema removed
 `samples.gps_*`, `sessions.notes`, `sessions.ended_at` and `reports.epg_per_species`.
@@ -63,7 +81,7 @@ medtech. Its exception handler is load-bearing; `admin_0002` tests it. See
 `../processes/lab-scoping.md`.
 
 **What counts is cross-repo.** Every non-rejected detection on a live sample counts
-(`src/domain/clinical.ts:32`), matching the app's Session Detail and its PDF report, and
+(`src/domain/clinical.ts:33`), matching the app's Session Detail and its PDF report, and
 the tests carry the app's own cases. Changing the rule here alone makes the console and the
 report a patient was handed disagree about the same smear.
 

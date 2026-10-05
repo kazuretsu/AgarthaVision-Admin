@@ -10,6 +10,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 ├── .gitignore                 Ignores .env*, .mcp.json, AGENTS.md, .claude/. Templates stay tracked.
 ├── .mcp.example.json          MCP server template. Copy to .mcp.json and fill in the key.
 ├── AGENTS.example.md          Per-developer rules template. Copy to AGENTS.md.
+├── components.json            shadcn CLI config: Base UI (base-nova), aliases, globals.css.
 ├── .husky/
 │   ├── pre-commit             ① typecheck ② test ③ build ④ lint. Each step exits 1 on failure.
 │   ├── commit-msg             Enforces [type][ClickUp-ID][Lastname]: Task title.
@@ -60,8 +61,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter.
-    │       ├── records/       Patients list; patients/, sessions/, samples/ detail pages;
-    │                          loading.tsx.
+    │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
+    │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
     │       ├── organizations/ Super admin: list, detail, and the audited server actions.
     │       └── audit/         The audit trail, filtered and scoped.
@@ -73,10 +74,11 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   └── supabase/          client, env, database (paged reads in paging.ts), reports (row mapping), admin-write, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
-    │   ├── ui/                shadcn components on Base UI (incl. alert dialog). Ours to edit.
+    │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
-    │   ├── records/           LPF table, field image with box overlay, breadcrumbs.
+    │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
+    │                          with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
     │   ├── theme-provider.tsx next-themes, class-based.
     └── lib/
@@ -85,6 +87,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── read-scope.ts      The actor and the ReadScope their reads run in.
         ├── utils.ts           cn(): clsx + tailwind-merge.
         ├── format.ts          Dates in Asia/Manila, person names.
+        ├── pagination.ts      Page arithmetic: ?page= parsing, offsets, ranges, page links.
         ├── signed-urls.ts     Signs a page's frames; an unreadable one becomes null.
         ├── palette.ts         Validated species colours, with the validator's findings.
         └── period.ts          The dashboard's and export's from/to dates, defensively parsed.

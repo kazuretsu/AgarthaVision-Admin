@@ -1,4 +1,4 @@
-import type { PatientDisclosure, PatientListItem, PatientRecord, Profile } from "@/domain";
+import type { PatientDisclosure, PatientPage, PatientRecord, Profile } from "@/domain";
 import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
 import type { AuditEntry, OrganizationDetail, OrganizationSummary, ReadScope } from "@/domain";
 
@@ -35,7 +35,9 @@ export interface PatientQuery {
   search?: string;
   /** Exact 10-digit PSGC barangay code. */
   barangayCode?: string;
-  /** Hard cap on rows returned. Adapters must apply a sane default. */
+  /** Rows to skip, for a later page. Defaults to 0. */
+  offset?: number;
+  /** Rows on the page. Adapters must apply a sane default and a ceiling. */
   limit?: number;
 }
 
@@ -68,8 +70,11 @@ export interface AuditQuery {
 }
 
 export interface DatabasePort {
-  /** Patients, most recently registered first. */
-  listPatients(query: PatientQuery): Promise<PatientListItem[]>;
+  /**
+   * One page of patients, most recently registered first, with the number that
+   * match in all. Search and filters apply to every patient, not just this page.
+   */
+  listPatients(query: PatientQuery): Promise<PatientPage>;
 
   /** One patient with their sessions and what each showed; `null` when absent or hidden. */
   getPatientRecord(

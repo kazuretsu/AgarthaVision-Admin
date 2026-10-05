@@ -30,6 +30,13 @@ Run in this order; it is the order `.husky/pre-commit` runs them in.
 `vitest` is configured with `passWithNoTests`, so a docs-only or hooks-only commit does not
 fail the gate for having touched no test file.
 
+## Components
+
+`bunx shadcn@latest add <name>` adds a shadcn component (Base UI) to `src/components/ui/`, as
+configured in `components.json`; it needs network access to `ui.shadcn.com`. Review the diff
+before committing, and never run `shadcn init`. `bunx shadcn@latest info` prints the
+configuration and the components it sees as installed. Rules: `docs/constraints.md` (#15).
+
 ## Database tests
 
 `bun run test:db` (`scripts/db-test.ts`) drops and recreates a local database, applies

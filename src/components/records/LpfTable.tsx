@@ -1,5 +1,5 @@
-import type { SessionSummary } from "@/domain";
-import { canonicalSpecies, formatLpfRange, speciesRows } from "@/domain";
+import type { LpfDescriptor, SessionSummary } from "@/domain";
+import { canonicalSpecies, formatLpfRange, formatLpfReading, speciesRows } from "@/domain";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -14,8 +14,9 @@ import { SpeciesName } from "./SpeciesName";
 
 /**
  * A session's findings, laid out like the app's Session Detail: per species, the
- * LPF range across the fields examined, the descriptor read off the worst field,
- * and the eggs counted. A range, never a mean; no EPG and no WHO tier.
+ * LPF range across the fields examined, the descriptor read off the worst field
+ * with the estimated burden it implies, and the eggs counted. A range, never a
+ * mean; no EPG and no WHO tier.
  */
 export function LpfTable({ summary }: { summary: SessionSummary }) {
   const rows = speciesRows(summary);
@@ -39,7 +40,7 @@ export function LpfTable({ summary }: { summary: SessionSummary }) {
         <TableRow>
           <TableHead>Species</TableHead>
           <TableHead>LPF range</TableHead>
-          <TableHead>Descriptor</TableHead>
+          <TableHead>Descriptor · burden</TableHead>
           <TableHead className="text-right">Eggs counted</TableHead>
         </TableRow>
       </TableHeader>
@@ -51,7 +52,7 @@ export function LpfTable({ summary }: { summary: SessionSummary }) {
             </TableCell>
             <TableCell className="tnum">{row.lpf ? formatLpfRange(row.lpf) : "—"}</TableCell>
             <TableCell>
-              {row.lpf?.descriptor ? <Badge variant="neutral">{row.lpf.descriptor}</Badge> : "—"}
+              <LpfReading descriptor={row.lpf?.descriptor ?? null} />
             </TableCell>
             <TableCell className="tnum text-right">{row.eggs}</TableCell>
           </TableRow>
@@ -61,7 +62,16 @@ export function LpfTable({ summary }: { summary: SessionSummary }) {
   );
 }
 
-/** One line per species, for a session row: `Ascaris lumbricoides 0–4 LPF · few`. */
+/** `Moderate · Moderate Burden` as a badge, or a dash for a species never seen. */
+function LpfReading({ descriptor }: { descriptor: LpfDescriptor | null }) {
+  const reading = formatLpfReading(descriptor);
+  return reading ? <Badge variant="neutral">{reading}</Badge> : "—";
+}
+
+/**
+ * One line per species, for a session row:
+ * `Ascaris lumbricoides 0–4 LPF · Few · Low Burden`.
+ */
 export function LpfInline({ summary }: { summary: SessionSummary }) {
   const entries = Object.entries(summary.lpf).sort(([left], [right]) => left.localeCompare(right));
   if (entries.length === 0) {
@@ -69,15 +79,23 @@ export function LpfInline({ summary }: { summary: SessionSummary }) {
   }
   return (
     <ul className="flex flex-col gap-0.5">
-      {entries.map(([species, density]) => (
-        <li key={species}>
-          <SpeciesName species={canonicalSpecies(species)} />{" "}
-          <span className="tnum text-stone-mid">
-            {formatLpfRange(density)}
-            {density.descriptor ? ` · ${density.descriptor}` : ""}
-          </span>
-        </li>
-      ))}
+      {entries.map(([species, density]) => {
+        const reading = formatLpfReading(density.descriptor);
+        return (
+          <li key={species}>
+            <SpeciesName species={canonicalSpecies(species)} />{" "}
+            <span className="tnum text-stone-mid">
+              {formatLpfRange(density)}
+              {reading ? (
+                <>
+                  {" · "}
+                  <span className="whitespace-nowrap">{reading}</span>
+                </>
+              ) : null}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -89,7 +89,7 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
             No sessions recorded for this patient yet.
           </p>
         ) : (
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[720px]">
             <TableCaption>Sessions for {name}, newest first</TableCaption>
             <TableHeader>
               <TableRow>

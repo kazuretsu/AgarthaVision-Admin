@@ -194,3 +194,20 @@ a de-identified reader; `toSession` and `toSample`, which drop the label and the
 whatever the source returns); `src/adapters/supabase/database.test.ts` (no super admin request
 names an identity column or a clinical table); app `0012`/`0013`, covered by
 `supabase/tests/app_0013_deidentified_reads.test.sql`.
+
+### 15. Components come from shadcn
+
+UI primitives live in `src/components/ui/` and come from the shadcn registry, Base UI
+flavour: `bunx shadcn@latest add <name>`, configured by `components.json`. Nobody writes a
+primitive from scratch. Everything else composes them: a feature component never imports
+`@base-ui/` and never hand-builds a button, select, textarea, table or visible input. If
+the registry has nothing close, compose existing primitives; if that cannot work, ask before
+adding anything to `ui/`. A component added with the CLI may be adapted to the console, and
+its adaptation is recorded in `docs/map/objects/ui-components.md`. The console's palette is
+kept under shadcn's token names in `src/app/globals.css`; never run `shadcn init`, which
+replaces it.
+
+**Enforced at:** `src/components/ui/shadcn.test.ts`, run by the pre-commit hook. It fails on
+a `ui/` file that is not a registry item, a `@base-ui/` import outside `ui/`, a raw element
+outside `ui/` that is not a listed exception, a `components.json` that stops pointing at Base
+UI, and a `globals.css` that loses the palette.

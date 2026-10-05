@@ -17,6 +17,7 @@ import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import {
   Table,
   TableBody,
@@ -41,9 +42,6 @@ const AUDIT_LIMIT = 500;
 function first(value: string | string[] | undefined): string | undefined {
   return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
 }
-
-const SELECT_CLASS =
-  "h-9 rounded-[8px] border border-stone-line bg-surface px-2 text-[14px] text-stone-ink outline-none focus:border-maroon";
 
 export default async function AuditPage({
   searchParams,
@@ -102,25 +100,25 @@ export default async function AuditPage({
       <form className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
           <span className="text-[12px] font-medium text-stone-deep">Person</span>
-          <select name="actor" defaultValue={actorId ?? ""} className={SELECT_CLASS}>
-            <option value="">Anyone</option>
+          <NativeSelect name="actor" defaultValue={actorId ?? ""}>
+            <NativeSelectOption value="">Anyone</NativeSelectOption>
             {actors.map((person) => (
-              <option key={person.id} value={person.id}>
+              <NativeSelectOption key={person.id} value={person.id}>
                 {person.fullName?.trim() || "Unnamed user"}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-[12px] font-medium text-stone-deep">Action</span>
-          <select name="action" defaultValue={action ?? ""} className={SELECT_CLASS}>
-            <option value="">Any action</option>
+          <NativeSelect name="action" defaultValue={action ?? ""}>
+            <NativeSelectOption value="">Any action</NativeSelectOption>
             {Object.entries(AUDIT_ACTIONS).map(([value, label]) => (
-              <option key={value} value={value}>
+              <NativeSelectOption key={value} value={value}>
                 {label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-[12px] font-medium text-stone-deep">From</span>

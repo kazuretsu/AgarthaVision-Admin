@@ -17,6 +17,101 @@ type or a contradictory shape. No page reads reports yet. `admin_0004_patient_re
 covers both laboratories' patient reports, the session report regression, super admins, a
 colleague medtech, a signed-out visitor and a deactivated laboratory.
 
+## [fix] Records tables fit the console at its narrowest width
+
+The shell is never narrower than 1024px, which leaves the page 734px of table. The records
+list and a patient's sessions table each asked for at least 760px, so at that width the
+last column (Eggs on the patient page) sat behind a sideways scroll. Both now ask for 720px,
+as the sample and audit tables already do; wider windows are unchanged.
+
+## [feat] Records show the estimated parasite burden next to the LPF descriptor
+
+The app's Session Detail writes each species seen as "Moderate · Moderate Burden"; the
+console wrote only "moderate", so the phone and the console read one smear two ways. The
+console now ports `LpfDensity.kt::ParasiteBurdenLevel.forDescriptor` as
+`parasiteBurdenLevel` in `src/domain/clinical.ts`: rare or few is low, moderate is moderate,
+numerous is high, and a species never seen has none. `formatLpfReading` writes the app's
+line. The session page's findings table and the patient page's session list show it; a
+species never seen, and a session never read, show nothing. The level is derived from the
+worst field on read, never stored, and is labelled "Burden", not a WHO or DOH tier or an
+infection intensity (PB-16). The research export is unchanged: its v2 columns are a
+contract.
+
+## [fix] Records list reaches every patient, a page at a time
+
+`/records` read one response of patients, which PostgREST stops at 1000 rows without saying
+so: a laboratory past that could not see or search its oldest patients. The list now reads
+50 at a time (`?page=`), says how many match in all ("Showing 51–100 of 1,234 patients"),
+and pages with shadcn's `pagination` (ported from the registry source, the twelfth
+component in `ui/`). Search, barangay and laboratory filters run in the database over every
+patient in scope and are kept in the page links; a page past the end goes to the last page.
+The list (`src/components/records/PatientList.tsx`) renders inside a Suspense boundary keyed by
+its query, so a new search or page shows `PatientListFallback`'s skeleton in its place while
+the search form stays on screen; without the key, the previous page stayed up with no sign
+the click registered.
+
+`DatabasePort.listPatients` takes `offset` and `limit` and returns a `PatientPage`
+(`items`, `total`). The adapter reads with `.range()` and an exact count, ordered by
+`created_at` then `id` so a patient sits on one page, and caps a page at the server's row
+cap. A range past the last row is refused (`PGRST103`) and loses the count, so the adapter
+then asks for the count alone with the same filters. A super admin's pages still come from
+the de-identified views and ignore a name search. Page arithmetic in `src/lib/pagination.ts`.
+
+## [fix] CLI components take the console's corners and field height
+
+The organization, person and action filters rendered as 32px pills beside 36px fields with
+8px corners. `globals.css` fixed `rounded-lg` at 16px, while shadcn components size their
+corners from a scale derived from `--radius`. `globals.css` now carries shadcn's scale
+(`--radius-sm` … `--radius-4xl`) with `--radius: 8px`, the console's field corner, and
+`shadcn.test.ts` fails if the scale stops deriving from it. `native-select` is adapted to the
+field height (`h-9`) and background (`bg-surface`), recorded on the components card. The
+dashboard legend's swatches (`rounded-sm`) go from near-circles to rounded squares.
+
+## [chore] The console's filters use shadcn's native select
+
+`bunx shadcn@latest add native-select` added `src/components/ui/native-select.tsx`. The audit
+trail's person and action filters and the organization filter render `NativeSelect` in place
+of a raw `<select>`, keeping their `name` and `defaultValue`, so the GET forms submit the same
+query strings. `SELECT_CLASS` is gone. With no raw element left outside `ui/`,
+`shadcn.test.ts` drops its known-exceptions list and the test that kept it shrinking. The CLI
+imported `cn` from an unrelated npm package; the import points at `@/lib/utils` and the
+package was not added.
+
+## [chore] Components come from shadcn, never from scratch
+
+New constraint #15. `components.json` configures the shadcn CLI for Base UI (`base-nova`) and
+this repo's paths, so `bunx shadcn@latest add <name>` installs a primitive into
+`src/components/ui/`; `shadcn info` reads the config back and recognises all ten existing
+components as installed. `src/app/globals.css` maps shadcn's token names (`card`, `muted`,
+`accent`, `border`, `input`, `ring`, `destructive`, …) onto the console's palette, so an added
+component renders in maroon and stone in both themes. Nothing used those names before;
+`muted` was a text grey and now means shadcn's subtle background.
+
+`src/components/ui/shadcn.test.ts` fails on a `ui/` file that is not a shadcn registry item, a
+`@base-ui/` import outside `ui/`, a raw `<button>`, `<select>`, `<textarea>`, `<table>` or
+visible `<input>` outside `ui/`, a `components.json` that stops pointing at Base UI, and a
+`globals.css` that takes the registry's `oklch()` theme. Two raw `<select>`s (audit filters,
+organization filter) are listed exceptions until `native-select` is added. New card
+`docs/map/objects/ui-components.md`, with the inventory; a routing row, an effects row, a rule
+in `AGENTS.example.md`, and constraint #14 now named in the router too.
+
+## [fix] A missing patient, session or field answers HTTP 404
+
+Record pages showed "This page could not be found" for a missing id, or for another
+laboratory's record, but with status 200: `records/loading.tsx` began streaming the response
+before the page could call `notFound()`. The list page and its loading state move into a
+`(list)` route group, so the loading state covers the list only. The session and sample pages
+read the record and decide 404 first, then sign their frames inside a Suspense boundary
+(`FramesFallback`), so the figures still show at once and the frames follow. A missing
+storage configuration now leaves the frames unavailable instead of replacing the page.
+`src/app/not-found-status.test.ts` fails if a page that calls `notFound()` is put back under a
+loading file. Both loading states use shadcn's `Skeleton` (`src/components/ui/skeleton.tsx`).
+
+Checked against a local build: a malformed id, an unknown patient, session or field, and Lab
+B's records opened by Lab A's org admin (with or without `?org=`) all answer 404; existing
+records answer 200, with the frames streamed after the figures. `staging` answered 200 to all
+of them.
+
 ## [refactor] The console recognises super admins from the super_admins table
 
 The gate asks the app's `is_admin()` (app `0014`, D22) instead of reading `profiles.role`,

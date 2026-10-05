@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: c5c0fbe
+verified: 2026-10-05
+commit: d6f03d2
 ---
 
 # Signed image URL
@@ -17,6 +17,10 @@ short-lived URL the browser can load, or "Image unavailable".
 3. A returned `error` or a missing `signedUrl` is a failure (`:40`). `signFrames` turns that
    one frame into `null` (`src/lib/signed-urls.ts:16`), which renders as "Image unavailable"
    rather than failing the page.
+4. The session and sample pages call it inside a Suspense boundary (`SessionFields`,
+   `SignedFieldImage`), after they have read the record and called `notFound()` for a missing
+   one. The figures render at once, the frames follow, and a missing record still answers a
+   real 404 (`FramesFallback` shows meanwhile).
 
 ## Why no elevated key
 
