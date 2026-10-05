@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
@@ -19,9 +20,11 @@ import { formatDateTime, personName } from "@/lib/format";
 import { signFrames } from "@/lib/signed-urls";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
 import { fieldBoxes } from "@/components/records/boxes";
+import type { FieldBox } from "@/components/records/FieldImage";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Fact } from "@/components/records/Fact";
 import { FieldImage } from "@/components/records/FieldImage";
+import { FramesFallback } from "@/components/records/FramesFallback";
 import { PROVENANCE_LABEL } from "@/components/records/provenance";
 import { SpeciesName } from "@/components/records/SpeciesName";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +44,9 @@ import {
  * detection says whether its box is the model's, redrawn, or added by the
  * medtech, and its verdict — a rejected box stays visible as evidence and never
  * counts.
+ *
+ * The record is read, and a missing one answers 404, before anything streams.
+ * Only the frame, which takes a moment to sign, renders inside a Suspense boundary.
  */
 export const dynamic = "force-dynamic";
 
@@ -60,17 +66,15 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
   const { scope } = await scopeForRequest();
 
   let record;
-  let urls;
   try {
     record = await (await getDatabase()).getSampleRecord(sampleId, scope, disclosure);
-    if (!record) notFound();
-    urls = await signFrames([record.sample.storagePath]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Field" variable={cause.variable} />;
     }
     throw cause;
   }
+  if (!record) notFound();
 
   const { sample, detections, findings, session, patient, author, fieldNumber, fieldCount } =
     record;
@@ -98,11 +102,13 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
       </header>
 
       <div className="grid grid-cols-[3fr_2fr] gap-6">
-        <FieldImage
-          url={urls.get(sample.storagePath) ?? null}
-          alt={`Field ${fieldNumber} of ${sessionTitle}`}
-          boxes={fieldBoxes(record)}
-        />
+        <Suspense fallback={<FramesFallback />}>
+          <SignedFieldImage
+            storagePath={sample.storagePath}
+            alt={`Field ${fieldNumber} of ${sessionTitle}`}
+            boxes={fieldBoxes(record)}
+          />
+        </Suspense>
         <Card>
           <CardContent className="grid grid-cols-2 gap-4">
             <Fact label="Read by" value={personName(author)} />
@@ -210,4 +216,24 @@ export default async function SamplePage({ params }: { params: Promise<{ sampleI
       </nav>
     </main>
   );
+}
+
+/** The field's frame, signed as the visitor. */
+async function SignedFieldImage({
+  storagePath,
+  alt,
+  boxes,
+}: {
+  storagePath: string;
+  alt: string;
+  boxes: FieldBox[];
+}) {
+  let url: string | null = null;
+  try {
+    url = (await signFrames([storagePath])).get(storagePath) ?? null;
+  } catch (cause) {
+    // No storage configured: the frame shows as unavailable, the figures stay.
+    if (!(cause instanceof MissingEnvironmentError)) throw cause;
+  }
+  return <FieldImage url={url} alt={alt} boxes={boxes} />;
 }

@@ -1,7 +1,12 @@
 /**
- * Shown while a records page reads. A patient's sessions or a session's frames
- * can take a moment to read and sign; without this the previous page simply
- * stays on screen with no sign the click registered.
+ * Shown while the patient list reads; without it the previous page stays on
+ * screen with no sign the click registered.
+ *
+ * It covers the list only, through the `(list)` route group. A route-level
+ * loading state starts streaming the response with a 200 before the page runs, so
+ * a record page under it could never answer a missing id with a real 404. Record
+ * pages decide 404 first and show their own progress below that check, around
+ * the frames (`FramesFallback`).
  */
 export default function RecordsLoading() {
   return (

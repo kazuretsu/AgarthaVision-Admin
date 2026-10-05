@@ -60,8 +60,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter.
-    │       ├── records/       Patients list; patients/, sessions/, samples/ detail pages;
-    │                          loading.tsx.
+    │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
+    │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
     │       ├── organizations/ Super admin: list, detail, and the audited server actions.
     │       └── audit/         The audit trail, filtered and scoped.
