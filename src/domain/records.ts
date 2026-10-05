@@ -19,6 +19,13 @@ export interface PatientListItem {
   lastSessionAt: string | null;
 }
 
+/** One page of the patients list, with how many patients match in all. */
+export interface PatientPage {
+  items: PatientListItem[];
+  /** Every patient matching the query, not just this page's. */
+  total: number;
+}
+
 /** One session in a patient's history, with what it showed. */
 export interface SessionListItem {
   session: Session;

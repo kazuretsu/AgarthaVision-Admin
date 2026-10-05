@@ -39,7 +39,9 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   and `bun.lock`.
 - **Never `shadcn init`.** It rewrites `globals.css` with the registry's own `oklch()` theme.
 - **Inventory.** Ten were ported by hand in 14zcqntjnru before `components.json` existed
-  (`skeleton` in 14zcqntjw73). They follow the registry items' structure and APIs, with
+  (`skeleton` in 14zcqntjw73), and `pagination` in 14zcqntjw6w from the registry source,
+  where the CLI could not reach `ui.shadcn.com`. They follow the registry items' structure
+  and APIs, with
   console token classes (`bg-surface`, `text-stone-ink`, `border-stone-hair`) in place of the
   registry's. `native-select` came from the CLI; apart from its `cn` import, its only
   adaptation is to sit beside `Input` and `Button`: `h-9` (the registry ships `h-8`) on
@@ -55,10 +57,14 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   | `input.tsx`         | `input`         | `input`           | hand-ported        |
   | `label.tsx`         | `label`         | none              | hand-ported        |
   | `native-select.tsx` | `native-select` | none              | CLI (`shadcn add`) |
+  | `pagination.tsx`    | `pagination`    | none              | hand-ported        |
   | `separator.tsx`     | `separator`     | `separator`       | hand-ported        |
   | `skeleton.tsx`      | `skeleton`      | none              | hand-ported        |
   | `table.tsx`         | `table`         | none              | hand-ported        |
 
+- **`pagination`'s page links** are `next/link` styled with `buttonVariants`, not a Base UI
+  `Button` rendering an `<a>`: a page change keeps link semantics and is a client navigation,
+  not a document reload.
 - **Filters use `NativeSelect`.** The audit trail's person and action filters
   (`src/app/(dashboard)/audit/page.tsx`) and the super admin's organization filter
   (`src/components/organizations/OrganizationFilter.tsx`, on `/records`, `/dashboard`,

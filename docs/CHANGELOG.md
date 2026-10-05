@@ -2,6 +2,26 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Records list reaches every patient, a page at a time
+
+`/records` read one response of patients, which PostgREST stops at 1000 rows without saying
+so: a laboratory past that could not see or search its oldest patients. The list now reads
+50 at a time (`?page=`), says how many match in all ("Showing 51–100 of 1,234 patients"),
+and pages with shadcn's `pagination` (ported from the registry source, the twelfth
+component in `ui/`). Search, barangay and laboratory filters run in the database over every
+patient in scope and are kept in the page links; a page past the end goes to the last page.
+The list (`src/components/records/PatientList.tsx`) renders inside a Suspense boundary keyed by
+its query, so a new search or page shows `PatientListFallback`'s skeleton in its place while
+the search form stays on screen; without the key, the previous page stayed up with no sign
+the click registered.
+
+`DatabasePort.listPatients` takes `offset` and `limit` and returns a `PatientPage`
+(`items`, `total`). The adapter reads with `.range()` and an exact count, ordered by
+`created_at` then `id` so a patient sits on one page, and caps a page at the server's row
+cap. A range past the last row is refused (`PGRST103`) and loses the count, so the adapter
+then asks for the count alone with the same filters. A super admin's pages still come from
+the de-identified views and ignore a name search. Page arithmetic in `src/lib/pagination.ts`.
+
 ## [fix] CLI components take the console's corners and field height
 
 The organization, person and action filters rendered as 32px pills beside 36px fields with
