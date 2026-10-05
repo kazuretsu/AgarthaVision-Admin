@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-05
-commit: c0011a3
+commit: 3869e44
 ---
 
 # LPF session summary
@@ -19,7 +19,8 @@ records page shows.
 | Per species, **min–max eggs in any single field**; a field without it is 0; several rows in one field are summed; never a mean | `aggregateLpfPerSpecies`, `:114`                  | `LpfAggregation.kt::aggregateLpfPerSpecies`                             |
 | Descriptor read off the worst field: ≤2 rare, ≤5 few, ≤10 moderate, else numerous; none when never seen                        | `lpfDescriptor`, `:86`                            | `LpfDescriptor.forMax`                                                  |
 | Burden read off the descriptor: rare or few → Low, moderate → Moderate, numerous → High; none when never seen                  | `parasiteBurdenLevel`, `:153`                     | `ParasiteBurdenLevel.forDescriptor`                                     |
-| A smear is positive when a live sample carries a counted detection                                                             | `summariseSession`, `:265`                        | `public.barangay_prevalence()`                                          |
+| A smear is positive when a live sample carries a counted detection                                                             | `summariseSession`, `:274`                        | `public.barangay_prevalence()`                                          |
+| A session with no live field is **not read**: no result, and blanks, not zeros, for LPF and eggs                               | `isSessionRead`, `:214`                           | none: `LpfHeroCard` says "No parasites found" at 0 fields               |
 
 `src/domain/clinical.test.ts` repeats every case in the app's `LpfAggregationTest`, so a
 change to either side that the other does not make fails a test here.
@@ -35,9 +36,9 @@ infection intensity. No surface in the console shows EPG.
 1. The adapter reads a session with its samples and their detections, findings and
    prediction ids (`sampleTree`, `src/adapters/supabase/database.ts:233`), or only what a
    summary needs for a patient's session list (`sessionSummaryTree`, `:244`).
-2. `summariseSession` (`src/domain/clinical.ts:265`) keeps live samples, counts eggs per
+2. `summariseSession` (`src/domain/clinical.ts:274`) keeps live samples, counts eggs per
    species, ranges the findings over the live field count, and decides positivity.
-3. `speciesRows` (`src/domain/clinical.ts:231`) joins the two halves for display. The LPF
+3. `speciesRows` (`src/domain/clinical.ts:240`) joins the two halves for display. The LPF
    range is keyed by the finding's **stored** species string, as the app groups it, while egg
    counts are keyed by the canonical name; joining on the raw keys would split
    `ascaris_lumbricoides` and `Ascaris lumbricoides` into two half-empty rows. The join is on
@@ -45,14 +46,18 @@ infection intensity. No surface in the console shows EPG.
    range keep a row each.
 4. Pages render the result: `LpfTable` and `LpfInline` (`src/components/records/LpfTable.tsx`).
    Each species seen reads `Moderate · Moderate Burden`, written by `formatLpfReading`
-   (`src/domain/clinical.ts:179`) as the app's Session Detail writes it; a species never seen,
-   and a session never read, show neither. `src/components/records/LpfTable.test.ts` renders
-   both components and fails if the reading drops off either page.
+   (`src/domain/clinical.ts:179`) as the app's Session Detail writes it; a species never seen
+   shows neither. A session never read (`isSessionRead`) is not a negative one: its result
+   reads "Not read" (`SessionResult`, `src/components/records/ResultBadge.tsx`), its LPF and
+   eggs read "—", and the session page's findings say no field has been examined. A read
+   session with nothing found still says "No parasites found".
+   `src/components/records/LpfTable.test.ts` and `ResultBadge.test.ts` render these and fail
+   if the reading drops off either page or an unread session reads as negative.
    Field cards on the session page and the sample page name species canonically too.
 
 ## Box provenance
 
-`boxProvenance` (`src/domain/clinical.ts:311`) reads the table in the app's
+`boxProvenance` (`src/domain/clinical.ts:320`) reads the table in the app's
 `0004_predictions.sql`: linked + box → **model** (or **redrawn** when `BOX_INCORRECT`);
 linked, no box → **no box**; unlinked + box → **added**. An unlinked row on a frame with no
 predictions at all and not a manual capture is **unknown** — a pre-`0004` row whose
@@ -78,4 +83,5 @@ the overlay detects which (`:66`) and scales accordingly. Rejected boxes are das
 ## See
 
 `src/domain/clinical.ts`, `src/domain/clinical.test.ts`, `src/components/records/LpfTable.test.ts`,
+`src/components/records/ResultBadge.test.ts`,
 `src/adapters/supabase/database.ts`.
