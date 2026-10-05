@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Records tables fit the console at its narrowest width
+
+The shell is never narrower than 1024px, which leaves the page 734px of table. The records
+list and a patient's sessions table each asked for at least 760px, so at that width the
+last column (Eggs on the patient page) sat behind a sideways scroll. Both now ask for 720px,
+as the sample and audit tables already do; wider windows are unchanged.
+
 ## [feat] Records show the estimated parasite burden next to the LPF descriptor
 
 The app's Session Detail writes each species seen as "Moderate · Moderate Burden"; the
