@@ -120,7 +120,10 @@ smears carrying each species. No EPG and no WHO intensity tier. If a period hold
 
 Records follow the app's clinical hierarchy: **Patient → Session (one smear) → Sample (one
 field) → Detections**. `/records` lists patients, searchable by name or codename and by
-barangay PSGC code, with the query in the URL. A super admin sees patients de-identified: no
+barangay PSGC code, with the query in the URL. The list is read 50 patients at a time
+(`?page=`) and says how many match in all ("Showing 51–100 of 1,234 patients"), so every
+patient is reachable however many a laboratory holds; search and filters run in the
+database over all of them. A page past the end goes to the last page. A super admin sees patients de-identified: no
 name, sex, age or birthdate, no name search, no session label and no medtech's note; a
 patient or session is named by the start of its record id (constraint #14). A patient page lists every session with who
 read it, the fields examined, a positive/negative result, the per-species LPF range and the

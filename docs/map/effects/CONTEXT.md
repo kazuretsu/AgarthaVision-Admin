@@ -44,12 +44,17 @@ response before the page runs, so `notFound()` can only swap the content, not th
 Record pages therefore have none: the list's lives in `records/(list)/`, and the detail pages
 read first and suspend only their frames. Put a new loading state inside the page, below its
 not-found check. `src/app/not-found-status.test.ts` fails if any page that calls `notFound()`
-sits under a loading file, or suspends before its not-found check.
+sits under a loading file, or suspends before its not-found check. The same holds for
+`redirect()`: under the records list's loading state it arrives in the browser (the router,
+or a meta refresh) rather than as a 307, which is fine for the list's page-past-the-end
+redirect but not for anything a non-browser client must follow.
 
 **`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
 (1000 on Supabase by default) and does not say so. A read that can exceed it goes through
 `readPages` (`src/adapters/supabase/paging.ts`); a "more than N" check on a single
-response's length can never fire.
+response's length can never fire. A list a person pages through instead reads one page with
+`.range()` and `count: "exact"` (`listPatients`); a range past the last row is refused
+(`PGRST103`) and loses the count, so the adapter asks for the count alone.
 
 **One dropped column fails the whole query.** The consolidated schema removed
 `samples.gps_*`, `sessions.notes`, `sessions.ended_at` and `reports.epg_per_species`.

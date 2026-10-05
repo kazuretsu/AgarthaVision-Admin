@@ -2,6 +2,22 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Records list reaches every patient, a page at a time
+
+`/records` read one response of patients, which PostgREST stops at 1000 rows without saying
+so: a laboratory past that could not see or search its oldest patients. The list now reads
+50 at a time (`?page=`), says how many match in all ("Showing 51–100 of 1,234 patients"),
+and pages with shadcn's `pagination` (ported from the registry source, the eleventh
+component in `ui/`). Search, barangay and laboratory filters run in the database over every
+patient in scope and are kept in the page links; a page past the end goes to the last page.
+
+`DatabasePort.listPatients` takes `offset` and `limit` and returns a `PatientPage`
+(`items`, `total`). The adapter reads with `.range()` and an exact count, ordered by
+`created_at` then `id` so a patient sits on one page, and caps a page at the server's row
+cap. A range past the last row is refused (`PGRST103`) and loses the count, so the adapter
+then asks for the count alone with the same filters. A super admin's pages still come from
+the de-identified views and ignore a name search. Page arithmetic in `src/lib/pagination.ts`.
+
 ## [chore] Components come from shadcn, never from scratch
 
 New constraint #15. `components.json` configures the shadcn CLI for Base UI (`base-nova`) and

@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-05
-commit: d901563
+commit: 0d6a1c5
 ---
 
 # UI components
@@ -31,8 +31,9 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   `globals.css` that replaces the console's palette, and swap registry colour classes for
   console tokens only where the mapping is not enough.
 - **Never `shadcn init`.** It rewrites `globals.css` with the registry's own `oklch()` theme.
-- **Inventory.** All ten were ported by hand in 14zcqntjnru before `components.json` existed
-  (`skeleton` in 14zcqntjw73). They follow the registry items' structure and APIs, with
+- **Inventory.** Ported by hand from the registry source, since the CLI cannot reach
+  `ui.shadcn.com` from every environment: nine in 14zcqntjnru before `components.json`
+  existed, `skeleton` in 14zcqntjw73, `pagination` in 14zcqntjw6w. They follow the registry items' structure and APIs, with
   console token classes (`bg-surface`, `text-stone-ink`, `border-stone-hair`) in place of the
   registry's.
 
@@ -45,10 +46,14 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   | `dropdown-menu.tsx` | `dropdown-menu` | `menu`            |
   | `input.tsx`         | `input`         | `input`           |
   | `label.tsx`         | `label`         | none              |
+  | `pagination.tsx`    | `pagination`    | none              |
   | `separator.tsx`     | `separator`     | `separator`       |
   | `skeleton.tsx`      | `skeleton`      | none              |
   | `table.tsx`         | `table`         | none              |
 
+- **Adaptations.** `pagination`'s page links are `next/link` styled with `buttonVariants`,
+  not a Base UI `Button` rendering an `<a>`: a page change keeps link semantics and is a
+  client navigation, so the list's skeleton shows.
 - **Waiting for their component.** `src/app/(dashboard)/audit/page.tsx` and
   `src/components/organizations/OrganizationFilter.tsx` still render a raw `<select>`; both
   need `native-select`. They are the test's known exceptions.

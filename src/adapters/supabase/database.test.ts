@@ -92,3 +92,105 @@ describe("SupabaseDatabaseAdapter — an organization admin's reads", () => {
     expect(sessionRead?.select).toMatch(/\buser_note\b/);
   });
 });
+
+interface Call {
+  method: string;
+  args: unknown[];
+}
+
+/**
+ * A client that records every builder call per request and answers each request
+ * from `answers`, in order, so a paged read can be checked call by call.
+ */
+function scriptedClient(answers: { data?: unknown; error?: unknown; count?: number | null }[]) {
+  const requests: { source: string; calls: Call[] }[] = [];
+  const client = {
+    from(source: string) {
+      const request = { source, calls: [] as Call[] };
+      requests.push(request);
+      const answer = answers[requests.length - 1] ?? {};
+      const builder: Record<string, unknown> = {
+        then: (resolve: (value: unknown) => unknown) =>
+          Promise.resolve({ data: null, error: null, count: null, ...answer }).then(resolve),
+      };
+      for (const method of ["select", "eq", "or", "order", "range"]) {
+        builder[method] = (...args: unknown[]) => {
+          request.calls.push({ method, args });
+          return builder;
+        };
+      }
+      return builder;
+    },
+  };
+  return { client: client as unknown as SupabaseClient, requests };
+}
+
+const callsTo = (calls: Call[], method: string) =>
+  calls.filter((call) => call.method === method).map((call) => call.args);
+
+describe("SupabaseDatabaseAdapter.listPatients — one page at a time", () => {
+  const scope = SCOPES[1];
+
+  it("reads the asked-for page with an exact count, in a total order", async () => {
+    const { client, requests } = scriptedClient([{ data: [], count: 1234 }]);
+    const page = await new SupabaseDatabaseAdapter(client).listPatients({
+      scope,
+      disclosure: "identified",
+      offset: 100,
+      limit: 50,
+    });
+
+    expect(page).toEqual({ items: [], total: 1234 });
+    const { calls } = requests[0];
+    expect(callsTo(calls, "select")[0][1]).toEqual({ count: "exact" });
+    expect(callsTo(calls, "range")).toEqual([[100, 149]]);
+    expect(callsTo(calls, "order")).toEqual([
+      ["created_at", { ascending: false }],
+      ["id", { ascending: true }],
+    ]);
+  });
+
+  it("defaults to a page of 50 and never asks past the server's row cap", async () => {
+    const { client, requests } = scriptedClient([{ data: [] }, { data: [] }]);
+    const db = new SupabaseDatabaseAdapter(client);
+    await db.listPatients({ scope, disclosure: "identified" });
+    await db.listPatients({ scope, disclosure: "identified", limit: 5000 });
+
+    expect(callsTo(requests[0].calls, "range")).toEqual([[0, 49]]);
+    expect(callsTo(requests[1].calls, "range")).toEqual([[0, 999]]);
+  });
+
+  it("answers a page past the end with the count alone, filtered the same way", async () => {
+    const { client, requests } = scriptedClient([
+      { error: { code: "PGRST103", message: "Requested range not satisfiable" } },
+      { count: 1001 },
+    ]);
+    const page = await new SupabaseDatabaseAdapter(client).listPatients({
+      scope,
+      disclosure: "identified",
+      search: "Cruz",
+      barangayCode: "0722217001",
+      offset: 5000,
+    });
+
+    expect(page).toEqual({ items: [], total: 1001 });
+    expect(requests).toHaveLength(2);
+    const [pageRead, countRead] = requests.map((request) => request.calls);
+    expect(callsTo(countRead, "select")[0][1]).toEqual({ count: "exact", head: true });
+    for (const method of ["eq", "or"]) {
+      expect(callsTo(countRead, method)).toEqual(callsTo(pageRead, method));
+    }
+    expect(callsTo(countRead, "eq")).toContainEqual(["psgc_barangay_code", "0722217001"]);
+    expect(callsTo(countRead, "eq")).toContainEqual([
+      "patient_organizations.organization_id",
+      scope.kind === "organization" ? scope.organizationId : "",
+    ]);
+  });
+
+  it("still fails loudly on any other error", async () => {
+    const { client } = scriptedClient([{ error: { code: "42501", message: "denied" } }]);
+    await expect(
+      new SupabaseDatabaseAdapter(client).listPatients({ scope, disclosure: "identified" }),
+    ).rejects.toThrow("listPatients");
+  });
+});

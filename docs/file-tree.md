@@ -86,6 +86,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── read-scope.ts      The actor and the ReadScope their reads run in.
         ├── utils.ts           cn(): clsx + tailwind-merge.
         ├── format.ts          Dates in Asia/Manila, person names.
+        ├── pagination.ts      Page arithmetic: ?page= parsing, offsets, ranges, page links.
         ├── signed-urls.ts     Signs a page's frames; an unreadable one becomes null.
         ├── palette.ts         Validated species colours, with the validator's findings.
         └── period.ts          The dashboard's and export's from/to dates, defensively parsed.
