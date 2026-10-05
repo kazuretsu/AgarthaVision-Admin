@@ -47,6 +47,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── lab-scoping.md         Who sees which laboratory's records, enforced twice.
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
+│       │   ├── medtech-access.md      The Medtechs page; deactivate = ban the login, record, undo.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
@@ -67,24 +68,25 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
     │       ├── organizations/ Super admin: list, detail (invitations too), audited actions.
-    │       ├── medtechs/      Org admin: invite medtechs, follow their invitations.
+    │       ├── medtechs/      A laboratory's medtechs: invite, search, sort, deactivate.
     │       ├── invitations/   Invite, re-send and revoke server actions (no page).
     │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
     │                          patient, dashboard and research-export rules, id checks.
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
-    │                          mail. No vendor types.
+    │                          mail, account-access. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
     │   │                      paging.ts), reports (row mapping), admin-write, storage, auth,
-    │   │                      onboarding (accepting an invitation).
+    │   │                      onboarding (accepting an invitation), account-access (bans).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.
+    │   ├── people/            The medtechs table (sortable, paged) and the deactivate form.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
     │                          with box overlay, breadcrumbs.

@@ -66,6 +66,9 @@ admin invites an organization's admins, an org admin its medtechs, and accepting
 membership the invitation names. `organization_invitations` is read like the members: a super
 admin all, an org admin their organization's; its token hash by nobody.
 
+**Deactivating a medtech** (`admin/0006`, `docs/map/processes/medtech-access.md`) sets
+their membership's status and bans their login; nothing is deleted.
+
 **Backfill** (`:363`): one "Starting laboratory" receives every existing non-admin user as a
 medtech and every existing patient, so nothing is orphaned when scoping arrives. Super
 admins are members of nothing; they see everything.

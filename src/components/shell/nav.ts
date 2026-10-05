@@ -23,7 +23,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   { href: "/records", label: "Records", icon: "records", visibleTo: ["super_admin", "org_admin"] },
   { href: "/export", label: "Export", icon: "export", visibleTo: ["super_admin", "org_admin"] },
-  { href: "/medtechs", label: "Medtechs", icon: "medtechs", visibleTo: ["org_admin"] },
+  {
+    href: "/medtechs",
+    label: "Medtechs",
+    icon: "medtechs",
+    visibleTo: ["super_admin", "org_admin"],
+  },
   {
     href: "/organizations",
     label: "Organizations",

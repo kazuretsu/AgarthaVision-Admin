@@ -28,8 +28,9 @@ The app's `0001_init.sql` grants every admin read on the whole bucket (`"samples
 all"`, `bucket_id = 'samples' and public.is_admin(auth.uid())`). So a super admin's own
 session can sign any frame, and the Storage policy — not this console — decides what a user
 may see. Signing never uses the service-role key; the old path that signed with it (needed only
-while the legacy database lacked that policy) is gone. The key's one use now is making an
-invited person's account (`docs/map/processes/invitations.md`).
+while the legacy database lacked that policy) is gone. The key's uses now are making an
+invited person's account and banning a deactivated medtech's login
+(`docs/map/processes/invitations.md`, `docs/map/processes/medtech-access.md`).
 
 ## Consumes / produces
 

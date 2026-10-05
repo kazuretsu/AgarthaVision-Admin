@@ -74,3 +74,14 @@ describe("invitation entries", () => {
     }
   });
 });
+
+describe("member entries", () => {
+  it("name the medtech and the laboratory", () => {
+    expect(
+      describeAuditEntry(entry({ action: "member.deactivate", details: { name: "Tess Tech" } })),
+    ).toBe("Deactivated Tess Tech in Lab A");
+    expect(
+      describeAuditEntry(entry({ action: "member.reactivate", details: { name: "Tess Tech" } })),
+    ).toBe("Reactivated Tess Tech in Lab A");
+  });
+});

@@ -32,6 +32,8 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "invitation.resend": "Re-sent an invitation",
   "invitation.revoke": "Revoked an invitation",
   "invitation.accept": "Accepted an invitation",
+  "member.deactivate": "Deactivated a medtech",
+  "member.reactivate": "Reactivated a medtech",
 };
 
 /** The action's label; an action this build does not know is shown as recorded. */
@@ -78,6 +80,10 @@ export function describeAuditEntry(entry: AuditEntry): string {
       } as const;
       return verb[entry.action];
     }
+    case "member.deactivate":
+      return `Deactivated ${text(d.name) ?? "a medtech"} in ${entry.organizationName ?? "an organization"}`;
+    case "member.reactivate":
+      return `Reactivated ${text(d.name) ?? "a medtech"} in ${entry.organizationName ?? "an organization"}`;
     default:
       return auditActionLabel(entry.action);
   }

@@ -55,8 +55,8 @@ the default. Adapters are imported lazily.
 
 The Supabase adapters implement the database, storage, auth and onboarding ports, and a
 Resend adapter the mail port. Database reads and storage signing run through the visitor's
-own session so RLS decides visibility. The service-role key is used once: to make an invited
-person's account when they accept.
+own session so RLS decides visibility. The service-role key is used for two things: making an
+invited person's account when they accept, and banning or unbanning a medtech's login.
 
 ### Authentication and the admin gate
 
@@ -96,6 +96,19 @@ with re-send (a new link; the old one stops working) and revoke. An email that a
 account, or already has a live invitation, is refused. Expired, revoked, used and unknown
 links each say so. The role and organization come from the stored invitation, never from the
 invitee. Each invite, re-send, revoke and acceptance is in the audit trail.
+
+### Medtechs
+
+`/medtechs` lists a laboratory's medtechs and the medtechs it has invited: name, email,
+status (active, deactivated, invited, invite expired), date joined and number of the
+laboratory's patients each is linked to. Search by name or email, sort by any column and page
+through 50 at a time, all in the URL. An org admin sees their own laboratory and invites from
+here; a super admin chooses any laboratory (also linked from its organization page).
+
+**Deactivate** (behind a confirmation) blocks the medtech's sign-in to the app and the console
+and deletes nothing; the app signs them out the next time it reaches the server. **Reactivate**
+restores it. An org admin cannot deactivate themselves, another org admin, or anyone in another
+laboratory. Each change is in the audit trail.
 
 ### Laboratory scoping
 

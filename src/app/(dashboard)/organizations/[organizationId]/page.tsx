@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
 import { isUuid } from "@/domain";
@@ -14,6 +15,7 @@ import {
 import { InviteForm } from "@/components/invitations/InvitationForms";
 import { InvitationTable } from "@/components/invitations/InvitationTable";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -79,7 +81,15 @@ export default async function OrganizationPage({
       </Card>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-[15px] font-semibold text-stone-ink">Members</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[15px] font-semibold text-stone-ink">Members</h2>
+          <Link
+            href={`/medtechs?org=${organization.id}`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Manage medtechs
+          </Link>
+        </div>
         {organization.members.length === 0 ? (
           <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
             Nobody belongs to this organization yet. Organization admins are added by invitation.

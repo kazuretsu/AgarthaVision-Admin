@@ -48,6 +48,13 @@ export interface AdminWritePort {
   resendInvitation(invitationId: string): Promise<Omit<IssuedInvitation, "invitationId">>;
   /** Withdraws a pending invitation. Nothing is deleted. */
   revokeInvitation(invitationId: string): Promise<void>;
+
+  /**
+   * Records a medtech's membership as deactivated or active. Blocking or allowing
+   * their sign-in is the caller's other half ({@link AccountAccessPort}); this
+   * deletes nothing.
+   */
+  setMemberStatus(userId: string, status: OrganizationStatus): Promise<void>;
 }
 
 export type AdminWriteFailure = "forbidden" | "conflict" | "not_found" | "invalid" | "failed";

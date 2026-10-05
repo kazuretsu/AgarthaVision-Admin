@@ -20,6 +20,7 @@ import type {
 import { sortMembers } from "@/domain";
 import type {
   Invitation,
+  Person,
   MembershipRole,
   OrganizationDetail,
   OrganizationStatus,
@@ -747,6 +748,34 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
 
     if (error) throw new DatabaseReadError("listInvitations", error);
     return ((data as unknown as InvitationRow[] | null) ?? []).map(toInvitation);
+  }
+
+  async listPeople(organizationId: string): Promise<Person[]> {
+    const { data, error } = await this.client.rpc("console_organization_people", {
+      p_organization_id: organizationId,
+    });
+    if (error) throw new DatabaseReadError("listPeople", error);
+
+    type Row = {
+      user_id: string;
+      account_id: string | null;
+      full_name: string | null;
+      email: string | null;
+      role: string;
+      status: string;
+      added_at: string;
+      assigned_patients: number;
+    };
+    return ((data as Row[] | null) ?? []).map((row) => ({
+      userId: row.user_id,
+      accountId: row.account_id,
+      fullName: row.full_name,
+      email: row.email,
+      role: row.role === "org_admin" ? "org_admin" : "medtech",
+      status: toStatus(row.status),
+      addedAt: row.added_at,
+      assignedPatients: row.assigned_patients,
+    }));
   }
 
   async getInvitation(invitationId: string): Promise<Invitation | null> {

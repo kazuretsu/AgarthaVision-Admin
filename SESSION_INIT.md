@@ -34,6 +34,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Changing which laboratory's records someone sees | `docs/map/processes/lab-scoping.md`                                  |
 | Changing who can reach a route                   | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
 | Inviting people, or how an account is made       | `docs/map/processes/invitations.md`, `docs/constraints.md` (#2)      |
+| A laboratory's medtechs, deactivating someone    | `docs/map/processes/medtech-access.md`                               |
 | Adding or changing a UI component                | `docs/map/objects/ui-components.md`, `docs/constraints.md` (#15)     |
 | Loading sample images                            | `docs/map/processes/signed-image-url.md`                             |
 | Wondering what a command does                    | `docs/commands.md`                                                   |
