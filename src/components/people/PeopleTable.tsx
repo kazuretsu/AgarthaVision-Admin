@@ -140,7 +140,16 @@ export function PeopleTable({
             return (
               <TableRow key={row.key}>
                 <TableCell className="font-medium text-stone-ink">
-                  {name?.trim() || <span className="text-stone-mid">—</span>}
+                  {row.kind === "member" ? (
+                    <Link
+                      href={`/medtechs/${row.person.userId}${query.org ? `?org=${query.org}` : ""}`}
+                      className="hover:text-maroon"
+                    >
+                      {name?.trim() || email || "Unnamed medtech"}
+                    </Link>
+                  ) : (
+                    name?.trim() || <span className="text-stone-mid">—</span>
+                  )}
                 </TableCell>
                 <TableCell>{email ?? <span className="text-stone-mid">—</span>}</TableCell>
                 <TableCell>

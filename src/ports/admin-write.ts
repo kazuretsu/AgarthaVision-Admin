@@ -55,6 +55,16 @@ export interface AdminWritePort {
    * deletes nothing.
    */
   setMemberStatus(userId: string, status: OrganizationStatus): Promise<void>;
+
+  /** Assigns a patient to an active medtech of its laboratory. Org admins only. */
+  assignPatient(patientId: string, userId: string): Promise<void>;
+  /**
+   * Removes one assignment — access only, never a record. Refused (`invalid`, hint
+   * `last_assignment`) when no other active medtech would remain.
+   */
+  unassignPatient(patientId: string, userId: string): Promise<void>;
+  /** Hands a patient from one medtech to another in one step. */
+  replaceAssignment(patientId: string, fromUserId: string, toUserId: string): Promise<void>;
 }
 
 export type AdminWriteFailure = "forbidden" | "conflict" | "not_found" | "invalid" | "failed";

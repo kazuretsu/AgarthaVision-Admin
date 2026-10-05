@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Assign a laboratory's patients to its medtechs
+
+A patient's page now shows its assigned medtechs, and the laboratory's org admin assigns, removes
+and hands over through `admin/0007_patient_assignments.sql` (**apply it in the SQL editor**):
+`console_assign_patient`, `console_unassign_patient` and `console_replace_assignment` add or
+remove the `patient_users` link the app's visibility resolves through, and audit it. Only an
+active medtech of the patient's own laboratory can be assigned; the last active medtech can only
+be handed over, never removed. Removing touches the link only, never the patient, a record or its
+author. `/medtechs/[id]` shows one medtech and the patients assigned to them (de-identified for a
+super admin, who reads assignments but does not change them). Audit lines name the patient by
+record id only.
+
 ## [feat] Org admin manages the laboratory's medtechs
 
 `/medtechs` now lists a laboratory's medtechs with the medtechs it has invited: name, email,

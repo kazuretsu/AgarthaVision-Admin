@@ -85,3 +85,15 @@ describe("member entries", () => {
     ).toBe("Reactivated Tess Tech in Lab A");
   });
 });
+
+describe("assignment entries", () => {
+  it("name the patient by record id only, and the medtech", () => {
+    const base = { targetId: "70000000-0000-4000-8000-000000000001", details: { medtech: "Ana" } };
+    expect(describeAuditEntry(entry({ ...base, action: "assignment.add" }))).toBe(
+      "Assigned patient 70000000 to Ana",
+    );
+    expect(describeAuditEntry(entry({ ...base, action: "assignment.remove" }))).toBe(
+      "Removed patient 70000000 from Ana",
+    );
+  });
+});

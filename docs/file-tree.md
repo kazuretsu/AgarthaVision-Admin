@@ -48,6 +48,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
 │       │   ├── medtech-access.md      The Medtechs page; deactivate = ban the login, record, undo.
+│       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
@@ -68,7 +69,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
     │       ├── organizations/ Super admin: list, detail (invitations too), audited actions.
-    │       ├── medtechs/      A laboratory's medtechs: invite, search, sort, deactivate.
+    │       ├── medtechs/      A laboratory's medtechs: invite, search, sort, deactivate;
+    │                          [userId]/ one medtech and their assigned patients.
+    │       ├── assignments/   Assign, remove and hand-over server actions (no page).
     │       ├── invitations/   Invite, re-send and revoke server actions (no page).
     │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
@@ -87,6 +90,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.
     │   ├── people/            The medtechs table (sortable, paged) and the deactivate form.
+    │   ├── assignments/       A patient's assigned medtechs, with assign/remove/hand over.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
     │                          with box overlay, breadcrumbs.

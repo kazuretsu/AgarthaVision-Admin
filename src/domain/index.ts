@@ -1,5 +1,6 @@
 /** Domain barrel. Entities, enums and the pure logic over them. No I/O lives here. */
 export * from "./access";
+export * from "./assignments";
 export * from "./audit";
 export * from "./clinical";
 export * from "./dashboard";

@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getDatabase } from "@/adapters/registry";
 import {
   ageYears,
+  assignableMedtechs,
   isSessionRead,
   isUuid,
   patientDisclosureFor,
   patientLabel,
   sessionLabel,
+  type ConsoleAccess,
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -18,7 +21,9 @@ import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Fact } from "@/components/records/Fact";
 import { LpfInline } from "@/components/records/LpfTable";
 import { SessionResult } from "@/components/records/ResultBadge";
+import { AssignmentsPanel } from "@/components/assignments/AssignmentsPanel";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -28,6 +33,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+/**
+ * Who is assigned to the patient. Read after the page has decided the patient
+ * exists, so it can suspend without turning a 404 into a 200.
+ */
+async function Assignments({ patientId, access }: { patientId: string; access: ConsoleAccess }) {
+  const db = await getDatabase();
+  const [assignments, people] = await Promise.all([
+    db.listPatientAssignments(patientId),
+    access.kind === "org_admin" ? db.listPeople(access.organizationId) : Promise.resolve([]),
+  ]);
+  return (
+    <AssignmentsPanel
+      patientId={patientId}
+      assignments={assignments}
+      assignable={assignableMedtechs(people, assignments)}
+      access={access}
+    />
+  );
+}
 
 /**
  * One patient and every session read for them, newest first. Sex and birthdate
@@ -88,6 +113,18 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
           <Fact label="Registered" value={formatDateTime(patient.createdAt)} />
         </CardContent>
       </Card>
+
+      <Suspense
+        fallback={
+          <div aria-busy="true" className="flex flex-col gap-2">
+            <span className="sr-only">Loading assigned medtechs…</span>
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-24 w-full rounded-[12px]" />
+          </div>
+        }
+      >
+        <Assignments patientId={patient.id} access={actor.access} />
+      </Suspense>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-stone-ink">Sessions</h2>

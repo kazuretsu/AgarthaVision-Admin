@@ -20,6 +20,8 @@ import type {
 import { sortMembers } from "@/domain";
 import type {
   Invitation,
+  MemberPatient,
+  PatientAssignment,
   Person,
   MembershipRole,
   OrganizationDetail,
@@ -776,6 +778,58 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       addedAt: row.added_at,
       assignedPatients: row.assigned_patients,
     }));
+  }
+
+  async listPatientAssignments(patientId: string): Promise<PatientAssignment[]> {
+    const { data, error } = await this.client.rpc("console_patient_assignments", {
+      p_patient: patientId,
+    });
+    if (error) throw new DatabaseReadError("listPatientAssignments", error);
+
+    type Row = {
+      user_id: string;
+      full_name: string | null;
+      role: string | null;
+      status: string | null;
+      linked_at: string;
+    };
+    return ((data as Row[] | null) ?? []).map((row) => ({
+      userId: row.user_id,
+      fullName: row.full_name,
+      role: row.role === "org_admin" || row.role === "medtech" ? row.role : null,
+      status: row.status === null ? null : toStatus(row.status),
+      linkedAt: row.linked_at,
+    }));
+  }
+
+  async listMemberPatients(userId: string): Promise<MemberPatient[]> {
+    const { data, error } = await this.client.rpc("console_member_patients", { p_user: userId });
+    if (error) throw new DatabaseReadError("listMemberPatients", error);
+
+    type Row = {
+      patient_id: string;
+      lastname: string | null;
+      firstname: string | null;
+      middle_name: string | null;
+      psgc_barangay_code: string;
+      linked_at: string;
+    };
+    return ((data as Row[] | null) ?? [])
+      .map((row) => ({
+        patientId: row.patient_id,
+        // The function withholds names from a super admin (constraint #14).
+        name:
+          row.lastname === null
+            ? null
+            : {
+                lastname: row.lastname,
+                firstname: row.firstname ?? "",
+                middleName: row.middle_name,
+              },
+        psgcBarangayCode: row.psgc_barangay_code,
+        linkedAt: row.linked_at,
+      }))
+      .sort((left, right) => Date.parse(right.linkedAt) - Date.parse(left.linkedAt));
   }
 
   async getInvitation(invitationId: string): Promise<Invitation | null> {
