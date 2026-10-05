@@ -1,3 +1,5 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
 /**
  * Shown while the patient list reads; without it the previous page stays on
  * screen with no sign the click registered.
@@ -16,9 +18,9 @@ export default function RecordsLoading() {
       aria-live="polite"
     >
       <span className="sr-only">Loading records…</span>
-      <div className="h-6 w-48 animate-pulse rounded-[6px] bg-stone-hair" />
-      <div className="h-4 w-80 animate-pulse rounded-[6px] bg-stone-hair" />
-      <div className="mt-4 h-64 w-full animate-pulse rounded-[12px] bg-stone-hair" />
+      <Skeleton className="h-6 w-48" />
+      <Skeleton className="h-4 w-80" />
+      <Skeleton className="mt-4 h-64 w-full rounded-[12px]" />
     </main>
   );
 }

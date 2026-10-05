@@ -42,7 +42,8 @@ handler that forgets to is an open dataset.
 response before the page runs, so `notFound()` can only swap the content, not the status.
 Record pages therefore have none: the list's lives in `records/(list)/`, and the detail pages
 read first and suspend only their frames. Put a new loading state inside the page, below its
-not-found check.
+not-found check. `src/app/not-found-status.test.ts` fails if any page that calls `notFound()`
+sits under a loading file, or suspends before its not-found check.
 
 **`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
 (1000 on Supabase by default) and does not say so. A read that can exceed it goes through

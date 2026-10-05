@@ -11,6 +11,8 @@ before the page could call `notFound()`. The list page and its loading state mov
 read the record and decide 404 first, then sign their frames inside a Suspense boundary
 (`FramesFallback`), so the figures still show at once and the frames follow. A missing
 storage configuration now leaves the frames unavailable instead of replacing the page.
+`src/app/not-found-status.test.ts` fails if a page that calls `notFound()` is put back under a
+loading file. Both loading states use shadcn's `Skeleton` (`src/components/ui/skeleton.tsx`).
 
 Checked against a local build: a malformed id, an unknown patient, session or field, and Lab
 B's records opened by Lab A's org admin (with or without `?org=`) all answer 404; existing

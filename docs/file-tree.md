@@ -73,7 +73,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   └── supabase/          client, env, database (paged reads in paging.ts), admin-write, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
-    │   ├── ui/                shadcn components on Base UI (incl. alert dialog). Ours to edit.
+    │   ├── ui/                shadcn components on Base UI (incl. alert dialog, skeleton). Ours to edit.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           LPF table, field image with box overlay, breadcrumbs.
