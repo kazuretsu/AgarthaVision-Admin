@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: ed59346
+verified: 2026-10-05
+commit: d6f03d2
 ---
 
 # Lab scoping
@@ -34,6 +34,9 @@ the insert to fail and checks the patient is still saved.
    predictions, findings and reports, their members' profiles (`:164`), and their sample
    frames in Storage (`:171`). Permissive policies are ORed, so these only add rows; the
    app's own policies are untouched and a medtech sees exactly what they saw before.
+   Reports reach the org admin two ways: a session report through its session (`0002`,
+   `:159`), and a patient report, which has no session (app `0015`), through its patient
+   (`admin/0004_patient_reports.sql:36`).
 
 Pages call `scopeForRequest` (`src/lib/read-scope.ts:10`); the export route derives its
 scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:35`).
@@ -59,7 +62,8 @@ grants nothing. A frame stored under any other key is unreadable to an org admin
 
 - Every records page, the dashboard and the export, for org admins.
 - The app's patient sync, if the trigger ever raises. Keep the handler.
-- `supabase/tests/admin_0002_patient_scoping.test.sql` and
+- `supabase/tests/admin_0002_patient_scoping.test.sql`,
+  `supabase/tests/admin_0004_patient_reports.test.sql` and
   `supabase/tests/app_0013_deidentified_reads.test.sql`.
 
 **Does not hit**
@@ -70,5 +74,6 @@ grants nothing. A frame stored under any other key is unreadable to an org admin
 
 ## See
 
-`supabase/migrations/admin/0002_patient_scoping.sql`, `src/domain/scope.ts`,
+`supabase/migrations/admin/0002_patient_scoping.sql`, `admin/0004_patient_reports.sql`,
+`src/domain/scope.ts`,
 `src/lib/read-scope.ts`, `src/adapters/supabase/database.ts`.

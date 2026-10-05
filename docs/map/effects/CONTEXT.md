@@ -48,6 +48,11 @@ response's length can never fire.
 PostgREST rejects a select naming any of them, so every page on that query errors — this is
 how the console broke. Read `0001_init.sql` before adding a column to a select.
 
+**A report may have no session.** Since app `0015` a patient report carries `patient_id` and
+no `session_id`. Anything that finds a report through its session — a policy, a join, an
+embed — silently misses every patient report. `admin/0004` adds the patient path for org
+admins; a reports page or the verification page needs both paths too.
+
 **An ambiguous embed fails the whole query.** `patients` reaches `profiles` through
 `created_by` and through `patient_users`, so `profiles(...)` from `patients` must name
 `patients_created_by_fkey`. See `../objects/domain-model.md`.

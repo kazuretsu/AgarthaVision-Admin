@@ -4,7 +4,7 @@ import type { DetectionVerdict } from "./enums";
  * Entity types mirrored from the AgarthaVision Postgres schema.
  *
  * Field names match the columns after the app's `supabase/migrations/0001_init.sql`
- * through `0006_drop_species_touched.sql` on `development` — the consolidated,
+ * through `0015_patient_reports.sql` on `development` — the consolidated,
  * patient-based schema. The `legacy-dev/` migrations describe an older database
  * and are not the authority here. Per-field comments name the migration each
  * field came from. Room-only columns are not represented.
@@ -136,17 +136,47 @@ export interface SpeciesFinding {
   eggCount: number;
 }
 
-/** `public.reports` — a report generated on the phone (`0001`). */
-export interface Report {
+/**
+ * `public.reports` — a report generated on the phone (`0001`), in one of two scopes
+ * (`0015`). The database's `reports_scope_check` holds exactly one of these shapes, so
+ * the type does too: narrow on `reportType` to get the scope's id.
+ */
+export type Report = SessionReport | PatientReport;
+
+/** The two `report_type` values `0015` allows. */
+export type ReportType = Report["reportType"];
+
+interface ReportBase {
   id: string;
-  sessionId: string;
+  /** The author, FK to `profiles(id)` (`0001`). */
   userId: string;
-  reportType: "session";
   generatedAt: Iso8601;
   totalSamples: number;
   totalEggsConfirmed: number;
   positiveSpecies: string[];
-  /** `{ "<species>": { "min": 0, "max": 4 } }`, stored as issued. */
+  /** `{ "<species>": { "min": 0, "max": 4 } }`, stored as issued (`0001`). */
   lpfPerSpecies: Record<string, { min: number; max: number }>;
+  /** Object keys in the `reports` bucket (`0003`); the files print the patient's name. */
+  csvFilePath: string | null;
   pdfFilePath: string | null;
+}
+
+/** One session's report (`0001`). */
+export interface SessionReport extends ReportBase {
+  reportType: "session";
+  sessionId: string;
+  patientId: null;
+  sessionIds: null;
+}
+
+/** One patient's report, pooling several sessions' findings (`0015`). */
+export interface PatientReport extends ReportBase {
+  reportType: "patient";
+  sessionId: null;
+  patientId: string;
+  /**
+   * The sessions the report pooled, fixed at generation so the report stays reproducible
+   * when the patient's session list changes. Nullable in the schema; the app always sets it.
+   */
+  sessionIds: string[] | null;
 }
