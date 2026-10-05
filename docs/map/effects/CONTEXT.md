@@ -28,6 +28,7 @@ is right and this table is stale.**
 | `src/domain/audit.ts`, any new admin write                                         | `../processes/audit-trail.md` — a write must audit itself; add its action                          |
 | `src/ports/admin-write.ts`, `src/adapters/supabase/admin-write.ts`                 | `../objects/organizations.md` — every write audits itself                                          |
 | `SESSION_INIT.md`                                                                  | `../../constraints.md` (#13)                                                                       |
+| `src/components/ui/*`, `components.json`, tokens in `globals.css`                  | `../objects/ui-components.md` · `../../constraints.md` (#15) — add primitives with the shadcn CLI  |
 | `.husky/*`, `package.json` scripts                                                 | `../../commands.md` · `../../constraints.md` (#9)                                                  |
 | `.env.example`                                                                     | `../objects/provider-registry.md` · `../../stack.md` · `../../constraints.md` (#2, #12)            |
 

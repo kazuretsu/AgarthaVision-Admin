@@ -111,7 +111,27 @@
   --color-surface: var(--surface);
   --color-surface-sunken: var(--surface-sunken);
   --color-border-hairline: var(--hair);
-  --color-muted: var(--mid);
+
+  /*
+   * shadcn's token names, mapped onto the console's semantic layer, so a component added
+   * with `bunx shadcn@latest add` renders in the console's palette in both themes with no
+   * edits. Never replace these with the registry's own colours (constraint #15).
+   */
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--primary);
+  --color-secondary: var(--surface-sunken);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-sunken);
+  --color-muted-foreground: var(--mid);
+  --color-accent: var(--surface-sunken);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--danger);
+  --color-border: var(--hair);
+  --color-input: var(--line);
+  --color-ring: var(--primary);
 
   --color-maroon: var(--primary);
   --color-maroon-hover: var(--primary-hover);

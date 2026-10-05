@@ -10,6 +10,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 ├── .gitignore                 Ignores .env*, .mcp.json, AGENTS.md, .claude/. Templates stay tracked.
 ├── .mcp.example.json          MCP server template. Copy to .mcp.json and fill in the key.
 ├── AGENTS.example.md          Per-developer rules template. Copy to AGENTS.md.
+├── components.json            shadcn CLI config: Base UI (base-nova), aliases, globals.css.
 ├── .husky/
 │   ├── pre-commit             ① typecheck ② test ③ build ④ lint. Each step exits 1 on failure.
 │   ├── commit-msg             Enforces [type][ClickUp-ID][Lastname]: Task title.
@@ -73,7 +74,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   └── supabase/          client, env, database (paged reads in paging.ts), admin-write, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
-    │   ├── ui/                shadcn components on Base UI (incl. alert dialog, skeleton). Ours to edit.
+    │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           LPF table, field image with box overlay, breadcrumbs.

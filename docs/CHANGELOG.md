@@ -2,6 +2,24 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [chore] Components come from shadcn, never from scratch
+
+New constraint #15. `components.json` configures the shadcn CLI for Base UI (`base-nova`) and
+this repo's paths, so `bunx shadcn@latest add <name>` installs a primitive into
+`src/components/ui/`; `shadcn info` reads the config back and recognises all ten existing
+components as installed. `src/app/globals.css` maps shadcn's token names (`card`, `muted`,
+`accent`, `border`, `input`, `ring`, `destructive`, …) onto the console's palette, so an added
+component renders in maroon and stone in both themes. Nothing used those names before;
+`muted` was a text grey and now means shadcn's subtle background.
+
+`src/components/ui/shadcn.test.ts` fails on a `ui/` file that is not a shadcn registry item, a
+`@base-ui/` import outside `ui/`, a raw `<button>`, `<select>`, `<textarea>`, `<table>` or
+visible `<input>` outside `ui/`, a `components.json` that stops pointing at Base UI, and a
+`globals.css` that takes the registry's `oklch()` theme. Two raw `<select>`s (audit filters,
+organization filter) are listed exceptions until `native-select` is added. New card
+`docs/map/objects/ui-components.md`, with the inventory; a routing row, an effects row, a rule
+in `AGENTS.example.md`, and constraint #14 now named in the router too.
+
 ## [fix] A missing patient, session or field answers HTTP 404
 
 Record pages showed "This page could not be found" for a missing id, or for another
