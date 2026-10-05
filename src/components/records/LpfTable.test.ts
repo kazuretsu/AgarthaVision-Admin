@@ -56,8 +56,7 @@ describe("LpfTable", () => {
 
   it("says a session never read is not read, not that no parasites were found", () => {
     const shown = text(renderToStaticMarkup(createElement(LpfTable, { summary: neverRead })));
-    expect(shown).toMatch(/^Not read\./);
-    expect(shown).not.toMatch(/No parasites found/);
+    expect(shown).toBe("No fields have been examined, so there are no findings yet.");
   });
 
   it("still says no parasites were found when a read field had none", () => {

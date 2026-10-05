@@ -25,7 +25,7 @@ import { SpeciesName } from "./SpeciesName";
  * mean; no EPG and no WHO tier.
  *
  * A session no one has read has no findings at all, which is not the same as
- * finding no parasites: it says so instead.
+ * finding no parasites: it says so instead, and leaves "Not read" to the result.
  */
 export function LpfTable({ summary }: { summary: SessionSummary }) {
   const rows = speciesRows(summary);
@@ -33,7 +33,7 @@ export function LpfTable({ summary }: { summary: SessionSummary }) {
   if (!isSessionRead(summary)) {
     return (
       <p className="rounded-[12px] border border-stone-hair bg-surface p-4 text-[13px] text-stone-mid">
-        Not read. No fields have been examined, so there are no findings yet.
+        No fields have been examined, so there are no findings yet.
       </p>
     );
   }

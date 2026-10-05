@@ -101,7 +101,7 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
             <TableHeader>
               <TableRow>
                 <TableHead>Session</TableHead>
-                <TableHead>Read</TableHead>
+                <TableHead>Started</TableHead>
                 <TableHead>Read by</TableHead>
                 <TableHead className="text-right">Fields</TableHead>
                 <TableHead>Result</TableHead>

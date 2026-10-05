@@ -102,13 +102,15 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-stone-ink">Findings</h2>
         <LpfTable summary={summary} />
-        <p className="text-[12px] text-stone-mid">
-          LPF = eggs per low-power field (direct smear): the lowest to the highest count in any
-          single field, where a field without the species counts as 0. The descriptor is read off
-          the worst field, and the estimated parasite burden follows from it: rare or few is low,
-          moderate is moderate, numerous is high. It is a direct-smear estimate, not a WHO or DOH
-          tier. Every detection except a rejected one counts.
-        </p>
+        {isSessionRead(summary) ? (
+          <p className="text-[12px] text-stone-mid">
+            LPF = eggs per low-power field (direct smear): the lowest to the highest count in any
+            single field, where a field without the species counts as 0. The descriptor is read off
+            the worst field, and the estimated parasite burden follows from it: rare or few is low,
+            moderate is moderate, numerous is high. It is a direct-smear estimate, not a WHO or DOH
+            tier. Every detection except a rejected one counts.
+          </p>
+        ) : null}
       </section>
 
       <section className="flex flex-col gap-3">

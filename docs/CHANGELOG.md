@@ -9,11 +9,13 @@ parasites found" in its LPF column and 0 eggs, which reads as a negative smear. 
 is now read once a live field exists (`isSessionRead`, `src/domain/clinical.ts`). Before
 that, the patient page shows a dash for LPF and eggs and only the Result column says "Not
 read"; the session page says "Not read" where the result badge goes, shows a dash for eggs
-counted, and its findings say no field has been examined. A read session with nothing found
-still says "No parasites found". The dashboard and the export already left unread sessions
-out, and are unchanged. The app's Session Detail still says "No parasites found" for a
-session with no fields (`SessionDetailScreen.kt::LpfHeroCard`); the console departs from it
-here on purpose.
+counted, and its findings say no field has been examined, without the LPF footnote. The
+patient page's "Read" column, which showed when a session started, is now "Started", as on
+the session page, so an unread row no longer reads "Read … Not read". A read session with
+nothing found still says "No parasites found". The dashboard and the export already left
+unread sessions out, and are unchanged. The app's Session Detail still says "No parasites
+found" for a session with no fields (`SessionDetailScreen.kt::LpfHeroCard`); the console
+departs from it here on purpose.
 
 ## [feat] Org admins read their laboratory's patient reports (app 0015)
 
