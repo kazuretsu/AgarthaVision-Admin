@@ -1,6 +1,12 @@
 import type { PatientDisclosure, PatientPage, PatientRecord, Profile } from "@/domain";
 import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
-import type { AuditEntry, OrganizationDetail, OrganizationSummary, ReadScope } from "@/domain";
+import type {
+  AuditEntry,
+  Invitation,
+  OrganizationDetail,
+  OrganizationSummary,
+  ReadScope,
+} from "@/domain";
 
 /**
  * The database port.
@@ -106,6 +112,12 @@ export interface DatabasePort {
   /** One organization with its members; `null` when absent or hidden. */
   getOrganization(organizationId: string): Promise<OrganizationDetail | null>;
 
+  /** An organization's invitations, newest first, at most {@link INVITATION_LIST_LIMIT}. */
+  listInvitations(organizationId: string): Promise<Invitation[]>;
+
+  /** One invitation by id; `null` when absent or hidden. */
+  getInvitation(invitationId: string): Promise<Invitation | null>;
+
   /** Audit entries, newest first. */
   listAuditEntries(query: AuditQuery): Promise<AuditEntry[]>;
 
@@ -115,6 +127,9 @@ export interface DatabasePort {
   /** Profiles the caller may read, for owner labels and the owner filter. */
   listProfiles(): Promise<Profile[]>;
 }
+
+/** The most invitations one organization's list shows; the page says when it stops there. */
+export const INVITATION_LIST_LIMIT = 500;
 
 /** Thrown when the backing store rejects or fails a read. */
 export class DatabaseReadError extends Error {

@@ -29,6 +29,8 @@ Selection reads one variable per port, defaulting to the first supported entry
 | `STORAGE_PROVIDER` | `getStorage()`     | `supabase`                                          |
 | `AUTH_PROVIDER`    | `getAuth()`        | `supabase`                                          |
 | `DB_PROVIDER`      | `getAdminWrites()` | `supabase` — the writes live in the reads' database |
+| `AUTH_PROVIDER`    | `getOnboarding()`  | `supabase` — it makes the account in the auth store |
+| `MAIL_PROVIDER`    | `getMail()`        | `resend`                                            |
 
 An unrecognised value throws `UnknownProviderError` (`src/adapters/registry.ts:31`) rather
 than falling back. A silent fallback would let a deployment believe it is pointed at one

@@ -27,8 +27,9 @@ short-lived URL the browser can load, or "Image unavailable".
 The app's `0001_init.sql` grants every admin read on the whole bucket (`"samples: admin read
 all"`, `bucket_id = 'samples' and public.is_admin(auth.uid())`). So a super admin's own
 session can sign any frame, and the Storage policy — not this console — decides what a user
-may see. Nothing in the console reads the service-role key any more; the old path that
-signed with it (needed only while the legacy database lacked that policy) is gone.
+may see. Signing never uses the service-role key; the old path that signed with it (needed only
+while the legacy database lacked that policy) is gone. The key's one use now is making an
+invited person's account (`docs/map/processes/invitations.md`).
 
 ## Consumes / produces
 

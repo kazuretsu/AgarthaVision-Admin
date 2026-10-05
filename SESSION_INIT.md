@@ -33,6 +33,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Organizations, memberships or the audit log      | `docs/map/objects/organizations.md`, `docs/constraints.md` (#4, #7)  |
 | Changing which laboratory's records someone sees | `docs/map/processes/lab-scoping.md`                                  |
 | Changing who can reach a route                   | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
+| Inviting people, or how an account is made       | `docs/map/processes/invitations.md`, `docs/constraints.md` (#2)      |
 | Adding or changing a UI component                | `docs/map/objects/ui-components.md`, `docs/constraints.md` (#15)     |
 | Loading sample images                            | `docs/map/processes/signed-image-url.md`                             |
 | Wondering what a command does                    | `docs/commands.md`                                                   |

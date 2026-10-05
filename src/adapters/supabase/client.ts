@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { publicConfig } from "./env";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { publicConfig, serviceRoleKey } from "./env";
 
 /**
  * Supabase client construction. The only file in the repo that builds one.
@@ -15,8 +15,8 @@ import { publicConfig } from "./env";
  * A request-scoped client carrying the visitor's session cookies. Reads run as
  * the signed-in user, so RLS — including the upstream admin read policies on
  * tables and on the `samples` bucket — is what decides visibility. This client
- * can never see more than its user may, and it is the only client the console
- * builds.
+ * can never see more than its user may, and every read and write the console
+ * makes goes through it.
  */
 export async function createRequestClient(): Promise<SupabaseClient> {
   const { url, anonKey } = publicConfig();
@@ -39,5 +39,19 @@ export async function createRequestClient(): Promise<SupabaseClient> {
         }
       },
     },
+  });
+}
+
+/**
+ * The one privileged client, for the one thing a signed-in user cannot do: make
+ * the account an invitation is for (`auth.admin.createUser`). It bypasses RLS, so
+ * nothing else may use it — `adapters/supabase/onboarding.ts` is its only caller,
+ * and only after the invitation has been checked. Server-only: the key is read at
+ * request time and never leaves the server. No session is kept or refreshed.
+ */
+export function createServiceClient(): SupabaseClient {
+  const { url } = publicConfig();
+  return createClient(url, serviceRoleKey(), {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
 }

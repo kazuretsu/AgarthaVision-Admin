@@ -11,6 +11,8 @@ import {
   OrganizationStatusForm,
   RenameOrganizationForm,
 } from "@/components/organizations/OrganizationForms";
+import { InviteForm } from "@/components/invitations/InvitationForms";
+import { InvitationTable } from "@/components/invitations/InvitationTable";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -31,14 +33,19 @@ export default async function OrganizationPage({
 }: {
   params: Promise<{ organizationId: string }>;
 }) {
-  await requirePageAccess(["super_admin"]);
+  const actor = await requirePageAccess(["super_admin"]);
   const { organizationId } = await params;
   // A malformed id names no organization; Postgres would reject it as an error.
   if (!isUuid(organizationId)) notFound();
 
   let organization;
+  let invitations;
   try {
-    organization = await (await getDatabase()).getOrganization(organizationId);
+    const db = await getDatabase();
+    [organization, invitations] = await Promise.all([
+      db.getOrganization(organizationId),
+      db.listInvitations(organizationId),
+    ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Organization" variable={cause.variable} />;
@@ -106,6 +113,26 @@ export default async function OrganizationPage({
             </TableBody>
           </Table>
         )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[15px] font-semibold text-stone-ink">Invitations</h2>
+        {organization.status === "active" ? (
+          <Card>
+            <CardContent>
+              <InviteForm organizationId={organization.id} role="org_admin" />
+            </CardContent>
+          </Card>
+        ) : (
+          <p className="text-[13px] text-stone-mid">
+            A deactivated organization takes no new invitations. Reactivate it first.
+          </p>
+        )}
+        <InvitationTable
+          invitations={invitations}
+          access={actor.access}
+          caption={`Invitations into ${organization.name}`}
+        />
       </section>
 
       <Card>

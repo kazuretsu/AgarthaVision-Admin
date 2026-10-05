@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, FileDown, History, LayoutDashboard, Microscope } from "lucide-react";
+import { Building2, FileDown, History, LayoutDashboard, Microscope, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "./nav";
 
@@ -10,6 +10,7 @@ const ICONS = {
   dashboard: LayoutDashboard,
   records: Microscope,
   export: FileDown,
+  medtechs: Users,
   organizations: Building2,
   audit: History,
 } as const;

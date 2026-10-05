@@ -42,20 +42,21 @@ Pure logic, all of it unit-tested and none of it touching I/O:
 
 ### Port interfaces
 
-`src/ports/` holds three vendor-free interfaces — `db.ts`, `storage.ts`, `auth.ts` — plus
-their error types. The database port is read-only by construction: it has no insert,
+`src/ports/` holds vendor-free interfaces — `db.ts`, `admin-write.ts`, `storage.ts`,
+`auth.ts`, `onboarding.ts`, `mail.ts` — plus their error types. The database port is read-only by construction: it has no insert,
 update or delete verb, so no feature can mutate clinical data.
 
 ### Provider registry and Supabase adapters
 
 `src/adapters/registry.ts` is the only module that names a concrete backend. `DB_PROVIDER`,
-`STORAGE_PROVIDER` and `AUTH_PROVIDER` select an implementation; an unrecognised value
+`STORAGE_PROVIDER`, `AUTH_PROVIDER` and `MAIL_PROVIDER` select an implementation; an unrecognised value
 throws rather than falling back, so a typo cannot leave a deployment silently reading from
 the default. Adapters are imported lazily.
 
-The Supabase adapters implement all three ports. Database reads run through the visitor's
-own session so RLS decides visibility. Storage signs short-lived URLs with the service-role
-key — necessary because upstream Storage RLS has no admin exception yet.
+The Supabase adapters implement the database, storage, auth and onboarding ports, and a
+Resend adapter the mail port. Database reads and storage signing run through the visitor's
+own session so RLS decides visibility. The service-role key is used once: to make an invited
+person's account when they accept.
 
 ### Authentication and the admin gate
 
@@ -79,6 +80,22 @@ unique ignoring case and spacing. Deactivation asks for confirmation, deletes no
 locks the laboratory's org admins out until reactivated. Every change is written to the
 audit log in the same transaction by the database, which checks the caller again. Existing
 users and patients start in one "Starting laboratory". Org admins and medtechs get a 404.
+
+### Invitations
+
+Nobody signs up. A super admin invites an organization's admins from its page
+(`/organizations/[id]`); an org admin invites their laboratory's medtechs from `/medtechs`.
+The inviter enters an email and, optionally, a name; the role and the organization follow
+from who is inviting. The invitee gets an email from the console's domain (Resend) with a
+link that works for 7 days and opens `/invite/<token>`, where they set their own password.
+No password is ever emailed. An org admin then lands in the console; a medtech is told to
+sign in to the Android app with the same email and password.
+
+Both pages list the organization's invitations — pending, expired, accepted and revoked —
+with re-send (a new link; the old one stops working) and revoke. An email that already has an
+account, or already has a live invitation, is refused. Expired, revoked, used and unknown
+links each say so. The role and organization come from the stored invitation, never from the
+invitee. Each invite, re-send, revoke and acceptance is in the audit trail.
 
 ### Laboratory scoping
 

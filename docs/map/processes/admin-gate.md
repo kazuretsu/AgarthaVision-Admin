@@ -83,6 +83,12 @@ appears only after a correct password, so it tells a stranger nothing; bad crede
 an unknown email return the **same** generic refusal, so the form does not confirm which
 addresses are real accounts.
 
+## Outside the gate
+
+`/login` and `/invite/[token]` (with `/invite/joined`) render outside `(dashboard)/`. The
+invitation page is open to anyone holding a link; the token is the permission, and what it
+can do is described in `docs/map/processes/invitations.md`.
+
 ## Consumes / produces
 
 Consumes `AuthPort` (`docs/map/objects/ports.md`), `profiles`

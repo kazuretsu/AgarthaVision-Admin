@@ -19,6 +19,7 @@ import type {
 } from "@/domain";
 import { sortMembers } from "@/domain";
 import type {
+  Invitation,
   MembershipRole,
   OrganizationDetail,
   OrganizationStatus,
@@ -27,6 +28,7 @@ import type {
 } from "@/domain";
 import {
   DatabaseReadError,
+  INVITATION_LIST_LIMIT,
   type AuditQuery,
   type DatabasePort,
   type PatientQuery,
@@ -269,6 +271,49 @@ function scopedOrganization(scope: ReadScope): string | null {
  */
 const MEMBER_TREE =
   "organization_members ( user_id, role, status, added_at, profiles!organization_members_user_id_fkey ( full_name ) )";
+
+/**
+ * An invitation's readable columns. `token_hash` is not among them: no client is
+ * granted it (admin/0005), so naming it would fail the whole read.
+ */
+const INVITATION_COLUMNS =
+  "id, organization_id, email, full_name, role, status, expires_at, invited_by, invited_at, sent_count, last_sent_at, accepted_at, revoked_at, organizations ( name )";
+
+interface InvitationRow {
+  id: string;
+  organization_id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  status: string;
+  expires_at: string;
+  invited_by: string | null;
+  invited_at: string;
+  sent_count: number;
+  last_sent_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  organizations: { name: string } | null;
+}
+
+function toInvitation(row: InvitationRow): Invitation {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    organizationName: row.organizations?.name ?? "",
+    email: row.email,
+    fullName: row.full_name,
+    role: row.role === "org_admin" ? "org_admin" : "medtech",
+    status: row.status === "accepted" || row.status === "revoked" ? row.status : "pending",
+    expiresAt: row.expires_at,
+    invitedAt: row.invited_at,
+    invitedById: row.invited_by,
+    sentCount: row.sent_count,
+    lastSentAt: row.last_sent_at,
+    acceptedAt: row.accepted_at,
+    revokedAt: row.revoked_at,
+  };
+}
 
 function toStatus(value: string): OrganizationStatus {
   return value === "deactivated" ? "deactivated" : "active";
@@ -690,6 +735,30 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
         })),
       ),
     };
+  }
+
+  async listInvitations(organizationId: string): Promise<Invitation[]> {
+    const { data, error } = await this.client
+      .from("organization_invitations")
+      .select(INVITATION_COLUMNS)
+      .eq("organization_id", organizationId)
+      .order("invited_at", { ascending: false })
+      .limit(INVITATION_LIST_LIMIT);
+
+    if (error) throw new DatabaseReadError("listInvitations", error);
+    return ((data as unknown as InvitationRow[] | null) ?? []).map(toInvitation);
+  }
+
+  async getInvitation(invitationId: string): Promise<Invitation | null> {
+    if (!isUuid(invitationId)) return null;
+    const { data, error } = await this.client
+      .from("organization_invitations")
+      .select(INVITATION_COLUMNS)
+      .eq("id", invitationId)
+      .maybeSingle();
+
+    if (error) throw new DatabaseReadError("getInvitation", error);
+    return data ? toInvitation(data as unknown as InvitationRow) : null;
   }
 
   async listAuditEntries(query: AuditQuery): Promise<AuditEntry[]> {

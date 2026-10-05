@@ -32,6 +32,10 @@ their own organization whatever the console passes (`:30`), so an entry cannot b
 | `organization.reactivate` | `console_set_organization_status` |
 | `organization.backfill`   | `admin/0001`, once                |
 | `export.research`         | `console_record_export`           |
+| `invitation.create`       | `console_invite`                  |
+| `invitation.resend`       | `console_resend_invitation`       |
+| `invitation.revoke`       | `console_revoke_invitation`       |
+| `invitation.accept`       | `console_accept_invitation`       |
 
 ## Reading
 

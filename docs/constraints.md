@@ -19,14 +19,17 @@ vendor import statements; the only construction site for a provider is
 ### 2. Server-only secrets
 
 The service-role key is read on the server, at request time, and never reaches the browser.
-Today no code reads it at all: every read, image signing included, runs as the signed-in
-user.
+One function reads it, `createServiceClient()`, and one caller uses it: accepting an
+invitation, to make the invited person's account (`auth.admin.createUser`) after the link
+has been checked. Every read and every other write, image signing included, runs as the
+signed-in user. The Resend key is server-only too, read when an email is sent.
 Only `NEXT_PUBLIC_`-prefixed variables may appear in client components. Env access goes
 through the accessor helpers, which throw a named error when a variable is missing —
 never at module load.
 
 **Enforced at:** `src/lib/env.ts` (lazy accessors, no top-level throw);
-`src/adapters/supabase/client.ts` (builds only the request-scoped client);
+`src/adapters/supabase/client.ts` (the request-scoped client, and `createServiceClient`,
+whose only caller is `src/adapters/supabase/onboarding.ts`);
 `.env.example` documents which variables are public and which are not.
 
 ### 3. Admin-only routes
@@ -54,9 +57,10 @@ an org admin may read is decided twice: by the `ReadScope` every clinical read r
 
 The console reads clinical data. It does not create, edit, delete or re-validate
 patients, sessions, samples, detections or verdicts — that is the Android client's
-human-in-the-loop workflow. Its only writes are administrative (organizations today;
-memberships, assignments and shares later), each through a narrow port that records it in
-the audit trail (D2). Nothing is deleted: organizations and members are deactivated.
+human-in-the-loop workflow. Its only writes are administrative (organizations, invitations and the
+memberships they create today; assignments and shares later), each through a narrow port
+that records it in the audit trail (D2). An account is made only by accepting an
+invitation, and its role and organization come from the stored invitation. Nothing is deleted: organizations and members are deactivated.
 
 **Enforced at:** `src/ports/db.ts` exposes query methods only — there is no `insert`,
 `update` or `delete` in it, so no feature can write clinical data. Administrative writes
