@@ -72,7 +72,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
-    │   └── supabase/          client, env, database (paged reads in paging.ts), admin-write, storage, auth.
+    │   └── supabase/          client, env, database (paged reads in paging.ts), reports (row mapping), admin-write, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.

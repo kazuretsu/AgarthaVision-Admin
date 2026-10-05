@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-05
-commit: c0011a3
+commit: cd4e670
 ---
 
 # Domain model
@@ -11,7 +11,7 @@ read models the records browser composes from them.
 ## Why this shape
 
 These types are a **mirror, not a design**. The authority is the app repo's
-`supabase/migrations/0001_init.sql` through `0006_drop_species_touched.sql` on
+`supabase/migrations/0001_init.sql` through `0015_patient_reports.sql` on
 `development` — the consolidated, patient-based schema. The `legacy-dev/` migrations there
 describe an older database and are **not** the authority. This console cannot invent a
 field that does not exist upstream.
@@ -29,7 +29,7 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 | `Sample`         | `0001`                         | `deleted_at` is the duplicate tombstone — see below; `userNote` `null` for a de-identified reader           |
 | `Detection`      | `0001`, `0004`, `0005`, `0006` | `prediction_id` (0004), `stage` (0005); `species_touched` dropped (0006)                                    |
 | `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range, descriptor and burden                            |
-| `Report`         | `0001`                         | `lpf_per_species` stored as issued; no `epg_per_species`                                                    |
+| `Report`         | `0001`, `0015`                 | a `SessionReport` or a `PatientReport` (`0015`), narrowed on `reportType`; `lpf_per_species` as issued      |
 
 Read models for the records browser live in `src/domain/records.ts`: `PatientListItem`
 (`:15`), `PatientRecord` (`:37`), `SessionRecord` (`:53`), `SampleRecordDetail` (`:62`).
@@ -43,6 +43,12 @@ Facts that trip people up:
 - **`deleted_at`.** A sample deleted as a duplicate keeps its rows and JPEG (C8) but must
   not appear or count anywhere. The adapter fetches it with its siblings and the domain drops
   it (`isLiveSample`, `src/domain/clinical.ts:38`), so the rule has one definition.
+- **A report has two scopes (app `0015`).** A session report has `session_id`; a patient
+  report has `patient_id` and the `session_ids` it pooled, and no session. The database
+  holds one shape or the other (`reports_scope_check`), and so does the type
+  (`src/domain/entities.ts:144`). `toReport` (`src/adapters/supabase/reports.ts:38`) is the
+  one mapping from a row and returns `null` for a type or shape it does not know, so a
+  caller skips it instead of guessing. No page reads reports yet.
 - **Patient visibility resolves through `patient_users`**, not `created_by`, which is
   provenance only.
 - **`patients` reaches `profiles` two ways** (`created_by`, and the `patient_users` join),

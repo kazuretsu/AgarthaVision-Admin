@@ -53,7 +53,8 @@ repo, and is not part of the pre-commit hook.
 `app_0013_deidentified_reads.test.sql` needs an app checkout with `0012` and `0013`, and fails
 with a message naming them when it has neither. Every test needs `0014`: the helpers make a
 super admin by inserting a `super_admins` row, and the seed stops with a message naming
-`0014` when the table is missing.
+`0014` when the table is missing. `admin/0004` needs `0015`, and stops with a message naming it
+when `reports.patient_id` is missing.
 
 It refuses any host but localhost and any database whose name does not end in `_test`.
 

@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Org admins read their laboratory's patient reports (app 0015)
+
+App `0015` lets a report belong to a patient instead of a session. `admin/0002` found an org
+admin's reports through the session, so every patient report was hidden from the laboratory
+that owns the patient. `admin/0004_patient_reports.sql` adds one permissive SELECT policy that
+finds a patient report through its patient (`console_admin_owns_patient`); session reports keep
+their path, and a report on another laboratory's patient stays invisible. It refuses to apply
+before `0015`. **Apply it in the SQL editor.**
+
+`Report` is now `SessionReport | PatientReport`, matching `reports_scope_check`, and gains
+`csvFilePath`. `toReport` (`src/adapters/supabase/reports.ts`) maps a row and skips an unknown
+type or a contradictory shape. No page reads reports yet. `admin_0004_patient_reports.test.sql`
+covers both laboratories' patient reports, the session report regression, super admins, a
+colleague medtech, a signed-out visitor and a deactivated laboratory.
+
 ## [fix] Records tables fit the console at its narrowest width
 
 The shell is never narrower than 1024px, which leaves the page 734px of table. The records

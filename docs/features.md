@@ -90,6 +90,9 @@ records browser, the dashboard and the export — and gets a 404 for anything el
 URL. A super admin sees everything and can narrow the records, dashboard and export to one
 organization.
 
+The database also lets an org admin read their laboratory's reports, session and patient
+reports alike (`admin/0004`), though no page shows reports yet.
+
 ### Audit trail
 
 `/audit` lists every console change and every export, newest first: when, who, the action,
