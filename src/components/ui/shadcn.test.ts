@@ -31,16 +31,6 @@ const SHADCN_UI_ITEMS = new Set(
   ).split(" "),
 );
 
-/**
- * Raw elements outside `ui/` that are waiting for their shadcn component. Each needs the CLI,
- * which needs network access to ui.shadcn.com. Remove a line when its file switches over; the
- * last test fails if a line here no longer matches anything.
- */
-const KNOWN_RAW_ELEMENTS = new Set([
-  "src/app/(dashboard)/audit/page.tsx <select>", // → bunx shadcn@latest add native-select
-  "src/components/organizations/OrganizationFilter.tsx <select>", // → native-select
-]);
-
 function files(dir: string, keep: (path: string) => boolean): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
@@ -85,12 +75,7 @@ describe("components come from shadcn (constraint #15)", () => {
   });
 
   it("nothing outside ui/ hand-builds a button, select, textarea, table or input", () => {
-    expect(rawElements().filter((found) => !KNOWN_RAW_ELEMENTS.has(found))).toEqual([]);
-  });
-
-  it("every known exception still exists, so the list shrinks as they are fixed", () => {
-    const found = new Set(rawElements());
-    expect([...KNOWN_RAW_ELEMENTS].filter((known) => !found.has(known))).toEqual([]);
+    expect(rawElements()).toEqual([]);
   });
 
   it("globals.css keeps the console palette under shadcn's token names", () => {

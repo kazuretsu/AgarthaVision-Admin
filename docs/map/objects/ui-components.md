@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-05
-commit: d901563
+commit: 0d6a1c5
 ---
 
 # UI components
@@ -29,29 +29,35 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
 - **Adding one:** `bunx shadcn@latest add <name>` from the repo root. Needs network access to
   `ui.shadcn.com`. Then review the diff: keep the component, revert anything it wrote into
   `globals.css` that replaces the console's palette, and swap registry colour classes for
-  console tokens only where the mapping is not enough.
+  console tokens only where the mapping is not enough. Check its `cn` import too: on Windows
+  the CLI wrote `import { cn } from "cn"` and installed the unrelated `cn` npm package instead
+  of using the `@/lib/utils` alias. Point it back at `@/lib/utils` and revert `package.json`
+  and `bun.lock`.
 - **Never `shadcn init`.** It rewrites `globals.css` with the registry's own `oklch()` theme.
-- **Inventory.** All ten were ported by hand in 14zcqntjnru before `components.json` existed
+- **Inventory.** Ten were ported by hand in 14zcqntjnru before `components.json` existed
   (`skeleton` in 14zcqntjw73). They follow the registry items' structure and APIs, with
   console token classes (`bg-surface`, `text-stone-ink`, `border-stone-hair`) in place of the
-  registry's.
+  registry's. `native-select` came from the CLI, as written apart from its `cn` import, and
+  styles itself through the shadcn token mapping alone.
 
-  | File                | Registry item   | Base UI primitive |
-  | ------------------- | --------------- | ----------------- |
-  | `alert-dialog.tsx`  | `alert-dialog`  | `alert-dialog`    |
-  | `badge.tsx`         | `badge`         | none              |
-  | `button.tsx`        | `button`        | `button`          |
-  | `card.tsx`          | `card`          | none              |
-  | `dropdown-menu.tsx` | `dropdown-menu` | `menu`            |
-  | `input.tsx`         | `input`         | `input`           |
-  | `label.tsx`         | `label`         | none              |
-  | `separator.tsx`     | `separator`     | `separator`       |
-  | `skeleton.tsx`      | `skeleton`      | none              |
-  | `table.tsx`         | `table`         | none              |
+  | File                | Registry item   | Base UI primitive | Source             |
+  | ------------------- | --------------- | ----------------- | ------------------ |
+  | `alert-dialog.tsx`  | `alert-dialog`  | `alert-dialog`    | hand-ported        |
+  | `badge.tsx`         | `badge`         | none              | hand-ported        |
+  | `button.tsx`        | `button`        | `button`          | hand-ported        |
+  | `card.tsx`          | `card`          | none              | hand-ported        |
+  | `dropdown-menu.tsx` | `dropdown-menu` | `menu`            | hand-ported        |
+  | `input.tsx`         | `input`         | `input`           | hand-ported        |
+  | `label.tsx`         | `label`         | none              | hand-ported        |
+  | `native-select.tsx` | `native-select` | none              | CLI (`shadcn add`) |
+  | `separator.tsx`     | `separator`     | `separator`       | hand-ported        |
+  | `skeleton.tsx`      | `skeleton`      | none              | hand-ported        |
+  | `table.tsx`         | `table`         | none              | hand-ported        |
 
-- **Waiting for their component.** `src/app/(dashboard)/audit/page.tsx` and
-  `src/components/organizations/OrganizationFilter.tsx` still render a raw `<select>`; both
-  need `native-select`. They are the test's known exceptions.
+- **Filters use `NativeSelect`.** The audit trail's person and action filters
+  (`src/app/(dashboard)/audit/page.tsx`) and the super admin's organization filter
+  (`src/components/organizations/OrganizationFilter.tsx`, on `/records`, `/dashboard`,
+  `/export` and `/audit`) submit with their page's GET form, so they stay native selects.
 
 ## Connected to
 

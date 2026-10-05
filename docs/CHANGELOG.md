@@ -2,6 +2,16 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [chore] The console's filters use shadcn's native select
+
+`bunx shadcn@latest add native-select` added `src/components/ui/native-select.tsx`. The audit
+trail's person and action filters and the organization filter render `NativeSelect` in place
+of a raw `<select>`, keeping their `name` and `defaultValue`, so the GET forms submit the same
+query strings. `SELECT_CLASS` is gone. With no raw element left outside `ui/`,
+`shadcn.test.ts` drops its known-exceptions list and the test that kept it shrinking. The CLI
+imported `cn` from an unrelated npm package; the import points at `@/lib/utils` and the
+package was not added.
+
 ## [chore] Components come from shadcn, never from scratch
 
 New constraint #15. `components.json` configures the shadcn CLI for Base UI (`base-nova`) and
