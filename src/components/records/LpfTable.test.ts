@@ -27,6 +27,12 @@ const read: SessionSummary = summariseSession({
   ],
 });
 const neverRead = summariseSession({ samples: [], detections: [], findings: [] });
+// One field read, nothing found in it.
+const readClean: SessionSummary = summariseSession({
+  samples: [{ id: "a", deletedAt: null }],
+  detections: [],
+  findings: [],
+});
 
 describe("LpfTable", () => {
   it("shows each species' descriptor and burden as the app writes it", () => {
@@ -47,6 +53,17 @@ describe("LpfTable", () => {
     const shown = text(renderToStaticMarkup(createElement(LpfTable, { summary: read })));
     expect(shown).not.toMatch(/intensity/i);
   });
+
+  it("says a session never read is not read, not that no parasites were found", () => {
+    const shown = text(renderToStaticMarkup(createElement(LpfTable, { summary: neverRead })));
+    expect(shown).toMatch(/^Not read\./);
+    expect(shown).not.toMatch(/No parasites found/);
+  });
+
+  it("still says no parasites were found when a read field had none", () => {
+    const shown = text(renderToStaticMarkup(createElement(LpfTable, { summary: readClean })));
+    expect(shown).toBe("No parasites found in the 1 field examined.");
+  });
 });
 
 describe("LpfInline", () => {
@@ -64,8 +81,13 @@ describe("LpfInline", () => {
     expect(html).toContain('<span class="whitespace-nowrap">Moderate · Moderate Burden</span>');
   });
 
-  it("shows no burden for a session never read", () => {
+  it("shows a dash, and no burden, for a session never read", () => {
     const shown = text(renderToStaticMarkup(createElement(LpfInline, { summary: neverRead })));
-    expect(shown).not.toMatch(/Burden/);
+    expect(shown).toBe("—");
+  });
+
+  it("still says no parasites were found when a read field had none", () => {
+    const shown = text(renderToStaticMarkup(createElement(LpfInline, { summary: readClean })));
+    expect(shown).toBe("No parasites found");
   });
 });

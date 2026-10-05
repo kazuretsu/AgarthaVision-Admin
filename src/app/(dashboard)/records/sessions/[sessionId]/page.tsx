@@ -5,6 +5,7 @@ import { getDatabase } from "@/adapters/registry";
 import {
   canonicalSpecies,
   isCountedDetection,
+  isSessionRead,
   isUuid,
   patientDisclosureFor,
   patientLabel,
@@ -23,7 +24,7 @@ import { Fact } from "@/components/records/Fact";
 import { FieldImage } from "@/components/records/FieldImage";
 import { FramesFallback } from "@/components/records/FramesFallback";
 import { LpfTable } from "@/components/records/LpfTable";
-import { ResultBadge } from "@/components/records/ResultBadge";
+import { SessionResult } from "@/components/records/ResultBadge";
 import { SpeciesName } from "@/components/records/SpeciesName";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,7 +75,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
 
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-[22px] font-bold text-stone-ink">{title}</h1>
-        {summary.fieldCount > 0 ? <ResultBadge positive={summary.isPositive} /> : null}
+        <SessionResult summary={summary} />
       </header>
 
       <Card>
@@ -90,7 +91,11 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
           <Fact label="Read by" value={personName(author)} />
           <Fact label="Started" value={formatDateTime(session.startedAt)} />
           <Fact label="Fields examined" value={String(summary.fieldCount)} mono />
-          <Fact label="Eggs counted" value={String(summary.totalEggs)} mono />
+          <Fact
+            label="Eggs counted"
+            value={isSessionRead(summary) ? String(summary.totalEggs) : "—"}
+            mono
+          />
         </CardContent>
       </Card>
 
