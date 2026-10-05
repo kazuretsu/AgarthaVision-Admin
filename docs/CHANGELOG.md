@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] An unread session shows no LPF result, not "No parasites found"
+
+A session with no live fields showed "Not read" as its result on a patient page, but "No
+parasites found" in its LPF column and 0 eggs, which reads as a negative smear. A session
+is now read once a live field exists (`isSessionRead`, `src/domain/clinical.ts`). Before
+that, the patient page shows a dash for LPF and eggs and only the Result column says "Not
+read"; the session page says "Not read" where the result badge goes, shows a dash for eggs
+counted, and its findings say no field has been examined, without the LPF footnote. The
+patient page's "Read" column, which showed when a session started, is now "Started", as on
+the session page, so an unread row no longer reads "Read … Not read". A read session with
+nothing found still says "No parasites found". The dashboard and the export already left
+unread sessions out, and are unchanged. The app's Session Detail still says "No parasites
+found" for a session with no fields (`SessionDetailScreen.kt::LpfHeroCard`); the console
+departs from it here on purpose.
+
 ## [feat] Org admins read their laboratory's patient reports (app 0015)
 
 App `0015` lets a report belong to a patient instead of a session. `admin/0002` found an org

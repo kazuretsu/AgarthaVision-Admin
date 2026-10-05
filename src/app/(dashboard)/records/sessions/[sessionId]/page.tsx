@@ -5,6 +5,7 @@ import { getDatabase } from "@/adapters/registry";
 import {
   canonicalSpecies,
   isCountedDetection,
+  isSessionRead,
   isUuid,
   patientDisclosureFor,
   patientLabel,
@@ -23,7 +24,7 @@ import { Fact } from "@/components/records/Fact";
 import { FieldImage } from "@/components/records/FieldImage";
 import { FramesFallback } from "@/components/records/FramesFallback";
 import { LpfTable } from "@/components/records/LpfTable";
-import { ResultBadge } from "@/components/records/ResultBadge";
+import { SessionResult } from "@/components/records/ResultBadge";
 import { SpeciesName } from "@/components/records/SpeciesName";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,7 +75,7 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
 
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-[22px] font-bold text-stone-ink">{title}</h1>
-        {summary.fieldCount > 0 ? <ResultBadge positive={summary.isPositive} /> : null}
+        <SessionResult summary={summary} />
       </header>
 
       <Card>
@@ -90,20 +91,26 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
           <Fact label="Read by" value={personName(author)} />
           <Fact label="Started" value={formatDateTime(session.startedAt)} />
           <Fact label="Fields examined" value={String(summary.fieldCount)} mono />
-          <Fact label="Eggs counted" value={String(summary.totalEggs)} mono />
+          <Fact
+            label="Eggs counted"
+            value={isSessionRead(summary) ? String(summary.totalEggs) : "—"}
+            mono
+          />
         </CardContent>
       </Card>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-stone-ink">Findings</h2>
         <LpfTable summary={summary} />
-        <p className="text-[12px] text-stone-mid">
-          LPF = eggs per low-power field (direct smear): the lowest to the highest count in any
-          single field, where a field without the species counts as 0. The descriptor is read off
-          the worst field, and the estimated parasite burden follows from it: rare or few is low,
-          moderate is moderate, numerous is high. It is a direct-smear estimate, not a WHO or DOH
-          tier. Every detection except a rejected one counts.
-        </p>
+        {isSessionRead(summary) ? (
+          <p className="text-[12px] text-stone-mid">
+            LPF = eggs per low-power field (direct smear): the lowest to the highest count in any
+            single field, where a field without the species counts as 0. The descriptor is read off
+            the worst field, and the estimated parasite burden follows from it: rare or few is low,
+            moderate is moderate, numerous is high. It is a direct-smear estimate, not a WHO or DOH
+            tier. Every detection except a rejected one counts.
+          </p>
+        ) : null}
       </section>
 
       <section className="flex flex-col gap-3">

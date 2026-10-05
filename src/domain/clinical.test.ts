@@ -6,6 +6,7 @@ import {
   formatLpfRange,
   formatLpfReading,
   isBinomial,
+  isSessionRead,
   lpfDescriptor,
   parasiteBurdenLevel,
   speciesRows,
@@ -233,6 +234,24 @@ describe("summariseSession", () => {
     const summary = summariseSession({ samples: [], detections: [], findings: [] });
     expect(summary.fieldCount).toBe(0);
     expect(summary.lpf).toEqual({});
+  });
+
+  it("reads a session once a live field exists, and not before", () => {
+    const never = summariseSession({ samples: [], detections: [], findings: [] });
+    const onlyDeleted = summariseSession({
+      samples: [{ id: "s1", deletedAt: "2026-10-01T00:00:00Z" }],
+      detections: [],
+      findings: [],
+    });
+    const clean = summariseSession({
+      samples: [{ id: "s1", deletedAt: null }],
+      detections: [],
+      findings: [],
+    });
+    expect(isSessionRead(never)).toBe(false);
+    expect(isSessionRead(onlyDeleted)).toBe(false);
+    expect(isSessionRead(clean)).toBe(true);
+    expect(clean.isPositive).toBe(false);
   });
 
   it("calls a session with only rejected detections negative", () => {

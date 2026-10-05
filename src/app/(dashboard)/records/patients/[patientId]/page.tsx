@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { ageYears, isUuid, patientDisclosureFor, patientLabel, sessionLabel } from "@/domain";
+import {
+  ageYears,
+  isSessionRead,
+  isUuid,
+  patientDisclosureFor,
+  patientLabel,
+  sessionLabel,
+} from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { scopeForRequest } from "@/lib/read-scope";
@@ -10,7 +17,7 @@ import { Breadcrumbs } from "@/components/records/Breadcrumbs";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Fact } from "@/components/records/Fact";
 import { LpfInline } from "@/components/records/LpfTable";
-import { ResultBadge } from "@/components/records/ResultBadge";
+import { SessionResult } from "@/components/records/ResultBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -94,7 +101,7 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
             <TableHeader>
               <TableRow>
                 <TableHead>Session</TableHead>
-                <TableHead>Read</TableHead>
+                <TableHead>Started</TableHead>
                 <TableHead>Read by</TableHead>
                 <TableHead className="text-right">Fields</TableHead>
                 <TableHead>Result</TableHead>
@@ -117,16 +124,18 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
                   <TableCell>{personName(author)}</TableCell>
                   <TableCell className="tnum text-right">{summary.fieldCount}</TableCell>
                   <TableCell>
-                    {summary.fieldCount === 0 ? (
-                      <span className="text-stone-mid">Not read</span>
-                    ) : (
-                      <ResultBadge positive={summary.isPositive} />
-                    )}
+                    <SessionResult summary={summary} />
                   </TableCell>
                   <TableCell>
                     <LpfInline summary={summary} />
                   </TableCell>
-                  <TableCell className="tnum text-right">{summary.totalEggs}</TableCell>
+                  <TableCell className="tnum text-right">
+                    {isSessionRead(summary) ? (
+                      summary.totalEggs
+                    ) : (
+                      <span className="text-stone-mid">—</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

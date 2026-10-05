@@ -132,7 +132,9 @@ the search form stays. A page past the end goes to the last page. A super admin 
 name, sex, age or birthdate, no name search, no session label and no medtech's note; a
 patient or session is named by the start of its record id (constraint #14). A patient page lists every session with who
 read it, the fields examined, a positive/negative result, the per-species LPF range with its
-descriptor and estimated burden ("0–4 LPF · Few · Low Burden") and the eggs counted. A session
+descriptor and estimated burden ("0–4 LPF · Few · Low Burden") and the eggs counted; a
+session no one has read yet says "Not read" and shows a dash for its LPF and eggs, never "No
+parasites found". A session
 page shows the findings table the way the app's Session Detail does, burden level included,
 and every live field as a frame with its boxes drawn over it. A sample page shows one field:
 the frame, the eggs recorded per species, and each detection with its verdict, whether its

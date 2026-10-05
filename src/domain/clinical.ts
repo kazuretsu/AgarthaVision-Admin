@@ -206,6 +206,15 @@ export interface SessionSummary {
   isPositive: boolean;
 }
 
+/**
+ * Whether anyone has examined a field of this session. A session opened but
+ * never read has no result: it is neither negative nor "no parasites found",
+ * and its LPF and egg figures are blanks, not zeros.
+ */
+export function isSessionRead(summary: Pick<SessionSummary, "fieldCount">): boolean {
+  return summary.fieldCount > 0;
+}
+
 /** One row of a session's findings table: a species, its LPF range and its eggs. */
 export interface SpeciesRow {
   species: string;
