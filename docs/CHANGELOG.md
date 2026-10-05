@@ -2,6 +2,16 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] CLI components take the console's corners and field height
+
+The organization, person and action filters rendered as 32px pills beside 36px fields with
+8px corners. `globals.css` fixed `rounded-lg` at 16px, while shadcn components size their
+corners from a scale derived from `--radius`. `globals.css` now carries shadcn's scale
+(`--radius-sm` … `--radius-4xl`) with `--radius: 8px`, the console's field corner, and
+`shadcn.test.ts` fails if the scale stops deriving from it. `native-select` is adapted to the
+field height (`h-9`) and background (`bg-surface`), recorded on the components card. The
+dashboard legend's swatches (`rounded-sm`) go from near-circles to rounded squares.
+
 ## [chore] The console's filters use shadcn's native select
 
 `bunx shadcn@latest add native-select` added `src/components/ui/native-select.tsx`. The audit

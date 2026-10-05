@@ -85,4 +85,14 @@ describe("components come from shadcn (constraint #15)", () => {
     expect(css).toContain("--primary: var(--av-maroon);");
     expect(css).toContain("--color-primary: var(--primary);");
   });
+
+  it("globals.css keeps shadcn's radius scale, so CLI components get the console's corners", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // Registry components size corners with rounded-sm…rounded-4xl; each must derive from --radius.
+    expect(css).toMatch(/--radius:\s*8px;/);
+    expect(css).toContain("--radius-lg: var(--radius);");
+    for (const step of ["sm", "md", "xl", "2xl", "3xl", "4xl"]) {
+      expect(css).toMatch(new RegExp(`--radius-${step}: calc\\(var\\(--radius\\) \\* [0-9.]+\\);`));
+    }
+  });
 });

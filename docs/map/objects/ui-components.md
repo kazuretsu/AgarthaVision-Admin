@@ -18,6 +18,10 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   npm dependency. Adapt it to the console after adding it, and record the adaptation below.
 - **Base UI, not Radix (D1).** `components.json` sets `style: "base-nova"`, so the CLI
   installs the Base UI flavour. No Radix package is installed.
+- **The console's corners too.** `globals.css` keeps shadcn's radius scale (`--radius-sm` …
+  `--radius-4xl`, each derived from `--radius`), with `--radius` at the 8px every console field
+  uses, so a CLI component's `rounded-lg` is a field's corner. A fixed scale (it was 16px for
+  `rounded-lg`) turns every added component into a pill.
 - **The console's colours win.** `src/app/globals.css` maps shadcn's token names (`card`,
   `muted`, `accent`, `border`, `input`, `ring`, `destructive`, …) onto the console's semantic
   layer, so a newly added component renders in maroon and stone in both themes with no edits.
@@ -37,8 +41,9 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
 - **Inventory.** Ten were ported by hand in 14zcqntjnru before `components.json` existed
   (`skeleton` in 14zcqntjw73). They follow the registry items' structure and APIs, with
   console token classes (`bg-surface`, `text-stone-ink`, `border-stone-hair`) in place of the
-  registry's. `native-select` came from the CLI, as written apart from its `cn` import, and
-  styles itself through the shadcn token mapping alone.
+  registry's. `native-select` came from the CLI; apart from its `cn` import, its only
+  adaptation is to sit beside `Input` and `Button`: `h-9` (the registry ships `h-8`) on
+  `bg-surface` (the registry ships transparent, with its own dark tints).
 
   | File                | Registry item   | Base UI primitive | Source             |
   | ------------------- | --------------- | ----------------- | ------------------ |
@@ -78,7 +83,7 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   - anything outside `ui/` renders a raw `<button>`, `<select>`, `<textarea>`, `<table>` or
     visible `<input>`;
   - `components.json` stops pointing at Base UI and these paths;
-  - `globals.css` loses the console palette.
+  - `globals.css` loses the console palette, or shadcn's radius scale.
 - This card's inventory, in the same change.
 
 **Does not hit**
