@@ -1,4 +1,5 @@
 import type { OrganizationSummary, ReadScope } from "@/domain";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 /**
  * A super admin's "which laboratory" choice, submitted with the page's own GET
@@ -15,19 +16,15 @@ export function OrganizationFilter({
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[12px] font-medium text-stone-deep">Organization</span>
-      <select
-        name="org"
-        defaultValue={selected}
-        className="h-9 rounded-[8px] border border-stone-line bg-surface px-2 text-[14px] text-stone-ink outline-none focus:border-maroon"
-      >
-        <option value="">All organizations</option>
+      <NativeSelect name="org" defaultValue={selected}>
+        <NativeSelectOption value="">All organizations</NativeSelectOption>
         {organizations.map((organization) => (
-          <option key={organization.id} value={organization.id}>
+          <NativeSelectOption key={organization.id} value={organization.id}>
             {organization.name}
             {organization.status === "deactivated" ? " (deactivated)" : ""}
-          </option>
+          </NativeSelectOption>
         ))}
-      </select>
+      </NativeSelect>
     </label>
   );
 }

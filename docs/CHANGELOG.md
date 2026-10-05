@@ -7,7 +7,7 @@ Newest first. One entry per commit that changes behavior or contract.
 `/records` read one response of patients, which PostgREST stops at 1000 rows without saying
 so: a laboratory past that could not see or search its oldest patients. The list now reads
 50 at a time (`?page=`), says how many match in all ("Showing 51–100 of 1,234 patients"),
-and pages with shadcn's `pagination` (ported from the registry source, the eleventh
+and pages with shadcn's `pagination` (ported from the registry source, the twelfth
 component in `ui/`). Search, barangay and laboratory filters run in the database over every
 patient in scope and are kept in the page links; a page past the end goes to the last page.
 
@@ -17,6 +17,26 @@ patient in scope and are kept in the page links; a page past the end goes to the
 cap. A range past the last row is refused (`PGRST103`) and loses the count, so the adapter
 then asks for the count alone with the same filters. A super admin's pages still come from
 the de-identified views and ignore a name search. Page arithmetic in `src/lib/pagination.ts`.
+
+## [fix] CLI components take the console's corners and field height
+
+The organization, person and action filters rendered as 32px pills beside 36px fields with
+8px corners. `globals.css` fixed `rounded-lg` at 16px, while shadcn components size their
+corners from a scale derived from `--radius`. `globals.css` now carries shadcn's scale
+(`--radius-sm` … `--radius-4xl`) with `--radius: 8px`, the console's field corner, and
+`shadcn.test.ts` fails if the scale stops deriving from it. `native-select` is adapted to the
+field height (`h-9`) and background (`bg-surface`), recorded on the components card. The
+dashboard legend's swatches (`rounded-sm`) go from near-circles to rounded squares.
+
+## [chore] The console's filters use shadcn's native select
+
+`bunx shadcn@latest add native-select` added `src/components/ui/native-select.tsx`. The audit
+trail's person and action filters and the organization filter render `NativeSelect` in place
+of a raw `<select>`, keeping their `name` and `defaultValue`, so the GET forms submit the same
+query strings. `SELECT_CLASS` is gone. With no raw element left outside `ui/`,
+`shadcn.test.ts` drops its known-exceptions list and the test that kept it shrinking. The CLI
+imported `cn` from an unrelated npm package; the import points at `@/lib/utils` and the
+package was not added.
 
 ## [chore] Components come from shadcn, never from scratch
 

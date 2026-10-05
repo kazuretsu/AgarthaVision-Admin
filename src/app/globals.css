@@ -71,6 +71,9 @@
   --warn: var(--av-amber);
   --warn-tint: var(--av-amber-tint);
 
+  /* The corner every form field uses. shadcn's radius scale below is built from it. */
+  --radius: 8px;
+
   color-scheme: light;
 }
 
@@ -158,9 +161,18 @@
 
   --font-sans:
     Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+
+  /*
+   * shadcn's radius scale, as the registry ships it (apps/v4/app/globals.css), so a component
+   * added with the CLI gets the console's corners: `rounded-lg` is a field's 8px.
+   */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 body {

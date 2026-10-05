@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -9,7 +10,7 @@ import { describe, expect, it } from "vitest";
  * `docs/map/objects/ui-components.md`.
  */
 
-const UI = dirname(new URL(import.meta.url).pathname);
+const UI = dirname(fileURLToPath(import.meta.url));
 const SRC = join(UI, "..", "..");
 const ROOT = join(SRC, "..");
 
@@ -29,16 +30,6 @@ const SHADCN_UI_ITEMS = new Set(
     "toggle-group tooltip"
   ).split(" "),
 );
-
-/**
- * Raw elements outside `ui/` that are waiting for their shadcn component. Each needs the CLI,
- * which needs network access to ui.shadcn.com. Remove a line when its file switches over; the
- * last test fails if a line here no longer matches anything.
- */
-const KNOWN_RAW_ELEMENTS = new Set([
-  "src/app/(dashboard)/audit/page.tsx <select>", // → bunx shadcn@latest add native-select
-  "src/components/organizations/OrganizationFilter.tsx <select>", // → native-select
-]);
 
 function files(dir: string, keep: (path: string) => boolean): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -84,12 +75,7 @@ describe("components come from shadcn (constraint #15)", () => {
   });
 
   it("nothing outside ui/ hand-builds a button, select, textarea, table or input", () => {
-    expect(rawElements().filter((found) => !KNOWN_RAW_ELEMENTS.has(found))).toEqual([]);
-  });
-
-  it("every known exception still exists, so the list shrinks as they are fixed", () => {
-    const found = new Set(rawElements());
-    expect([...KNOWN_RAW_ELEMENTS].filter((known) => !found.has(known))).toEqual([]);
+    expect(rawElements()).toEqual([]);
   });
 
   it("globals.css keeps the console palette under shadcn's token names", () => {
@@ -98,5 +84,15 @@ describe("components come from shadcn (constraint #15)", () => {
     expect(css).not.toMatch(/oklch\(/);
     expect(css).toContain("--primary: var(--av-maroon);");
     expect(css).toContain("--color-primary: var(--primary);");
+  });
+
+  it("globals.css keeps shadcn's radius scale, so CLI components get the console's corners", () => {
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    // Registry components size corners with rounded-sm…rounded-4xl; each must derive from --radius.
+    expect(css).toMatch(/--radius:\s*8px;/);
+    expect(css).toContain("--radius-lg: var(--radius);");
+    for (const step of ["sm", "md", "xl", "2xl", "3xl", "4xl"]) {
+      expect(css).toMatch(new RegExp(`--radius-${step}: calc\\(var\\(--radius\\) \\* [0-9.]+\\);`));
+    }
   });
 });

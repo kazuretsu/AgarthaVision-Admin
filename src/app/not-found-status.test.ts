@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -10,7 +11,7 @@ import { describe, expect, it } from "vitest";
  * a Suspense boundary, below its not-found check.
  */
 
-const APP = dirname(new URL(import.meta.url).pathname);
+const APP = dirname(fileURLToPath(import.meta.url));
 const LOADING = ["loading.tsx", "loading.ts", "loading.jsx", "loading.js"];
 
 function pages(dir: string): string[] {
@@ -37,7 +38,8 @@ const notFoundPages = pages(APP).filter((page) => readFileSync(page, "utf8").inc
 
 describe("pages that answer 404", () => {
   it("include the record and organization detail pages", () => {
-    const routes = notFoundPages.map((page) => relative(APP, page));
+    // Forward slashes on every OS, so the routes below read the same on Windows.
+    const routes = notFoundPages.map((page) => relative(APP, page).split(sep).join("/"));
     for (const route of [
       "(dashboard)/records/patients/[patientId]/page.tsx",
       "(dashboard)/records/sessions/[sessionId]/page.tsx",
