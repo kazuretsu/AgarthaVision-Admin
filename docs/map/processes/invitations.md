@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-05
-commit: eb6d05e
+commit: 3357cf4
 ---
 
 # Invitations
