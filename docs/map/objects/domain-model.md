@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: ff526ba
+verified: 2026-10-05
+commit: c0011a3
 ---
 
 # Domain model
@@ -28,11 +28,11 @@ serialise without a custom reviver (`src/domain/entities.ts:15`).
 | `Session`        | `0001`                         | one smear, owned by a patient; `user_id` is the **author**; `label` `null` for a de-identified reader (#14) |
 | `Sample`         | `0001`                         | `deleted_at` is the duplicate tombstone — see below; `userNote` `null` for a de-identified reader           |
 | `Detection`      | `0001`, `0004`, `0005`, `0006` | `prediction_id` (0004), `stage` (0005); `species_touched` dropped (0006)                                    |
-| `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range                                                   |
+| `SpeciesFinding` | `0001`, `0005`                 | one species' egg count in one field; drives the LPF range, descriptor and burden                            |
 | `Report`         | `0001`                         | `lpf_per_species` stored as issued; no `epg_per_species`                                                    |
 
 Read models for the records browser live in `src/domain/records.ts`: `PatientListItem`
-(`:15`), `PatientRecord` (`:30`), `SessionRecord` (`:46`), `SampleRecordDetail` (`:55`).
+(`:15`), `PatientRecord` (`:37`), `SessionRecord` (`:53`), `SampleRecordDetail` (`:62`).
 Each carries a `SessionSummary` computed by `docs/map/processes/lpf-session-summary.md`.
 
 Facts that trip people up:
@@ -42,12 +42,12 @@ Facts that trip people up:
   comments each absence. Selecting one fails the whole query — that is how the console broke.
 - **`deleted_at`.** A sample deleted as a duplicate keeps its rows and JPEG (C8) but must
   not appear or count anywhere. The adapter fetches it with its siblings and the domain drops
-  it (`isLiveSample`, `src/domain/clinical.ts:37`), so the rule has one definition.
+  it (`isLiveSample`, `src/domain/clinical.ts:38`), so the rule has one definition.
 - **Patient visibility resolves through `patient_users`**, not `created_by`, which is
   provenance only.
 - **`patients` reaches `profiles` two ways** (`created_by`, and the `patient_users` join),
   so an embed must name the constraint: `profiles!patients_created_by_fkey`
-  (`src/adapters/supabase/database.ts:217`).
+  (`src/adapters/supabase/database.ts:224`).
 
 Enums live in `src/domain/enums.ts`. `DetectionVerdict` is UPPERCASE in Postgres and
 lowercase in Room; `parseDetectionVerdict` accepts either. Species are free text and have no
@@ -59,7 +59,7 @@ migration behind it.
 - Owned by: upstream migrations own every field.
 - Consumed by: `src/domain/clinical.ts`, `patients.ts`, `dashboard.ts`, `research-export.ts`.
 - Produced by: `src/adapters/supabase/database.ts`, the only place snake_case and camelCase
-  meet (`toPatient` at `:252` and its siblings).
+  meet (`toPatient` at `:303` and its siblings).
 - Looks like but is not: Room entities in the Android client, which carry columns Postgres
   does not (`status`, `is_repeat`, `predictions_json`).
 

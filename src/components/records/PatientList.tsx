@@ -110,7 +110,7 @@ export async function PatientList({ db, query }: { db: DatabasePort; query: Pati
           {search || barangay ? "No patients match this search." : "No patients yet."}
         </p>
       ) : (
-        <Table className="min-w-[760px]">
+        <Table className="min-w-[720px]">
           <TableCaption>Patients, most recently registered first</TableCaption>
           <TableHeader>
             <TableRow>

@@ -2,6 +2,26 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Records tables fit the console at its narrowest width
+
+The shell is never narrower than 1024px, which leaves the page 734px of table. The records
+list and a patient's sessions table each asked for at least 760px, so at that width the
+last column (Eggs on the patient page) sat behind a sideways scroll. Both now ask for 720px,
+as the sample and audit tables already do; wider windows are unchanged.
+
+## [feat] Records show the estimated parasite burden next to the LPF descriptor
+
+The app's Session Detail writes each species seen as "Moderate · Moderate Burden"; the
+console wrote only "moderate", so the phone and the console read one smear two ways. The
+console now ports `LpfDensity.kt::ParasiteBurdenLevel.forDescriptor` as
+`parasiteBurdenLevel` in `src/domain/clinical.ts`: rare or few is low, moderate is moderate,
+numerous is high, and a species never seen has none. `formatLpfReading` writes the app's
+line. The session page's findings table and the patient page's session list show it; a
+species never seen, and a session never read, show nothing. The level is derived from the
+worst field on read, never stored, and is labelled "Burden", not a WHO or DOH tier or an
+infection intensity (PB-16). The research export is unchanged: its v2 columns are a
+contract.
+
 ## [fix] Records list reaches every patient, a page at a time
 
 `/records` read one response of patients, which PostgREST stops at 1000 rows without saying

@@ -100,7 +100,9 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
         <p className="text-[12px] text-stone-mid">
           LPF = eggs per low-power field (direct smear): the lowest to the highest count in any
           single field, where a field without the species counts as 0. The descriptor is read off
-          the worst field. Every detection except a rejected one counts.
+          the worst field, and the estimated parasite burden follows from it: rare or few is low,
+          moderate is moderate, numerous is high. It is a direct-smear estimate, not a WHO or DOH
+          tier. Every detection except a rejected one counts.
         </p>
       </section>
 

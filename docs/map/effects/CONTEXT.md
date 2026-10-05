@@ -76,7 +76,7 @@ medtech. Its exception handler is load-bearing; `admin_0002` tests it. See
 `../processes/lab-scoping.md`.
 
 **What counts is cross-repo.** Every non-rejected detection on a live sample counts
-(`src/domain/clinical.ts:32`), matching the app's Session Detail and its PDF report, and
+(`src/domain/clinical.ts:33`), matching the app's Session Detail and its PDF report, and
 the tests carry the app's own cases. Changing the rule here alone makes the console and the
 report a patient was handed disagree about the same smear.
 
