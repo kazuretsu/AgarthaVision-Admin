@@ -21,8 +21,8 @@ describe("organizations", () => {
 });
 
 describe("medtechs", () => {
-  it("is an org admin's entry: a super admin invites from an organization's page", () => {
+  it("is everyone's entry: an org admin's own laboratory, a super admin's choice", () => {
     expect(navFor("org_admin").some((item) => item.href === "/medtechs")).toBe(true);
-    expect(navFor("super_admin").some((item) => item.href === "/medtechs")).toBe(false);
+    expect(navFor("super_admin").some((item) => item.href === "/medtechs")).toBe(true);
   });
 });

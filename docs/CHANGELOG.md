@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Org admin manages the laboratory's medtechs
+
+`/medtechs` now lists a laboratory's medtechs with the medtechs it has invited: name, email,
+status, date joined and the number of its patients each is linked to, searchable, sortable and
+paged 50 at a time in the URL. An org admin sees their own laboratory; a super admin chooses one
+(the organization page links to it). **Deactivate** bans the medtech's login through the
+Supabase admin API, so they can no longer sign in or refresh a session (the app then signs
+them out and wipes the phone), and records the membership as deactivated with
+`console_set_member_status` (`admin/0006_member_status.sql`, **apply it in the SQL editor**);
+if the record fails, the ban is lifted again. **Reactivate** reverses both. Nothing is
+deleted. An org admin cannot deactivate themselves, another org admin, or anyone in another
+laboratory, in the console or in the database. Each change is audited. The people and their
+emails are read with `console_organization_people`, which only a super admin or that
+laboratory's org admin may call.
+
 ## [feat] Invite people by email: they set their own password and join the right organization
 
 Accounts are made only by invitation. A super admin invites an organization admin from

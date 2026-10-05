@@ -4,6 +4,7 @@ import type {
   AuditEntry,
   Invitation,
   OrganizationDetail,
+  Person,
   OrganizationSummary,
   ReadScope,
 } from "@/domain";
@@ -114,6 +115,12 @@ export interface DatabasePort {
 
   /** An organization's invitations, newest first, at most {@link INVITATION_LIST_LIMIT}. */
   listInvitations(organizationId: string): Promise<Invitation[]>;
+
+  /**
+   * One laboratory's members with their sign-in email and linked-patient count.
+   * Throws {@link DatabaseReadError} for a laboratory the caller may not read.
+   */
+  listPeople(organizationId: string): Promise<Person[]>;
 
   /** One invitation by id; `null` when absent or hidden. */
   getInvitation(invitationId: string): Promise<Invitation | null>;

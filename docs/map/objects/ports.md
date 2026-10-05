@@ -6,7 +6,8 @@ commit: c5c0fbe
 # Ports
 
 The interfaces every feature depends on: `DatabasePort`, `AdminWritePort`, `StoragePort`,
-`AuthPort`, and, for invitations, `OnboardingPort` and `MailPort`.
+`AuthPort`, and, for invitations and medtech access, `OnboardingPort`, `MailPort` and
+`AccountAccessPort`.
 
 ## Why this shape
 
@@ -24,14 +25,15 @@ express the intent.
 
 ## Shape
 
-| Port             | Members                                                                                                                                              | File                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `DatabasePort`   | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles`                                | `src/ports/db.ts:72`       |
-| `AdminWritePort` | `createOrganization`, `renameOrganization`, `setOrganizationStatus`, `recordExport`, `invite`, `resendInvitation`, `revokeInvitation` — each audited | `src/ports/admin-write.ts` |
-| `StoragePort`    | `createSignedUrl`                                                                                                                                    | `src/ports/storage.ts:21`  |
-| `AuthPort`       | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                                                             | `src/ports/auth.ts:33`     |
-| `OnboardingPort` | `findInvitation`, `acceptInvitation` — for a visitor with no account yet                                                                             | `src/ports/onboarding.ts`  |
-| `MailPort`       | `send`                                                                                                                                               | `src/ports/mail.ts`        |
+| Port                | Members                                                                                                                                                                 | File                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `DatabasePort`      | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles`                                                   | `src/ports/db.ts:72`          |
+| `AdminWritePort`    | `createOrganization`, `renameOrganization`, `setOrganizationStatus`, `recordExport`, `invite`, `resendInvitation`, `revokeInvitation`, `setMemberStatus` — each audited | `src/ports/admin-write.ts`    |
+| `StoragePort`       | `createSignedUrl`                                                                                                                                                       | `src/ports/storage.ts:21`     |
+| `AuthPort`          | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                                                                                | `src/ports/auth.ts:33`        |
+| `OnboardingPort`    | `findInvitation`, `acceptInvitation` — for a visitor with no account yet                                                                                                | `src/ports/onboarding.ts`     |
+| `MailPort`          | `send`                                                                                                                                                                  | `src/ports/mail.ts`           |
+| `AccountAccessPort` | `setSignInAllowed` — block or allow a login, deleting nothing                                                                                                           | `src/ports/account-access.ts` |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:115`), `StorageAccessError`

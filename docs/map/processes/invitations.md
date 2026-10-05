@@ -12,10 +12,10 @@ invitation. This is the only way anyone gets an account: there is no sign-up.
 
 ## Who invites whom
 
-| Inviter     | Invites       | Into                       | Where in the console          |
-| ----------- | ------------- | -------------------------- | ----------------------------- |
-| Super admin | **org admin** | the organization they pick | `/organizations/[id]`         |
-| Org admin   | **medtech**   | their own organization     | `/medtechs` (org admins only) |
+| Inviter     | Invites       | Into                       | Where in the console  |
+| ----------- | ------------- | -------------------------- | --------------------- |
+| Super admin | **org admin** | the organization they pick | `/organizations/[id]` |
+| Org admin   | **medtech**   | their own organization     | `/medtechs`           |
 
 The role is never chosen: `invitableRole` (`src/domain/invitations.ts:49`) derives it from
 the inviter, and `console_invite` (`supabase/migrations/admin/0005_invitations.sql:121`)
@@ -59,7 +59,7 @@ referrer.
 1. Re-reads the link; only `pending` goes on. The action has already checked the password
    and the name's length, so nothing it can refuse is left for after the account exists.
 2. `auth.admin.createUser` with the **invitation's** email, the chosen password and
-   `email_confirm: true` (`:91`) — the console's only use of the service-role key
+   `email_confirm: true` (`:91`) — one of the console's two uses of the service-role key
    (`createServiceClient`, `src/adapters/supabase/client.ts:52`). No `user_metadata` is
    written. If the email already has an account (a retry), that account is used.
 3. Signs in as that account (`:105`) and calls `console_accept_invitation` as the invitee

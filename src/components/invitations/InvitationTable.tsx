@@ -48,17 +48,20 @@ export function InvitationTable({
   invitations,
   access,
   caption,
+  empty = "No invitations yet.",
   now = new Date(),
 }: {
   invitations: readonly Invitation[];
   access: ConsoleAccess;
   caption: string;
+  /** What to say when there are none. */
+  empty?: string;
   now?: Date;
 }) {
   if (invitations.length === 0) {
     return (
       <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
-        No invitations yet.
+        {empty}
       </p>
     );
   }

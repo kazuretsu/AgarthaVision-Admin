@@ -12,7 +12,7 @@ import { createRequestClient } from "./client";
 /**
  * Supabase implementation of {@link AdminWritePort}.
  *
- * Each write is one call to a security-definer function (`admin/0001`, `0003`, `0005`), run as
+ * Each write is one call to a security-definer function (`admin/0001`, `0003`, `0005`, `0006`), run as
  * the signed-in user. The function checks the caller, performs the write and
  * appends the audit row in one transaction, so a write without its audit entry
  * cannot happen. No table is written directly: the tables have no write policies.
@@ -92,6 +92,10 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
 
   async revokeInvitation(invitationId: string): Promise<void> {
     await this.call("console_revoke_invitation", { p_id: invitationId });
+  }
+
+  async setMemberStatus(userId: string, status: OrganizationStatus): Promise<void> {
+    await this.call("console_set_member_status", { p_user: userId, p_status: status });
   }
 }
 

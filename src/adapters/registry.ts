@@ -1,4 +1,5 @@
 import type {
+  AccountAccessPort,
   AdminWritePort,
   AuthPort,
   DatabasePort,
@@ -122,6 +123,19 @@ export async function getOnboarding(): Promise<OnboardingPort> {
     case "supabase": {
       const { createSupabaseOnboarding } = await import("./supabase/onboarding");
       return createSupabaseOnboarding();
+    }
+  }
+}
+
+/**
+ * Blocking and allowing sign-in, for deactivating a medtech. Server-side only.
+ * Follows the auth provider: the login lives there.
+ */
+export async function getAccountAccess(): Promise<AccountAccessPort> {
+  switch (authProvider()) {
+    case "supabase": {
+      const { createSupabaseAccountAccess } = await import("./supabase/account-access");
+      return createSupabaseAccountAccess();
     }
   }
 }
