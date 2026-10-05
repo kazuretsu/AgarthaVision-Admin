@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
@@ -8,6 +9,7 @@ import {
   patientDisclosureFor,
   patientLabel,
   sessionLabel,
+  type SampleDetail,
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -19,6 +21,7 @@ import { fieldBoxes } from "@/components/records/boxes";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Fact } from "@/components/records/Fact";
 import { FieldImage } from "@/components/records/FieldImage";
+import { FramesFallback } from "@/components/records/FramesFallback";
 import { LpfTable } from "@/components/records/LpfTable";
 import { ResultBadge } from "@/components/records/ResultBadge";
 import { SpeciesName } from "@/components/records/SpeciesName";
@@ -29,6 +32,9 @@ import { Card, CardContent } from "@/components/ui/card";
  * One session — one smear — as the app's Session Detail shows it: the per-species
  * LPF range and egg count, then every live field. A field deleted as a duplicate
  * is not listed and changes no figure.
+ *
+ * The record is read, and a missing one answers 404, before anything streams.
+ * Only the frames, which take a moment to sign, render inside a Suspense boundary.
  */
 export const dynamic = "force-dynamic";
 
@@ -40,19 +46,17 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
   const { scope } = await scopeForRequest();
 
   let record;
-  let urls;
   try {
     record = await (
       await getDatabase()
     ).getSessionRecord(sessionId, scope, patientDisclosureFor(actor.access));
-    if (!record) notFound();
-    urls = await signFrames(record.samples.map((detail) => detail.sample.storagePath));
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Session" variable={cause.variable} />;
     }
     throw cause;
   }
+  if (!record) notFound();
 
   const { session, patient, author, samples, summary } = record;
   const patientName = patientLabel(patient);
@@ -107,59 +111,75 @@ export default async function SessionPage({ params }: { params: Promise<{ sessio
             No verified fields in this session yet.
           </p>
         ) : (
-          <ul className="grid grid-cols-3 gap-4">
-            {samples.map((detail, index) => {
-              const counted = detail.detections.filter(isCountedDetection);
-              const fieldEggs = new Map<string, number>();
-              for (const finding of detail.findings) {
-                // Named the way the sample page and the LPF table name it.
-                const species = canonicalSpecies(finding.species);
-                fieldEggs.set(species, (fieldEggs.get(species) ?? 0) + finding.eggCount);
-              }
-              return (
-                <li key={detail.sample.id}>
-                  <Link
-                    href={`/records/samples/${detail.sample.id}`}
-                    className="flex flex-col gap-2 rounded-[12px] border border-stone-hair bg-surface p-3 hover:border-maroon"
-                  >
-                    <FieldImage
-                      url={urls.get(detail.sample.storagePath) ?? null}
-                      alt={`Field ${index + 1} of ${title}`}
-                      boxes={fieldBoxes(detail)}
-                    />
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-semibold text-stone-ink">
-                        Field {index + 1}
-                      </span>
-                      <span className="tnum text-[12px] text-stone-mid">
-                        {counted.length} egg{counted.length === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {detail.sample.isManual ? <Badge variant="neutral">Manual</Badge> : null}
-                      {detail.sample.needsReannotation ? (
-                        <Badge variant="warn">Model missed eggs</Badge>
-                      ) : null}
-                    </div>
-                    {fieldEggs.size > 0 ? (
-                      <ul className="text-[12px] text-stone-deep">
-                        {[...fieldEggs.entries()].map(([species, count]) => (
-                          <li key={species}>
-                            <SpeciesName species={species} />{" "}
-                            <span className="tnum text-stone-mid">{count} in this field</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-[12px] text-stone-mid">No eggs recorded</span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <Suspense fallback={<FramesFallback count={Math.min(samples.length, 6)} columns={3} />}>
+            <SessionFields samples={samples} title={title} />
+          </Suspense>
         )}
       </section>
     </main>
+  );
+}
+
+/** The session's fields with their frames, signed as the visitor. */
+async function SessionFields({ samples, title }: { samples: SampleDetail[]; title: string }) {
+  let urls: Map<string, string | null>;
+  try {
+    urls = await signFrames(samples.map((detail) => detail.sample.storagePath));
+  } catch (cause) {
+    // No storage configured: every frame shows as unavailable, the figures stay.
+    if (!(cause instanceof MissingEnvironmentError)) throw cause;
+    urls = new Map();
+  }
+
+  return (
+    <ul className="grid grid-cols-3 gap-4">
+      {samples.map((detail, index) => {
+        const counted = detail.detections.filter(isCountedDetection);
+        const fieldEggs = new Map<string, number>();
+        for (const finding of detail.findings) {
+          // Named the way the sample page and the LPF table name it.
+          const species = canonicalSpecies(finding.species);
+          fieldEggs.set(species, (fieldEggs.get(species) ?? 0) + finding.eggCount);
+        }
+        return (
+          <li key={detail.sample.id}>
+            <Link
+              href={`/records/samples/${detail.sample.id}`}
+              className="flex flex-col gap-2 rounded-[12px] border border-stone-hair bg-surface p-3 hover:border-maroon"
+            >
+              <FieldImage
+                url={urls.get(detail.sample.storagePath) ?? null}
+                alt={`Field ${index + 1} of ${title}`}
+                boxes={fieldBoxes(detail)}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-semibold text-stone-ink">Field {index + 1}</span>
+                <span className="tnum text-[12px] text-stone-mid">
+                  {counted.length} egg{counted.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {detail.sample.isManual ? <Badge variant="neutral">Manual</Badge> : null}
+                {detail.sample.needsReannotation ? (
+                  <Badge variant="warn">Model missed eggs</Badge>
+                ) : null}
+              </div>
+              {fieldEggs.size > 0 ? (
+                <ul className="text-[12px] text-stone-deep">
+                  {[...fieldEggs.entries()].map(([species, count]) => (
+                    <li key={species}>
+                      <SpeciesName species={species} />{" "}
+                      <span className="tnum text-stone-mid">{count} in this field</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="text-[12px] text-stone-mid">No eggs recorded</span>
+              )}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

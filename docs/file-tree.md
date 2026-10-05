@@ -60,8 +60,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter.
-    │       ├── records/       Patients list; patients/, sessions/, samples/ detail pages;
-    │                          loading.tsx.
+    │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
+    │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
     │       ├── organizations/ Super admin: list, detail, and the audited server actions.
     │       └── audit/         The audit trail, filtered and scoped.
@@ -73,7 +73,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   └── supabase/          client, env, database (paged reads in paging.ts), admin-write, storage, auth.
     ├── components/            Presentational. Import ports, never adapters.
-    │   ├── ui/                shadcn components on Base UI (incl. alert dialog). Ours to edit.
+    │   ├── ui/                shadcn components on Base UI (incl. alert dialog, skeleton). Ours to edit.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           LPF table, field image with box overlay, breadcrumbs.

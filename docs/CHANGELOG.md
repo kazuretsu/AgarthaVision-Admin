@@ -2,6 +2,23 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] A missing patient, session or field answers HTTP 404
+
+Record pages showed "This page could not be found" for a missing id, or for another
+laboratory's record, but with status 200: `records/loading.tsx` began streaming the response
+before the page could call `notFound()`. The list page and its loading state move into a
+`(list)` route group, so the loading state covers the list only. The session and sample pages
+read the record and decide 404 first, then sign their frames inside a Suspense boundary
+(`FramesFallback`), so the figures still show at once and the frames follow. A missing
+storage configuration now leaves the frames unavailable instead of replacing the page.
+`src/app/not-found-status.test.ts` fails if a page that calls `notFound()` is put back under a
+loading file. Both loading states use shadcn's `Skeleton` (`src/components/ui/skeleton.tsx`).
+
+Checked against a local build: a malformed id, an unknown patient, session or field, and Lab
+B's records opened by Lab A's org admin (with or without `?org=`) all answer 404; existing
+records answer 200, with the frames streamed after the figures. `staging` answered 200 to all
+of them.
+
 ## [refactor] The console recognises super admins from the super_admins table
 
 The gate asks the app's `is_admin()` (app `0014`, D22) instead of reading `profiles.role`,
