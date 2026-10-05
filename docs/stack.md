@@ -27,9 +27,10 @@ As-built. Versions are what `bun.lock` resolved, not what a range permits.
 - **No charting library.** The weekly trend and the species bars are
   hand-crafted inline SVG, mirroring the Android client's design rule. One less dependency
   and no runtime bundle cost.
-- **shadcn on Base UI (D1).** `src/components/ui/` holds shadcn-style components written
-  against Base UI primitives, not Radix — no Radix package is installed. The shadcn CLI's
-  registry is not used; the files are ours and are edited in place. `cn()` in
+- **shadcn on Base UI (D1).** `src/components/ui/` holds shadcn components on Base UI
+  primitives, not Radix — no Radix package is installed. New ones come from the shadcn CLI
+  (`components.json`, style `base-nova`); the files are ours once added and are adapted in
+  place (constraint #15, `docs/map/objects/ui-components.md`). `cn()` in
   `src/lib/utils.ts` merges classes with `clsx` + `tailwind-merge`, and variants use
   `class-variance-authority`.
 - **Light and dark themes.** `next-themes` toggles a `dark` class on `<html>`; the semantic

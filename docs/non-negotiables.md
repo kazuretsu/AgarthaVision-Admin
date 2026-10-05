@@ -25,3 +25,5 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - Never bypass the hooks.
 - Change the doc card in the same commit as the behavior.
 - `SESSION_INIT.md` routes; it never explains.
+- UI primitives come from shadcn (`bunx shadcn@latest add`), never from scratch. Never run
+  `shadcn init`.

@@ -30,6 +30,10 @@ special skill or plugin.
   card under `docs/map/processes/`. Give it a row in the `SESSION_INIT.md` table and, if it
   changes what something breaks, in `docs/map/effects/CONTEXT.md`. Copy the shape of a
   neighbouring card.
+- **Components come from shadcn, never from scratch.** Need a button, dialog, select, table,
+  tooltip…? Check `docs/map/objects/ui-components.md`; if it is not in `src/components/ui/`,
+  add it with `bunx shadcn@latest add <name>` and compose it. Never hand-build a primitive or
+  import `@base-ui/` outside `ui/`. Rules: `docs/constraints.md` (#15).
 - **Before you end the session,** list the files you changed and confirm each one's card, the
   changelog and `docs/features.md` say what the code now does.
 
