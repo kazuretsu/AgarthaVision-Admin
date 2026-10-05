@@ -49,6 +49,9 @@ export function toReport(row: ReportRow): Report | null {
   };
 
   if (row.report_type === "session" && row.session_id && !row.patient_id) {
+    // `session_ids` is dropped: `reports_scope_check` does not forbid it on a session
+    // report, but it means "the sessions a patient report pooled", and the app never sets
+    // it on one. A session report's one session is `session_id`.
     return {
       ...base,
       reportType: "session",

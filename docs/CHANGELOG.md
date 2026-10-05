@@ -15,7 +15,7 @@ before `0015`. **Apply it in the SQL editor.**
 `csvFilePath`. `toReport` (`src/adapters/supabase/reports.ts`) maps a row and skips an unknown
 type or a contradictory shape. No page reads reports yet. `admin_0004_patient_reports.test.sql`
 covers both laboratories' patient reports, the session report regression, super admins, a
-colleague medtech and a deactivated laboratory.
+colleague medtech, a signed-out visitor and a deactivated laboratory.
 
 ## [refactor] The console recognises super admins from the super_admins table
 

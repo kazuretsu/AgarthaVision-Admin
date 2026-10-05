@@ -130,6 +130,14 @@ begin
     perform tests.check(not exists (select 1 from public.reports where id = f.patient_report_a),
         'a colleague medtech in the same laboratory cannot read the patient report');
 
+    -- A signed-out visitor: 0004's policy is for `authenticated` only.
+    perform tests.act_as_owner();
+    perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+    execute 'set local role anon';
+    perform tests.check(
+        not exists (select 1 from public.reports where id in (f.patient_report_a, f.patient_report_b)),
+        'a signed-out visitor reads no patient report');
+
     -- A deactivated laboratory's org admin is no longer one.
     perform tests.act_as_owner();
     update public.organizations set status = 'deactivated', deactivated_at = now() where id = f.lab_a;
