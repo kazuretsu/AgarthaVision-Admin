@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -9,7 +10,7 @@ import { describe, expect, it } from "vitest";
  * `docs/map/objects/ui-components.md`.
  */
 
-const UI = dirname(new URL(import.meta.url).pathname);
+const UI = dirname(fileURLToPath(import.meta.url));
 const SRC = join(UI, "..", "..");
 const ROOT = join(SRC, "..");
 
