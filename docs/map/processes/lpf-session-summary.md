@@ -46,7 +46,8 @@ infection intensity. No surface in the console shows EPG.
 4. Pages render the result: `LpfTable` and `LpfInline` (`src/components/records/LpfTable.tsx`).
    Each species seen reads `Moderate · Moderate Burden`, written by `formatLpfReading`
    (`src/domain/clinical.ts:179`) as the app's Session Detail writes it; a species never seen,
-   and a session never read, show neither.
+   and a session never read, show neither. `src/components/records/LpfTable.test.ts` renders
+   both components and fails if the reading drops off either page.
    Field cards on the session page and the sample page name species canonically too.
 
 ## Box provenance
@@ -76,4 +77,5 @@ the overlay detects which (`:66`) and scales accordingly. Rejected boxes are das
 
 ## See
 
-`src/domain/clinical.ts`, `src/domain/clinical.test.ts`, `src/adapters/supabase/database.ts`.
+`src/domain/clinical.ts`, `src/domain/clinical.test.ts`, `src/components/records/LpfTable.test.ts`,
+`src/adapters/supabase/database.ts`.
