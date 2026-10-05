@@ -5,7 +5,8 @@ commit: c5c0fbe
 
 # Ports
 
-The three interfaces every feature depends on: `DatabasePort`, `StoragePort`, `AuthPort`.
+The interfaces every feature depends on: `DatabasePort`, `AdminWritePort`, `StoragePort`,
+`AuthPort`, and, for invitations, `OnboardingPort` and `MailPort`.
 
 ## Why this shape
 
@@ -23,17 +24,20 @@ express the intent.
 
 ## Shape
 
-| Port             | Members                                                                                                               | File                       |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `DatabasePort`   | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles` | `src/ports/db.ts:72`       |
-| `AdminWritePort` | `createOrganization`, `renameOrganization`, `setOrganizationStatus` — each audited                                    | `src/ports/admin-write.ts` |
-| `StoragePort`    | `createSignedUrl`                                                                                                     | `src/ports/storage.ts:21`  |
-| `AuthPort`       | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                              | `src/ports/auth.ts:33`     |
+| Port             | Members                                                                                                                                              | File                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `DatabasePort`   | `listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `getProfile`, `listProfiles`                                | `src/ports/db.ts:72`       |
+| `AdminWritePort` | `createOrganization`, `renameOrganization`, `setOrganizationStatus`, `recordExport`, `invite`, `resendInvitation`, `revokeInvitation` — each audited | `src/ports/admin-write.ts` |
+| `StoragePort`    | `createSignedUrl`                                                                                                                                    | `src/ports/storage.ts:21`  |
+| `AuthPort`       | `getCurrentUser`, `requireConsoleActor`, `signInWithPassword`, `signOut`                                                                             | `src/ports/auth.ts:33`     |
+| `OnboardingPort` | `findInvitation`, `acceptInvitation` — for a visitor with no account yet                                                                             | `src/ports/onboarding.ts`  |
+| `MailPort`       | `send`                                                                                                                                               | `src/ports/mail.ts`        |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:115`), `StorageAccessError`
 (`src/ports/storage.ts:30`), and `NotAuthenticatedError` / `NotAuthorizedError` /
-`AuthenticationFailedError` (`src/ports/auth.ts:55-77`).
+`AuthenticationFailedError` (`src/ports/auth.ts:55-77`), `AdminWriteError` (with a `hint`
+naming which conflict it was), `AcceptInvitationError` and `MailSendError`.
 
 `requireConsoleActor()` returns the user together with their `ConsoleAccess`
 (`src/domain/access.ts:22`) — super admin, or org admin with their organization — and
@@ -43,7 +47,8 @@ imports that one domain type; it still names no vendor.
 
 ## Connected to
 
-- Implemented by: `src/adapters/supabase/{database,storage,auth}.ts`.
+- Implemented by: `src/adapters/supabase/{database,admin-write,storage,auth,onboarding}.ts`
+  and `src/adapters/resend/mail.ts`.
 - Selected by: `docs/map/objects/provider-registry.md`.
 - Imported by: pages, layouts and route handlers — always via `@/ports`, never from
   `src/adapters/`.
@@ -69,4 +74,5 @@ The only interface between feature code and any backend.
 
 ## See
 
-`src/ports/db.ts`, `src/ports/storage.ts`, `src/ports/auth.ts`, `src/ports/index.ts`.
+`src/ports/db.ts`, `src/ports/admin-write.ts`, `src/ports/storage.ts`, `src/ports/auth.ts`,
+`src/ports/onboarding.ts`, `src/ports/mail.ts`, `src/ports/index.ts`.

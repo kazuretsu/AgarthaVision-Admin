@@ -48,3 +48,29 @@ describe("describeAuditEntry", () => {
     expect(auditActionLabel("member.invite")).toBe("member.invite");
   });
 });
+
+describe("invitation entries", () => {
+  it("say who was invited, as what, and where", () => {
+    const details = { email: "ana@example.test", role: "medtech" };
+    expect(describeAuditEntry(entry({ action: "invitation.create", details }))).toBe(
+      "Invited ana@example.test as a medtech to Lab A",
+    );
+    expect(
+      describeAuditEntry(
+        entry({ action: "invitation.accept", details: { ...details, role: "org_admin" } }),
+      ),
+    ).toBe("ana@example.test joined Lab A as an organization admin");
+    expect(describeAuditEntry(entry({ action: "invitation.resend", details }))).toBe(
+      "Re-sent the invitation to ana@example.test",
+    );
+    expect(describeAuditEntry(entry({ action: "invitation.revoke", details }))).toBe(
+      "Revoked the invitation to ana@example.test",
+    );
+  });
+
+  it("are filterable actions on the audit page", () => {
+    for (const action of ["create", "resend", "revoke", "accept"]) {
+      expect(auditActionLabel(`invitation.${action}`)).not.toBe(`invitation.${action}`);
+    }
+  });
+});

@@ -1,5 +1,18 @@
 import type { OrganizationStatus } from "@/domain/organizations";
 
+/** A link minted for an invitation. The token is returned once, to be emailed, and never stored. */
+export interface IssuedInvitation {
+  invitationId: string;
+  token: string;
+  expiresAt: string;
+}
+
+export interface InviteRequest {
+  email: string;
+  fullName: string | null;
+  organizationId: string;
+}
+
 /**
  * The console's writes (D2).
  *
@@ -24,6 +37,17 @@ export interface AdminWritePort {
    * caller cannot misfile it. Callers must not serve the file if this throws.
    */
   recordExport(organizationId: string | null, details: Record<string, unknown>): Promise<void>;
+
+  /**
+   * Invites someone. The role follows from the caller (a super admin invites an org
+   * admin, an org admin a medtech) and is never passed. Refuses an email that already
+   * has an account or a live invitation (`conflict`, with a `hint` saying which).
+   */
+  invite(request: InviteRequest): Promise<IssuedInvitation>;
+  /** Mints a new link and expiry for a pending invitation; the old link stops working. */
+  resendInvitation(invitationId: string): Promise<Omit<IssuedInvitation, "invitationId">>;
+  /** Withdraws a pending invitation. Nothing is deleted. */
+  revokeInvitation(invitationId: string): Promise<void>;
 }
 
 export type AdminWriteFailure = "forbidden" | "conflict" | "not_found" | "invalid" | "failed";
@@ -34,6 +58,8 @@ export class AdminWriteError extends Error {
     public readonly reason: AdminWriteFailure,
     operation: string,
     cause?: unknown,
+    /** Which case of the reason it was, when the implementation can tell (e.g. `account_exists`). */
+    public readonly hint: string | null = null,
   ) {
     super(`Admin write ${operation} failed: ${reason}.`);
     this.name = "AdminWriteError";

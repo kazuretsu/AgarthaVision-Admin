@@ -1,4 +1,11 @@
-import type { AdminWritePort, AuthPort, DatabasePort, StoragePort } from "@/ports";
+import type {
+  AdminWritePort,
+  AuthPort,
+  DatabasePort,
+  MailPort,
+  OnboardingPort,
+  StoragePort,
+} from "@/ports";
 import { optionalEnv } from "@/lib/env";
 
 /**
@@ -17,10 +24,12 @@ import { optionalEnv } from "@/lib/env";
 export const SUPPORTED_DATABASE_PROVIDERS = ["supabase"] as const;
 export const SUPPORTED_STORAGE_PROVIDERS = ["supabase"] as const;
 export const SUPPORTED_AUTH_PROVIDERS = ["supabase"] as const;
+export const SUPPORTED_MAIL_PROVIDERS = ["resend"] as const;
 
 export type DatabaseProvider = (typeof SUPPORTED_DATABASE_PROVIDERS)[number];
 export type StorageProvider = (typeof SUPPORTED_STORAGE_PROVIDERS)[number];
 export type AuthProvider = (typeof SUPPORTED_AUTH_PROVIDERS)[number];
+export type MailProvider = (typeof SUPPORTED_MAIL_PROVIDERS)[number];
 
 /**
  * Raised when a variable names a provider that has no adapter.
@@ -55,6 +64,10 @@ export function storageProvider(): StorageProvider {
 
 export function authProvider(): AuthProvider {
   return resolve("auth", "AUTH_PROVIDER", SUPPORTED_AUTH_PROVIDERS);
+}
+
+export function mailProvider(): MailProvider {
+  return resolve("mail", "MAIL_PROVIDER", SUPPORTED_MAIL_PROVIDERS);
 }
 
 /** The database port for this request. Server-side only. */
@@ -96,6 +109,29 @@ export async function getAdminWrites(): Promise<AdminWritePort> {
     case "supabase": {
       const { createSupabaseAdminWrite } = await import("./supabase/admin-write");
       return createSupabaseAdminWrite();
+    }
+  }
+}
+
+/**
+ * Accepting an invitation, for a visitor with no account yet. Server-side only.
+ * Follows the auth provider: it makes the account there.
+ */
+export async function getOnboarding(): Promise<OnboardingPort> {
+  switch (authProvider()) {
+    case "supabase": {
+      const { createSupabaseOnboarding } = await import("./supabase/onboarding");
+      return createSupabaseOnboarding();
+    }
+  }
+}
+
+/** The mail port. Server-side only. */
+export async function getMail(): Promise<MailPort> {
+  switch (mailProvider()) {
+    case "resend": {
+      const { createResendMail } = await import("./resend/mail");
+      return createResendMail();
     }
   }
 }

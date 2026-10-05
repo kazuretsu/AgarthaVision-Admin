@@ -3,9 +3,9 @@ import { optionalEnv, optionalIntEnv, requireEnv } from "@/lib/env";
 /**
  * Supabase configuration, read at request time.
  *
- * The anon key is browser-safe because RLS still applies to it. Nothing in the
- * console reads the service-role key: every read, image signing included, runs as
- * the signed-in user.
+ * The anon key is browser-safe because RLS still applies to it. The service-role
+ * key is read in one place, `serviceRoleKey()`, to make an invited person's
+ * account; every read, image signing included, runs as the signed-in user.
  */
 
 export interface SupabasePublicConfig {
@@ -30,4 +30,9 @@ export function storageConfig(): SupabaseStorageConfig {
     samplesBucket: optionalEnv("SUPABASE_SAMPLES_BUCKET", "samples"),
     signedUrlTtlSeconds: optionalIntEnv("SUPABASE_SIGNED_URL_TTL_SECONDS", 60),
   };
+}
+
+/** Server-only. Never prefix it `NEXT_PUBLIC_`. Read only by `createServiceClient()`. */
+export function serviceRoleKey(): string {
+  return requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 }

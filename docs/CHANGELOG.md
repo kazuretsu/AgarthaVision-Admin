@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Invite people by email: they set their own password and join the right organization
+
+Accounts are made only by invitation. A super admin invites an organization admin from
+`/organizations/[id]`; an org admin invites a medtech from the new `/medtechs` page. The
+invitation (`admin/0005_invitations.sql`, **apply it in the SQL editor**) stores the email,
+role and organization, decided by the database from who is inviting, and a hash of a one-time
+link that works for 7 days. The console emails the link through Resend
+(`src/adapters/resend/mail.ts`). The invitee sets their own password on `/invite/<token>`:
+the console makes the account for the invited email with `auth.admin.createUser` (the
+service-role key's only use), signs them in, and `console_accept_invitation` adds the
+membership from the invitation row. Re-send mints a new link; revoke withdraws it. An email
+with an account or a live invitation is refused, so no second account is made. Every
+invite, re-send, revoke and acceptance is audited. New server-only settings:
+`RESEND_API_KEY`, and optionally `MAIL_FROM` and `CONSOLE_URL`.
+
 ## [fix] An unread session shows no LPF result, not "No parasites found"
 
 A session with no live fields showed "Not read" as its result on a patient page, but "No

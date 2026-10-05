@@ -39,13 +39,14 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       ├── objects/
 │       │   ├── domain-model.md        Entities and enums, mirrored from upstream migrations.
 │       │   ├── organizations.md       Labs, members, patient ownership, the audit log.
-│       │   ├── ports.md               The three interfaces and their error types.
+│       │   ├── ports.md               The interfaces and their error types.
 │       │   └── provider-registry.md   How a backend is selected, and why lazily.
 │       ├── processes/
 │       │   ├── lpf-session-summary.md What counts, and the LPF range, as the app does it.
 │       │   ├── dashboard-figures.md   Per-smear counting, and why not to sum the map's rows.
 │       │   ├── lab-scoping.md         Who sees which laboratory's records, enforced twice.
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
+│       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
@@ -57,6 +58,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── globals.css        Design tokens. The only file holding raw hex.
     │   ├── page.tsx           Redirects to /dashboard; the gate decides from there.
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
+    │   ├── (auth)/invite/     [token]/ accept page and action (outside the gate); joined/.
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
@@ -64,18 +66,25 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
     │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
-    │       ├── organizations/ Super admin: list, detail, and the audited server actions.
+    │       ├── organizations/ Super admin: list, detail (invitations too), audited actions.
+    │       ├── medtechs/      Org admin: invite medtechs, follow their invitations.
+    │       ├── invitations/   Invite, re-send and revoke server actions (no page).
     │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
     │                          patient, dashboard and research-export rules, id checks.
     │                          No I/O.
-    ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth. No vendor types.
+    ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
+    │                          mail. No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
-    │   └── supabase/          client, env, database (paged reads in paging.ts), reports (row mapping), admin-write, storage, auth.
+    │   ├── supabase/          client (and the one service client), env, database (paged reads in
+    │   │                      paging.ts), reports (row mapping), admin-write, storage, auth,
+    │   │                      onboarding (accepting an invitation).
+    │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
+    │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
     │                          with box overlay, breadcrumbs.
@@ -89,6 +98,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── format.ts          Dates in Asia/Manila, person names.
         ├── pagination.ts      Page arithmetic: ?page= parsing, offsets, ranges, page links.
         ├── signed-urls.ts     Signs a page's frames; an unreadable one becomes null.
+        ├── invitation-email.ts The invitation email: the link, never a password.
+        ├── site-url.ts        The console's public origin, for the link.
         ├── palette.ts         Validated species colours, with the validator's findings.
         └── period.ts          The dashboard's and export's from/to dates, defensively parsed.
 ```

@@ -4,6 +4,7 @@ import {
   UnknownProviderError,
   authProvider,
   databaseProvider,
+  mailProvider,
   storageProvider,
 } from "./registry";
 
@@ -13,7 +14,7 @@ import {
  * and construct no adapter — they exercise resolution only.
  */
 
-const TOUCHED = ["DB_PROVIDER", "STORAGE_PROVIDER", "AUTH_PROVIDER"] as const;
+const TOUCHED = ["DB_PROVIDER", "STORAGE_PROVIDER", "AUTH_PROVIDER", "MAIL_PROVIDER"] as const;
 
 afterEach(() => {
   for (const variable of TOUCHED) delete process.env[variable];
@@ -60,6 +61,12 @@ describe("provider resolution", () => {
     process.env.STORAGE_PROVIDER = "nope";
     expect(databaseProvider()).toBe("supabase");
     expect(() => storageProvider()).toThrow(UnknownProviderError);
+  });
+
+  it("sends mail through Resend unless told otherwise, and refuses an unknown mailer", () => {
+    expect(mailProvider()).toBe("resend");
+    process.env.MAIL_PROVIDER = "smtp";
+    expect(() => mailProvider()).toThrow(UnknownProviderError);
   });
 
   it("declares the default as the first supported provider", () => {

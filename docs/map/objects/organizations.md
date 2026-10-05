@@ -61,6 +61,11 @@ because refusing it would stop user deletion working, which an additive migratio
 change. `actor_label` keeps who it was. Since the app's `0011`, deleting a login leaves the
 profile, so the entries keep their `actor_id`.
 
+**Members join by invitation** (`admin/0005`, `docs/map/processes/invitations.md`): a super
+admin invites an organization's admins, an org admin its medtechs, and accepting inserts the
+membership the invitation names. `organization_invitations` is read like the members: a super
+admin all, an org admin their organization's; its token hash by nobody.
+
 **Backfill** (`:363`): one "Starting laboratory" receives every existing non-admin user as a
 medtech and every existing patient, so nothing is orphaned when scoping arrives. Super
 admins are members of nothing; they see everything.

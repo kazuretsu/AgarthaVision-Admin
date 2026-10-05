@@ -7,7 +7,10 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - Providers are constructed in `src/adapters/registry.ts` and nowhere else.
 - An unknown provider name throws immediately, with the bad value in the message.
 - No top-level `throw` on a missing env var. Missing env fails at request time, named.
-- The service-role key never crosses into a client component.
+- The service-role key never crosses into a client component. Its one use is making an
+  invited person's account, after the link is checked.
+- No sign-up. An account is made only by accepting an invitation; its role and organization
+  come from the stored invitation, never from `user_metadata` or anything the invitee sends.
 - Every route under `(dashboard)` is gated server-side on console access (super admin or org
   admin). Route handlers repeat the check. A hidden link is not a gate.
 - The console never writes clinical data. No insert, no update, no delete.

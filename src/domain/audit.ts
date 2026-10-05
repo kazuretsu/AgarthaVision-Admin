@@ -28,6 +28,10 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "organization.deactivate": "Deactivated an organization",
   "organization.reactivate": "Reactivated an organization",
   "export.research": "Downloaded a research export",
+  "invitation.create": "Sent an invitation",
+  "invitation.resend": "Re-sent an invitation",
+  "invitation.revoke": "Revoked an invitation",
+  "invitation.accept": "Accepted an invitation",
 };
 
 /** The action's label; an action this build does not know is shown as recorded. */
@@ -58,6 +62,21 @@ export function describeAuditEntry(entry: AuditEntry): string {
         typeof d.rows === "number" ? `${d.rows} smear${d.rows === 1 ? "" : "s"}` : "smears";
       const period = [text(d.from), text(d.to)].filter(Boolean).join(" to ") || "all time";
       return `Exported ${rows} as ${String(d.format ?? "a file").toUpperCase()}, ${period}`;
+    }
+    case "invitation.create":
+    case "invitation.resend":
+    case "invitation.revoke":
+    case "invitation.accept": {
+      const who = text(d.email) ?? "someone";
+      const as = d.role === "org_admin" ? "an organization admin" : "a medtech";
+      const where = entry.organizationName ?? "an organization";
+      const verb = {
+        "invitation.create": `Invited ${who} as ${as} to ${where}`,
+        "invitation.resend": `Re-sent the invitation to ${who}`,
+        "invitation.revoke": `Revoked the invitation to ${who}`,
+        "invitation.accept": `${who} joined ${where} as ${as}`,
+      } as const;
+      return verb[entry.action];
     }
     default:
       return auditActionLabel(entry.action);
