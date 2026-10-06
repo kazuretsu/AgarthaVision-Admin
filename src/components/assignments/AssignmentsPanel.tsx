@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import {
   AssignForm,
+  AssignmentFeedback,
   RemoveAssignmentForm,
   ReplaceAssignmentForm,
   type MemberOption,
@@ -67,75 +68,77 @@ export function AssignmentsPanel({
         </p>
       </div>
 
-      {rows.length === 0 ? (
-        <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
-          Nobody is assigned to this patient.
-        </p>
-      ) : (
-        <Table className="min-w-[720px]">
-          <TableCaption>People assigned to this patient</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Assigned</TableHead>
-              {editable ? <TableHead className="text-right">Actions</TableHead> : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((assignment) => (
-              <TableRow key={assignment.userId}>
-                <TableCell className="font-medium text-stone-ink">
-                  {assignment.role && editable ? (
-                    <Link href={`/medtechs/${assignment.userId}`} className="hover:text-maroon">
-                      {personName(assignment)}
-                    </Link>
-                  ) : (
-                    personName(assignment)
-                  )}
-                </TableCell>
-                <TableCell className="text-stone-deep">
-                  {assignment.role ? ROLE_LABEL[assignment.role] : "—"}
-                </TableCell>
-                <TableCell>{assignmentStatus(assignment)}</TableCell>
-                <TableCell className="tnum">{formatDate(assignment.linkedAt)}</TableCell>
-                {editable ? (
-                  <TableCell className="text-right">
-                    {canRemoveAssignment(assignments, assignment.userId) ? (
-                      <RemoveAssignmentForm
-                        patientId={patientId}
-                        userId={assignment.userId}
-                        name={personName(assignment)}
-                      />
+      <AssignmentFeedback>
+        {rows.length === 0 ? (
+          <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
+            Nobody is assigned to this patient.
+          </p>
+        ) : (
+          <Table className="min-w-[720px]">
+            <TableCaption>People assigned to this patient</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Assigned</TableHead>
+                {editable ? <TableHead className="text-right">Actions</TableHead> : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((assignment) => (
+                <TableRow key={assignment.userId}>
+                  <TableCell className="font-medium text-stone-ink">
+                    {assignment.role && editable ? (
+                      <Link href={`/medtechs/${assignment.userId}`} className="hover:text-maroon">
+                        {personName(assignment)}
+                      </Link>
                     ) : (
-                      <ReplaceAssignmentForm
-                        patientId={patientId}
-                        userId={assignment.userId}
-                        options={options}
-                      />
+                      personName(assignment)
                     )}
                   </TableCell>
-                ) : null}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+                  <TableCell className="text-stone-deep">
+                    {assignment.role ? ROLE_LABEL[assignment.role] : "—"}
+                  </TableCell>
+                  <TableCell>{assignmentStatus(assignment)}</TableCell>
+                  <TableCell className="tnum">{formatDate(assignment.linkedAt)}</TableCell>
+                  {editable ? (
+                    <TableCell className="text-right">
+                      {canRemoveAssignment(assignments, assignment.userId) ? (
+                        <RemoveAssignmentForm
+                          patientId={patientId}
+                          userId={assignment.userId}
+                          name={personName(assignment)}
+                        />
+                      ) : (
+                        <ReplaceAssignmentForm
+                          patientId={patientId}
+                          userId={assignment.userId}
+                          options={options}
+                        />
+                      )}
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
 
-      {editable ? (
-        options.length > 0 ? (
-          <Card>
-            <CardContent>
-              <AssignForm patientId={patientId} options={options} />
-            </CardContent>
-          </Card>
-        ) : (
-          <p className="text-[12px] text-stone-mid">
-            Everyone active in this laboratory is already assigned.
-          </p>
-        )
-      ) : null}
+        {editable ? (
+          options.length > 0 ? (
+            <Card>
+              <CardContent>
+                <AssignForm patientId={patientId} options={options} />
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-[12px] text-stone-mid">
+              Everyone active in this laboratory is already assigned.
+            </p>
+          )
+        ) : null}
+      </AssignmentFeedback>
     </section>
   );
 }

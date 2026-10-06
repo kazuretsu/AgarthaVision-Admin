@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] The confirmation after removing or handing over an assignment is shown
+
+Removing an assignment, handing one over, or assigning the last person left unmounted the form
+that made the change, so its success message was never seen. Success is now announced in one
+status line under the patient's Assigned heading, which stays put; errors still show beside the
+form, which a failed change leaves in place.
+
 ## [feat] Org admins do fieldwork: assignable to patients and counted as cover
 
 A membership's role is now a permission level, not a job: an org admin can be assigned their

@@ -90,7 +90,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.
     │   ├── people/            The medtechs table (sortable, paged) and the deactivate form.
-    │   ├── assignments/       A patient's assigned medtechs, with assign/remove/hand over.
+    │   ├── assignments/       Who is assigned to a patient, with assign/remove/hand over.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
     │                          with box overlay, breadcrumbs.

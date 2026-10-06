@@ -57,6 +57,14 @@ clinic's decision. An org admin may assign themselves.
   (constraint #14). Since `admin/0008` the details are `member_id`, `member` and `role`;
   `admin/0007`'s entries say `medtech_id` and `medtech`, and `describeAuditEntry` reads both.
 
+## Feedback
+
+A successful assign, remove or hand-over usually unmounts the form that made it (the row goes,
+or the Assign card gives way to "Everyone active … is already assigned"). So success is
+announced once for the section, in a status line under its heading (`AssignmentFeedback`,
+`src/components/assignments/AssignmentForms.tsx`); an error stays beside its form, which a failed
+change leaves in place.
+
 ## Reads
 
 `console_patient_assignments` (`:35`) returns who is linked to one patient with their
