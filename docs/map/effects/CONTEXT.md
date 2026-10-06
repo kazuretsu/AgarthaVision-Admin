@@ -67,6 +67,12 @@ shows there; do the same for any list that pages or filters through the URL. The
 on the dashboard, audit trail and export are plain GET forms, so Apply reloads the document:
 the route's `loading.tsx` streams in once the server answers.
 
+**A page can be 30 seconds old in the browser.** `staleTimes.dynamic` (`next.config.ts`)
+re-shows a page opened in the last 30 seconds without asking the server
+(`../processes/admin-gate.md`). A server action that changes data must call `revalidatePath`
+(every one does), which empties that cache; a new kind of write that forgets to leaves its
+pages stale for up to 30 seconds.
+
 **`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
 (1000 on Supabase by default) and does not say so. A read that can exceed it goes through
 `readPages` (`src/adapters/supabase/paging.ts`); a "more than N" check on a single

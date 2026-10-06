@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { logTiming } from "@/lib/timing";
 
 /**
  * Session refresh.
@@ -42,8 +43,18 @@ export default async function proxy(request: NextRequest) {
     },
   });
 
-  // Touching getUser() is what triggers the refresh-and-set cycle above.
-  await supabase.auth.getUser();
+  // getClaims() verifies the access token locally against the project's published key
+  // and, only when it has expired, refreshes it — which is what triggers the
+  // refresh-and-set cycle above. A valid token costs no auth round trip (14zcqntkd0y).
+  const start = performance.now();
+  await supabase.auth.getClaims();
+  const milliseconds = performance.now() - start;
+  logTiming("proxy.session", milliseconds);
+  // The browser's Network tab shows this under Timing; the page's own reads are in the logs.
+  response.headers.set(
+    "Server-Timing",
+    `session;desc="Session check";dur=${milliseconds.toFixed(1)}`,
+  );
 
   return response;
 }

@@ -8,6 +8,7 @@ import type {
   StoragePort,
 } from "@/ports";
 import { optionalEnv } from "@/lib/env";
+import { timedPort } from "@/lib/timing";
 
 /**
  * Provider registry — the one place a concrete backend is named.
@@ -19,6 +20,9 @@ import { optionalEnv } from "@/lib/env";
  * Adapters are imported lazily. A future S3 or Postgres adapter must not drag
  * its SDK into the bundle of a deployment that does not use it, and the eager
  * alternative would also make this module unimportable in a unit test.
+ *
+ * Every data, storage and write port is handed out wrapped in `timedPort`, so each
+ * call logs its duration (`src/lib/timing.ts`) without any adapter knowing.
  */
 
 /** Providers with a working implementation today. */
@@ -76,7 +80,7 @@ export async function getDatabase(): Promise<DatabasePort> {
   switch (databaseProvider()) {
     case "supabase": {
       const { createSupabaseDatabase } = await import("./supabase/database");
-      return createSupabaseDatabase();
+      return timedPort("db", await createSupabaseDatabase());
     }
   }
 }
@@ -86,7 +90,7 @@ export async function getStorage(): Promise<StoragePort> {
   switch (storageProvider()) {
     case "supabase": {
       const { createSupabaseStorage } = await import("./supabase/storage");
-      return createSupabaseStorage();
+      return timedPort("storage", await createSupabaseStorage());
     }
   }
 }
@@ -109,7 +113,7 @@ export async function getAdminWrites(): Promise<AdminWritePort> {
   switch (databaseProvider()) {
     case "supabase": {
       const { createSupabaseAdminWrite } = await import("./supabase/admin-write");
-      return createSupabaseAdminWrite();
+      return timedPort("write", await createSupabaseAdminWrite());
     }
   }
 }
@@ -135,7 +139,7 @@ export async function getAccountAccess(): Promise<AccountAccessPort> {
   switch (authProvider()) {
     case "supabase": {
       const { createSupabaseAccountAccess } = await import("./supabase/account-access");
-      return createSupabaseAccountAccess();
+      return timedPort("account", await createSupabaseAccountAccess());
     }
   }
 }
