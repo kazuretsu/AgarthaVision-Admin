@@ -110,6 +110,7 @@ export function PeopleTable({
   actorId,
   organizationId,
   organizationName,
+  lastOrgAdminId,
 }: {
   rows: readonly PeopleRow[];
   total: number;
@@ -119,6 +120,8 @@ export function PeopleTable({
   actorId: string;
   organizationId: string;
   organizationName: string;
+  /** The laboratory's only active org admin, whom nobody deactivates; null when there are more. */
+  lastOrgAdminId: string | null;
 }) {
   if (total === 0) {
     return (
@@ -194,12 +197,17 @@ export function PeopleTable({
                 <TableCell className="text-right">
                   {row.kind === "member" ? (
                     canChangeMemberStatus(access, actorId, organizationId, row.person) ? (
-                      <MemberStatusForm
-                        organizationId={organizationId}
-                        userId={row.person.userId}
-                        name={name?.trim() || email || "this person"}
-                        status={row.person.status}
-                      />
+                      row.person.userId === lastOrgAdminId ? (
+                        <span className="text-[12px] text-stone-mid">Only organization admin</span>
+                      ) : (
+                        <MemberStatusForm
+                          organizationId={organizationId}
+                          userId={row.person.userId}
+                          name={name?.trim() || email || "this person"}
+                          role={row.person.role}
+                          status={row.person.status}
+                        />
+                      )
                     ) : (
                       <span className="text-stone-mid">—</span>
                     )

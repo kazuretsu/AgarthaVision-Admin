@@ -1,13 +1,13 @@
 ---
 verified: 2026-10-06
-commit: 8121cf4
+commit: 8c1c346
 ---
 
 # People and member access
 
 Input: an org admin (or a super admin) on `/people` → Movement: the laboratory's people are
 read with their emails and patient counts; a deactivation blocks the login's sign-in, then
-records the membership's status → Output: a medtech who can no longer sign in to the app or
+records the membership's status → Output: a member who can no longer sign in to the app or
 the console, with nothing deleted.
 
 ## The page
@@ -42,27 +42,64 @@ the email lives in the auth provider's table, which no client may read. It refus
 a super admin or that laboratory's org admin.
 
 A name opens `/people/[userId]` (a super admin's link carries `?org=`): their role, email,
-joined date, status (with deactivate/reactivate, medtechs only) and the laboratory's patients
-assigned to them (`docs/map/processes/patient-assignment.md`). It opens for a member of either
-role, since both do fieldwork (14zcqntkd0w); a patient's Assigned list links to it. Someone of
-another laboratory is a 404.
+joined date, status (with deactivate/reactivate where the viewer may) and the laboratory's
+patients assigned to them (`docs/map/processes/patient-assignment.md`). It opens for a member
+of either role, since both do fieldwork (14zcqntkd0w); a patient's Assigned list links to it.
+Someone of another laboratory is a 404. For a viewer who could deactivate an active member, it
+also reads which of their patients only they cover (`listSoleCoverPatients`, through
+`console_member_sole_cover`, `supabase/migrations/admin/0009_org_admin_status.sql:61`, patient
+ids only) and marks them "Only active member", with a note to hand them over first.
+
+## Who may deactivate whom (`admin/0009`, 14zcqntkd0x)
+
+| Viewer      | A medtech               | An org admin              |
+| ----------- | ----------------------- | ------------------------- |
+| Org admin   | of their own laboratory | never — not even a fellow |
+| Super admin | of any laboratory       | of any laboratory         |
+
+Nobody changes their own status. Super admins make org admins (by invitation), so super admins
+unmake them. `canChangeMemberStatus` (`src/domain/people.ts:182`) decides which rows show the
+action; the database function decides again. On the People page, on the person page and on the
+organization's Members table (`/organizations/[id]`, super admins), the action appears only
+where it is allowed.
+
+**Two deactivations are refused,** in the console before anything is touched and again in the
+database (SQLSTATE `23514`):
+
+- **The laboratory's last active org admin** (`isLastActiveOrgAdmin`, `:198`; hint
+  `last_org_admin`). Without one, nobody there can invite medtechs or assign patients. Their row
+  reads "Only organization admin" instead of a button. Invite the replacement first; to close a
+  laboratory, deactivate the organization. The function locks the laboratory's org admin rows
+  first, so two concurrent deactivations cannot each leave the other.
+- **A patient's only active member,** in either role (hint `sole_cover`): the same "a patient
+  keeps an active member of its laboratory" rule assignments follow
+  (`docs/map/processes/patient-assignment.md`). The function locks the links of every patient
+  the member is on — the rows assigning and removing lock — before counting. Hand the patients
+  over first; the person page lists them.
+
+Reactivating is never refused for either.
 
 ## Deactivate and reactivate
 
-`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:52`):
+`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:78`):
 
-1. Reads the laboratory's people and finds the member; checks `canChangeMemberStatus`
-   (`src/domain/people.ts:181`): a medtech, not the actor, and for an org admin only in their
-   own laboratory. A forged member id from elsewhere is "no longer in this laboratory".
+1. Reads the laboratory's people and finds the member; checks `canChangeMemberStatus` (above).
+   A forged member id from elsewhere is "no longer in this laboratory". For a deactivation it
+   also refuses the last active org admin and a patient's only cover, before step 2, so a
+   refused deactivation never touches the sign-in.
 2. Blocks (or allows) the login's sign-in through `AccountAccessPort`: a Supabase **ban**
    (`src/adapters/supabase/account-access.ts`, service-role client). A profile whose login was
    deleted has nothing to block.
-3. Records the status with `console_set_member_status` (`:71`), which checks the same rule
-   again, writes `member.deactivate` / `member.reactivate` to the audit trail, and does nothing
-   if the status is already that. If it fails, step 2 is undone.
+3. Records the status with `console_set_member_status` (`admin/0009:87`, replacing
+   `admin/0006`'s), which checks the same rules again, writes `member.deactivate` /
+   `member.reactivate` with the member's role to the audit trail ("Deactivated … (organization
+   admin)"), and does nothing if the status is already that. If it fails, step 2 is undone, and
+   a `last_org_admin` or `sole_cover` refusal is explained as above.
 
 **What deactivation does.** A banned login cannot sign in or refresh its session, in the
-console or the app. The app treats a refused refresh as "deactivated" and signs out and wipes
+console or the app. A deactivated org admin is also no org admin to any check
+(`console_org_admin_org` reads active memberships), so their next console click shows the
+no-access page. The app treats a refused refresh as "deactivated" and signs out and wipes
 the phone (SE2 14zcqntjph8). A session already open keeps working until its access token
 expires (up to an hour, Supabase's default): RLS on clinical tables keys on the author, not
 the membership. **Nothing is deleted** — not the account, the profile, the patient links or
@@ -72,9 +109,12 @@ any record (C8). Reactivating lifts the ban.
 
 **Hits**
 
-- `canChangeMemberStatus` and `console_set_member_status` must agree.
+- `canChangeMemberStatus` / `isLastActiveOrgAdmin` and `console_set_member_status` must agree.
+- The cover rule must match `console_unassign_patient` (`admin/0008`): both count any active
+  member of the patient's laboratory.
 - The app's sign-out-and-wipe depends on the ban being visible as a refused refresh.
-- `supabase/tests/admin_0006_member_status.test.sql`.
+- `supabase/tests/admin_0006_member_status.test.sql`,
+  `supabase/tests/admin_0009_org_admin_status.test.sql`.
 
 **Does not hit**
 

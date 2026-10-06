@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-06
-commit: 8121cf4
+commit: 8c1c346
 ---
 
 # Patient assignment
@@ -49,6 +49,9 @@ clinic's decision. An org admin may assign themselves.
   (`canRemoveAssignment`, `:50`); `console_replace_assignment`
   (`admin/0007_patient_assignments.sql:215`, unchanged) assigns the new person and removes the
   old one in one transaction, so it follows both rules above.
+- **Deactivating cannot get around it.** A member who is a patient's only active member cannot
+  be deactivated until the patient is handed over (`admin/0009`,
+  `docs/map/processes/people-access.md`).
 - **Removing is access only.** It deletes the one link row. The patient, sessions, samples,
   reports and their `user_id` authors are untouched (C8); the session table still says who
   read each smear.

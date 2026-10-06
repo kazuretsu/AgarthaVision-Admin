@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { canChangeMemberStatus, isUuid, memberPatientLabel, ROLE_LABEL } from "@/domain";
+import {
+  canChangeMemberStatus,
+  isLastActiveOrgAdmin,
+  isUuid,
+  memberPatientLabel,
+  ROLE_LABEL,
+} from "@/domain";
 import { DatabaseReadError } from "@/ports/db";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -62,13 +68,25 @@ export default async function PersonPage({
     actor.access.kind === "org_admin" ? actor.access.organizationId : param(query.org);
   if (!isUuid(organizationId)) notFound();
 
+  let people;
   let person;
   let patients;
+  let changeable = false;
+  // The patients only this person covers, which must be handed over before they can be
+  // deactivated; read only for someone who could deactivate them.
+  let soleCover = new Set<string>();
   try {
     const db = await getDatabase();
-    person = (await db.listPeople(organizationId)).find((candidate) => candidate.userId === userId);
+    people = await db.listPeople(organizationId);
+    person = people.find((candidate) => candidate.userId === userId);
     if (!person) notFound();
-    patients = await db.listMemberPatients(userId);
+    changeable = canChangeMemberStatus(actor.access, actor.user.id, organizationId, person);
+    [patients, soleCover] = await Promise.all([
+      db.listMemberPatients(userId),
+      changeable && person.status === "active"
+        ? db.listSoleCoverPatients(userId).then((ids) => new Set(ids))
+        : Promise.resolve(new Set<string>()),
+    ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Person" variable={cause.variable} />;
@@ -106,15 +124,33 @@ export default async function PersonPage({
             <Badge variant="neutral">Deactivated</Badge>
           )}
         </div>
-        {canChangeMemberStatus(actor.access, actor.user.id, organizationId, person) ? (
+        {!changeable ? null : isLastActiveOrgAdmin(people, person.userId) ? (
+          <p className="max-w-72 text-right text-[12px] text-stone-mid">
+            The only active organization admin of this laboratory. Invite another before
+            deactivating them.
+          </p>
+        ) : (
           <MemberStatusForm
             organizationId={organizationId}
             userId={person.userId}
             name={name}
+            role={person.role}
             status={person.status}
           />
-        ) : null}
+        )}
       </header>
+
+      {soleCover.size > 0 ? (
+        <p
+          role="note"
+          className="rounded-[12px] border border-stone-hair bg-warn-tint px-4 py-3 text-[13px] text-warn"
+        >
+          {name} is the only active member on {soleCover.size} patient
+          {soleCover.size === 1 ? "" : "s"}, marked below. Hand{" "}
+          {soleCover.size === 1 ? "it" : "them"} over on the patient&apos;s page before deactivating{" "}
+          {name}: a patient always keeps an active member of its laboratory.
+        </p>
+      ) : null}
 
       <Card>
         <CardContent className="grid grid-cols-3 gap-4">
@@ -146,6 +182,7 @@ export default async function PersonPage({
                   <TableHead>Patient</TableHead>
                   <TableHead>Barangay PSGC</TableHead>
                   <TableHead>Assigned</TableHead>
+                  {soleCover.size > 0 ? <TableHead>Cover</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -163,6 +200,13 @@ export default async function PersonPage({
                       {patient.psgcBarangayCode}
                     </TableCell>
                     <TableCell className="tnum">{formatDate(patient.linkedAt)}</TableCell>
+                    {soleCover.size > 0 ? (
+                      <TableCell>
+                        {soleCover.has(patient.patientId) ? (
+                          <Badge variant="warn">Only active member</Badge>
+                        ) : null}
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>

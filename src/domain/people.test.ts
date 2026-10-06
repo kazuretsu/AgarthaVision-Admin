@@ -5,6 +5,7 @@ import {
   canChangeMemberStatus,
   canViewPeople,
   filterPeopleByRole,
+  isLastActiveOrgAdmin,
   parsePeopleRole,
   peopleRows,
   parsePeopleSort,
@@ -161,7 +162,7 @@ describe("sortPeople", () => {
 });
 
 describe("who may change whom", () => {
-  it("an org admin changes their own laboratory's medtechs, never themselves or an admin", () => {
+  it("an org admin changes their own laboratory's medtechs, never themselves or an org admin", () => {
     expect(canChangeMemberStatus(ADMIN_A, "me", "lab-a", { userId: "m", role: "medtech" })).toBe(
       true,
     );
@@ -176,11 +177,28 @@ describe("who may change whom", () => {
     );
   });
 
-  it("a super admin changes any laboratory's medtechs", () => {
+  it("a super admin changes anyone in any laboratory, org admins included, never themselves", () => {
     expect(canChangeMemberStatus(SUPER, "me", "lab-b", { userId: "m", role: "medtech" })).toBe(
       true,
     );
     expect(canChangeMemberStatus(SUPER, "me", "lab-b", { userId: "o", role: "org_admin" })).toBe(
+      true,
+    );
+    expect(canChangeMemberStatus(SUPER, "me", "lab-b", { userId: "me", role: "org_admin" })).toBe(
+      false,
+    );
+  });
+
+  it("the last active org admin is protected; reactivation and medtechs are not", () => {
+    const lab = [
+      person({ userId: "o1", role: "org_admin" }),
+      person({ userId: "o2", role: "org_admin", status: "deactivated" }),
+      person({ userId: "m" }),
+    ];
+    expect(isLastActiveOrgAdmin(lab, "o1")).toBe(true);
+    expect(isLastActiveOrgAdmin(lab, "o2")).toBe(false);
+    expect(isLastActiveOrgAdmin(lab, "m")).toBe(false);
+    expect(isLastActiveOrgAdmin([...lab, person({ userId: "o3", role: "org_admin" })], "o1")).toBe(
       false,
     );
   });

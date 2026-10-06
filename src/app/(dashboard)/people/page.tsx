@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { getDatabase } from "@/adapters/registry";
 import {
   canViewPeople,
+  isLastActiveOrgAdmin,
   invitationState,
   isUuid,
   filterPeopleByRole,
@@ -105,6 +106,9 @@ async function People({
         actorId={actorId}
         organizationId={organizationId}
         organizationName={organizationName}
+        lastOrgAdminId={
+          people.find((person) => isLastActiveOrgAdmin(people, person.userId))?.userId ?? null
+        }
       />
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-stone-ink">Invitation history</h2>

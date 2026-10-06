@@ -133,6 +133,13 @@ export interface DatabasePort {
   /** The laboratory's patients one member is assigned to, newest link first. */
   listMemberPatients(userId: string): Promise<MemberPatient[]>;
 
+  /**
+   * The ids of the laboratory's patients this member is the only active member on:
+   * what must be handed over before they can be deactivated. Throws
+   * {@link DatabaseReadError} for a member the caller may not read.
+   */
+  listSoleCoverPatients(userId: string): Promise<string[]>;
+
   /** One invitation by id; `null` when absent or hidden. */
   getInvitation(invitationId: string): Promise<Invitation | null>;
 

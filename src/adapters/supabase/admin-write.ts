@@ -12,7 +12,7 @@ import { createRequestClient } from "./client";
 /**
  * Supabase implementation of {@link AdminWritePort}.
  *
- * Each write is one call to a security-definer function (`admin/0001`, `0003`, `0005`–`0007`), run as
+ * Each write is one call to a security-definer function (`admin/0001`, `0003`, `0005`–`0009`), run as
  * the signed-in user. The function checks the caller, performs the write and
  * appends the audit row in one transaction, so a write without its audit entry
  * cannot happen. No table is written directly: the tables have no write policies.

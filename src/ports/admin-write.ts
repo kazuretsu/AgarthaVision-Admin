@@ -50,9 +50,11 @@ export interface AdminWritePort {
   revokeInvitation(invitationId: string): Promise<void>;
 
   /**
-   * Records a medtech's membership as deactivated or active. Blocking or allowing
-   * their sign-in is the caller's other half ({@link AccountAccessPort}); this
-   * deletes nothing.
+   * Records a member's membership as deactivated or active; an org admin's, super
+   * admins only. Refused (`invalid`) with hint `last_org_admin` or `sole_cover` when
+   * deactivating would leave the laboratory with no active org admin or a patient
+   * with no active member. Blocking or allowing their sign-in is the caller's other
+   * half ({@link AccountAccessPort}); this deletes nothing.
    */
   setMemberStatus(userId: string, status: OrganizationStatus): Promise<void>;
 

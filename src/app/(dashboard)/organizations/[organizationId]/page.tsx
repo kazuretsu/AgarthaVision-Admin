@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { isUuid } from "@/domain";
+import { canChangeMemberStatus, isLastActiveOrgAdmin, isUuid } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { requirePageAccess } from "@/lib/console-access";
 import { formatDate, personName } from "@/lib/format";
@@ -14,6 +14,7 @@ import {
 } from "@/components/organizations/OrganizationForms";
 import { InviteForm } from "@/components/invitations/InvitationForms";
 import { InvitationTable } from "@/components/invitations/InvitationTable";
+import { MemberStatusForm } from "@/components/people/MemberStatusForm";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +104,7 @@ export default async function OrganizationPage({
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -118,6 +120,26 @@ export default async function OrganizationPage({
                   </TableCell>
                   <TableCell>{member.status === "active" ? "Active" : "Deactivated"}</TableCell>
                   <TableCell className="tnum">{formatDate(member.addedAt)}</TableCell>
+                  <TableCell className="text-right">
+                    {!canChangeMemberStatus(
+                      actor.access,
+                      actor.user.id,
+                      organization.id,
+                      member,
+                    ) ? (
+                      <span className="text-stone-mid">—</span>
+                    ) : isLastActiveOrgAdmin(organization.members, member.userId) ? (
+                      <span className="text-[12px] text-stone-mid">Only organization admin</span>
+                    ) : (
+                      <MemberStatusForm
+                        organizationId={organization.id}
+                        userId={member.userId}
+                        name={personName(member)}
+                        role={member.role}
+                        status={member.status}
+                      />
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

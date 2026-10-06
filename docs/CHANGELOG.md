@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Deactivate and reactivate an org admin
+
+A super admin now deactivates and reactivates organization admins the way medtechs are: the
+login is banned (nothing deleted), the membership is recorded and audited ("Deactivated …
+(organization admin)"), and a deactivated org admin loses the console on their next click and
+the app's sign-in. `admin/0009_org_admin_status.sql` (**apply it in the SQL editor**, after
+`admin/0008`) replaces `console_set_member_status` and adds `console_member_sole_cover`. Rules,
+in the page and in the database: only a super admin changes an org admin (org admins still
+manage their laboratory's medtechs); nobody changes themselves; the laboratory's last active
+org admin cannot be deactivated (invite another first, or deactivate the organization); and
+nobody — either role — is deactivated while they are a patient's only active member, which
+closes the gap where deactivating a medtech could leave a patient with nobody. A person's page
+marks those patients to hand over first. Refusals are checked before the sign-in is touched.
+The actions appear on People, the person page and the organization's Members table.
+
 ## [feat] An org admin sees everyone in their laboratory, org admins included
 
 The Medtechs page is now **People** (`/people`; `/medtechs` and `/medtechs/[id]` redirect
