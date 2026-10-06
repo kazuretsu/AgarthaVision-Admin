@@ -20,7 +20,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │   └── db-test.ts             bun run test:db. Local databases only.
 ├── supabase/
 │   ├── migrations/admin/      This repo's own migrations, additive only (D4).
-│   └── tests/                 SQL tests, Supabase stubs, helpers, pre-admin seed.
+│   └── tests/                 SQL tests (and TS parity tests), Supabase stubs, helpers, seed.
 ├── lint-staged.config.js      **/*.{ts,tsx} → eslint --fix, prettier --write.
 ├── eslint.config.mjs          next/core-web-vitals + next/typescript + prettier.
 ├── next.config.ts             Minimal. Strict mode on.
@@ -86,7 +86,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
     │   │                      paging.ts), reports (row mapping), admin-write, storage, auth,
-    │   │                      onboarding (accepting an invitation), account-access (bans).
+    │   │                      onboarding (accepting an invitation), account-access (bans),
+    │   │                      errors (a migration not applied yet).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.

@@ -194,3 +194,108 @@ describe("SupabaseDatabaseAdapter.listPatients — one page at a time", () => {
     ).rejects.toThrow("listPatients");
   });
 });
+
+/** A client whose RPCs answer `answer` and record their calls; table reads return nothing. */
+function rpcClient(answer: { data: unknown; error: unknown }) {
+  const { client: tables, requests } = recordingClient(null);
+  const rpcs: { name: string; args: unknown }[] = [];
+  const client = {
+    from: (tables as unknown as { from: (source: string) => unknown }).from,
+    rpc(name: string, args: unknown) {
+      rpcs.push({ name, args });
+      return Promise.resolve(answer);
+    },
+  };
+  return { client: client as unknown as SupabaseClient, rpcs, requests };
+}
+
+const LAB = "00000000-0000-4000-8000-000000000001";
+
+describe("SupabaseDatabaseAdapter — dashboard totals (14zcqntkg7p)", () => {
+  const row = {
+    sessions: 4,
+    patients: 2,
+    smears_examined: 3,
+    positive_smears: 1,
+    fields_verified: 9,
+    trend: [{ week_start: "2026-08-31", examined: 3, positive: 1 }],
+    species: [{ species: "Hookworm", positive_smears: 1 }],
+  };
+
+  it("asks the database once for the period and scope, and reads no table", async () => {
+    const { client, rpcs, requests } = rpcClient({ data: row, error: null });
+    const totals = await new SupabaseDatabaseAdapter(client).dashboardTotals({
+      scope: { kind: "organization", organizationId: LAB },
+      disclosure: "identified",
+      startedFrom: "2026-09-01",
+      startedTo: "2026-09-30",
+    });
+    expect(rpcs).toEqual([
+      {
+        name: "console_dashboard_figures",
+        args: { p_organization: LAB, p_from: "2026-09-01", p_to: "2026-09-30" },
+      },
+    ]);
+    expect(requests).toEqual([]);
+    expect(totals).toEqual({
+      sessions: 4,
+      patients: 2,
+      smearsExamined: 3,
+      positiveSmears: 1,
+      fieldsVerified: 9,
+      trend: [{ weekStart: "2026-08-31", examined: 3, positive: 1 }],
+      species: [{ species: "Hookworm", positiveSmears: 1 }],
+    });
+  });
+
+  it("sends no organization for a super admin's all-laboratories scope", async () => {
+    const { client, rpcs } = rpcClient({ data: row, error: null });
+    await new SupabaseDatabaseAdapter(client).dashboardTotals({
+      scope: { kind: "all" },
+      disclosure: "deidentified",
+    });
+    expect(rpcs[0]?.args).toEqual({ p_organization: null, p_from: null, p_to: null });
+  });
+
+  it("before admin/0011, counts the sessions itself, still through the de-identified views", async () => {
+    const { client, requests } = rpcClient({ data: null, error: { code: "PGRST202" } });
+    const totals = await new SupabaseDatabaseAdapter(client).dashboardTotals({
+      scope: { kind: "all" },
+      disclosure: "deidentified",
+    });
+    expect(totals.smearsExamined).toBe(0);
+    expect(requests.map((request) => request.source)).toEqual(["sessions_deidentified"]);
+  });
+
+  it("throws on any other failure rather than showing zeros", async () => {
+    const { client } = rpcClient({ data: null, error: { code: "42501" } });
+    await expect(
+      new SupabaseDatabaseAdapter(client).dashboardTotals({
+        scope: { kind: "all" },
+        disclosure: "deidentified",
+      }),
+    ).rejects.toThrow(/dashboardTotals/);
+  });
+});
+
+describe("SupabaseDatabaseAdapter — audit person filter (14zcqntkg7p)", () => {
+  it("lists only the people in the readable trail, in the scope asked for", async () => {
+    const { client, rpcs, requests } = rpcClient({
+      data: [{ actor_id: "u1", actor_label: "Ana" }],
+      error: null,
+    });
+    const actors = await new SupabaseDatabaseAdapter(client).listAuditActors({
+      kind: "organization",
+      organizationId: LAB,
+    });
+    expect(rpcs).toEqual([{ name: "console_audit_actors", args: { p_organization: LAB } }]);
+    expect(requests).toEqual([]);
+    expect(actors).toEqual([{ id: "u1", label: "Ana" }]);
+  });
+
+  it("before admin/0011, falls back to the profiles the caller may read", async () => {
+    const { client, requests } = rpcClient({ data: null, error: { code: "PGRST202" } });
+    await new SupabaseDatabaseAdapter(client).listAuditActors({ kind: "all" });
+    expect(requests.map((request) => request.source)).toEqual(["profiles"]);
+  });
+});

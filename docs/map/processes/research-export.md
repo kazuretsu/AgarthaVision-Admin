@@ -19,8 +19,11 @@ Output: a CSV or JSON download, one row per examined smear.
    by default) whatever `.limit()` asks. It asks for one more than
    `RESEARCH_EXPORT_LIMIT` (20,000, `src/domain/research-export.ts:27`) and a period over it
    is refused with 413 (`:73` of the route) rather than cut short, because a partial file
-   would be silently wrong. The export page reads with the same limit, so its count matches
-   the file and it warns before the click. A failed read is a 502 with no database detail.
+   would be silently wrong. The export page does not read rows: it asks
+   `console_dashboard_figures()` (`dashboard-figures.md`) once for the examined count and the
+   period's session count, and warns before the click when the sessions exceed the limit. The
+   file's rows are the examined smears, so the count matches it. A failed read is a 502 with
+   no database detail.
 3. **Build.** `buildResearchExport` (`src/domain/research-export.ts:100`) keeps examined
    smears only — a session never read has nothing to report — oldest first, and
    `toResearchExportRow` (`:60`) fills the columns from the same `SessionSummary` the records

@@ -1,6 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isLiveSample, isUuid, parseDetectionVerdict, summariseSession } from "@/domain";
+import {
+  RESEARCH_EXPORT_LIMIT,
+  isLiveSample,
+  isUuid,
+  parseDetectionVerdict,
+  summariseSession,
+  totalsOf,
+} from "@/domain";
 import type {
+  AuditActor,
+  DashboardTotals,
   Detection,
   Patient,
   PatientDisclosure,
@@ -33,11 +42,13 @@ import {
   DatabaseReadError,
   INVITATION_LIST_LIMIT,
   type AuditQuery,
+  type DashboardTotalsQuery,
   type DatabasePort,
   type PatientQuery,
   type SmearQuery,
 } from "@/ports/db";
 import { createRequestClient } from "./client";
+import { isFunctionNotFound } from "./errors";
 import { PAGE_SIZE, readPages } from "./paging";
 
 /**
@@ -156,7 +167,7 @@ interface ProfileRow {
  */
 const DEFAULT_LIMIT = 1000;
 
-/** Default cap for the dashboard's one-row-per-session read; callers may pass their own. */
+/** Default cap for the one-row-per-session read; callers may pass their own. */
 const SMEAR_LIMIT = 5000;
 
 /** Patients per page of the records list, when the caller does not say. */
@@ -476,6 +487,36 @@ function liveSampleDetails(
     .sort((left, right) => left.sample.capturedAt.localeCompare(right.sample.capturedAt));
 }
 
+/** What `console_dashboard_figures()` returns (admin/0011). */
+interface DashboardTotalsRow {
+  sessions: number;
+  patients: number;
+  smears_examined: number;
+  positive_smears: number;
+  fields_verified: number;
+  trend: { week_start: string; examined: number; positive: number }[] | null;
+  species: { species: string; positive_smears: number }[] | null;
+}
+
+function toDashboardTotals(row: DashboardTotalsRow): DashboardTotals {
+  return {
+    sessions: row.sessions,
+    patients: row.patients,
+    smearsExamined: row.smears_examined,
+    positiveSmears: row.positive_smears,
+    fieldsVerified: row.fields_verified,
+    trend: (row.trend ?? []).map((point) => ({
+      weekStart: point.week_start,
+      examined: point.examined,
+      positive: point.positive,
+    })),
+    species: (row.species ?? []).map((entry) => ({
+      species: entry.species,
+      positiveSmears: entry.positive_smears,
+    })),
+  };
+}
+
 export class SupabaseDatabaseAdapter implements DatabasePort {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -703,6 +744,31 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     }));
   }
 
+  async dashboardTotals(query: DashboardTotalsQuery): Promise<DashboardTotals> {
+    const { scope, startedFrom, startedTo } = query;
+    // The function decides the scope again on its side: an org admin asking for
+    // another laboratory, or for all of them, is refused there too.
+    const { data, error } = await this.client.rpc("console_dashboard_figures", {
+      p_organization: scopedOrganization(scope),
+      p_from: startedFrom ?? null,
+      p_to: startedTo ?? null,
+    });
+    if (error && isFunctionNotFound(error)) return this.dashboardTotalsWithoutFunction(query);
+    if (error || !data) throw new DatabaseReadError("dashboardTotals", error);
+    return toDashboardTotals(data as DashboardTotalsRow);
+  }
+
+  /**
+   * Before `admin/0011` is applied: every session read and counted here, as the
+   * dashboard did before. Capped at the export's limit, past which the export page
+   * refuses the period anyway.
+   */
+  private async dashboardTotalsWithoutFunction(
+    query: DashboardTotalsQuery,
+  ): Promise<DashboardTotals> {
+    return totalsOf(await this.listSmears({ ...query, limit: RESEARCH_EXPORT_LIMIT + 1 }));
+  }
+
   async listOrganizations(): Promise<OrganizationSummary[]> {
     const { data, error } = await this.client
       .from("organizations")
@@ -909,14 +975,28 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     return data ? toProfile(data as ProfileRow) : null;
   }
 
-  async listProfiles(): Promise<Profile[]> {
+  async listAuditActors(scope: ReadScope): Promise<AuditActor[]> {
+    const { data, error } = await this.client.rpc("console_audit_actors", {
+      p_organization: scopedOrganization(scope),
+    });
+    if (error && isFunctionNotFound(error)) return this.auditActorsWithoutFunction();
+    if (error) throw new DatabaseReadError("listAuditActors", error);
+    type Row = { actor_id: string; actor_label: string | null };
+    return ((data as Row[] | null) ?? []).map((row) => ({
+      id: row.actor_id,
+      label: row.actor_label,
+    }));
+  }
+
+  /** Before `admin/0011` is applied: every profile the caller may read, as before. */
+  private async auditActorsWithoutFunction(): Promise<AuditActor[]> {
     const { data, error } = await this.client
       .from("profiles")
       .select("id, full_name, created_at")
       .order("full_name", { ascending: true, nullsFirst: false });
 
-    if (error) throw new DatabaseReadError("listProfiles", error);
-    return ((data ?? []) as ProfileRow[]).map(toProfile);
+    if (error) throw new DatabaseReadError("listAuditActors", error);
+    return ((data ?? []) as ProfileRow[]).map((row) => ({ id: row.id, label: row.full_name }));
   }
 }
 

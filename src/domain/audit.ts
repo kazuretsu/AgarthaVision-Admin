@@ -6,6 +6,12 @@
  * describes them.
  */
 
+/** Someone who appears in the trail, under the label their latest entry carries. */
+export interface AuditActor {
+  id: string;
+  label: string | null;
+}
+
 export interface AuditEntry {
   id: number;
   at: string;

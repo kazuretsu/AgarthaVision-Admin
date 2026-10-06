@@ -1,6 +1,7 @@
 import type { PatientDisclosure, PatientPage, PatientRecord, Profile } from "@/domain";
-import type { SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
+import type { DashboardTotals, SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
 import type {
+  AuditActor,
   AuditEntry,
   Invitation,
   MemberPatient,
@@ -66,6 +67,9 @@ export interface SmearQuery {
   limit?: number;
 }
 
+/** A period's totals: the smear query without a row cap, since nothing is downloaded. */
+export type DashboardTotalsQuery = Omit<SmearQuery, "limit">;
+
 export interface AuditQuery {
   /** Whose entries: an organization's, or all of them for a super admin. */
   scope: ReadScope;
@@ -106,8 +110,14 @@ export interface DatabasePort {
     disclosure: PatientDisclosure,
   ): Promise<SampleRecordDetail | null>;
 
-  /** Every session in the period with its summary, for the dashboard and the export. */
+  /** Every session in the period with its summary, for the export file. */
   listSmears(query: SmearQuery): Promise<SmearRecord[]>;
+
+  /**
+   * The dashboard's counts for a scope and period, counted where the rows are: one
+   * request, whatever the period holds. The export page reads its count here too.
+   */
+  dashboardTotals(query: DashboardTotalsQuery): Promise<DashboardTotals>;
 
   /** Organizations the caller may read, by name, with member and patient counts. */
   listOrganizations(): Promise<OrganizationSummary[]>;
@@ -149,8 +159,11 @@ export interface DatabasePort {
   /** One profile by id, or `null` when it is absent or unreadable. */
   getProfile(userId: string): Promise<Profile | null>;
 
-  /** Profiles the caller may read, for owner labels and the owner filter. */
-  listProfiles(): Promise<Profile[]>;
+  /**
+   * The people who appear in the audit trail the caller can read, for its person
+   * filter: within one organization's entries, or all of them for a super admin.
+   */
+  listAuditActors(scope: ReadScope): Promise<AuditActor[]>;
 }
 
 /** The most invitations one organization's list shows; the page says when it stops there. */

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getDatabase } from "@/adapters/registry";
 import {
+  figuresFromTotals,
   patientDisclosureFor,
-  summariseDashboard,
   type ConsoleAccess,
   type OrganizationSummary,
   type ReadScope,
@@ -25,10 +25,11 @@ import { Input } from "@/components/ui/input";
 /**
  * The landing dashboard, counted per smear on the app's rule.
  *
- * Every figure comes from `summariseDashboard`: a smear is examined once a live
- * field was verified and positive when a live field carries a counted detection —
- * the rule `barangay_prevalence()` uses, so this page and the map agree. No EPG
- * and no WHO intensity tier; both were retracted for direct smear.
+ * The counts come from the database in one request (`console_dashboard_figures()`,
+ * admin/0011), whatever the period holds, on `summariseDashboard`'s rules: a smear
+ * is examined once a live field was verified and positive when a live field carries
+ * a counted detection — the rule `barangay_prevalence()` uses, so this page and the
+ * map agree. No EPG and no WHO intensity tier; both were retracted for direct smear.
  *
  * The header and filters render first; the figures read inside a Suspense
  * boundary keyed by the filters, so the first visit and every new period show
@@ -36,14 +37,11 @@ import { Input } from "@/components/ui/input";
  */
 export const dynamic = "force-dynamic";
 
-/** Sessions read for one dashboard. Reaching it means the figures would be partial. */
-const SMEAR_LIMIT = 5000;
-
 function percent(rate: number | null): string {
   return rate === null ? "—" : `${(rate * 100).toFixed(1)}%`;
 }
 
-/** The figures for one period and scope: the slow read, streamed into its skeleton. */
+/** The figures for one period and scope, streamed into their skeleton. */
 async function DashboardFigures({
   access,
   scope,
@@ -53,17 +51,18 @@ async function DashboardFigures({
   scope: ReadScope;
   period: Period;
 }) {
-  let smears;
+  let figures;
   try {
-    smears = await (
-      await getDatabase()
-    ).listSmears({
-      scope,
-      disclosure: patientDisclosureFor(access),
-      startedFrom: period.from,
-      startedTo: period.to,
-      limit: SMEAR_LIMIT + 1,
-    });
+    figures = figuresFromTotals(
+      await (
+        await getDatabase()
+      ).dashboardTotals({
+        scope,
+        disclosure: patientDisclosureFor(access),
+        startedFrom: period.from,
+        startedTo: period.to,
+      }),
+    );
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return (
@@ -75,20 +74,8 @@ async function DashboardFigures({
     throw cause;
   }
 
-  // One past the limit was asked for, so "more than the limit" is observable.
-  const truncated = smears.length > SMEAR_LIMIT;
-  if (truncated) smears = smears.slice(0, SMEAR_LIMIT);
-  const figures = summariseDashboard(smears);
-
   return (
     <>
-      {truncated ? (
-        <p role="status" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
-          This period holds more than {SMEAR_LIMIT.toLocaleString()} sessions, so these figures
-          cover only the most recent ones. Narrow the period for complete figures.
-        </p>
-      ) : null}
-
       <section aria-label="Summary" className="grid grid-cols-5 gap-3">
         <StatCard
           label="Patients"

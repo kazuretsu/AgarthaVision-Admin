@@ -6,7 +6,7 @@ import {
   auditActionLabel,
   describeAuditEntry,
   type OrganizationSummary,
-  type Profile,
+  type AuditActor,
   type ReadScope,
 } from "@/domain";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -157,12 +157,12 @@ export default async function AuditPage({
   const { actor, scope } = await scopeForRequest(params.org);
   const isSuperAdmin = actor.access.kind === "super_admin";
 
-  let people: Profile[];
+  let actors: AuditActor[];
   let organizations: OrganizationSummary[] = [];
   try {
     const db = await getDatabase();
-    [people, organizations] = await Promise.all([
-      db.listProfiles(),
+    [actors, organizations] = await Promise.all([
+      db.listAuditActors(scope),
       isSuperAdmin ? db.listOrganizations() : Promise.resolve([]),
     ]);
   } catch (cause) {
@@ -172,8 +172,6 @@ export default async function AuditPage({
     throw cause;
   }
 
-  // Everyone the reader may see: an org admin's own members, or every profile.
-  const actors = people;
   const filtered = Boolean(actorId || action || period.from || period.to || params.org);
 
   return (
@@ -191,9 +189,10 @@ export default async function AuditPage({
           <span className="text-[12px] font-medium text-stone-deep">Person</span>
           <NativeSelect name="actor" defaultValue={actorId ?? ""}>
             <NativeSelectOption value="">Anyone</NativeSelectOption>
+            {/* Only people who appear in the trail the reader can read (admin/0011). */}
             {actors.map((person) => (
               <NativeSelectOption key={person.id} value={person.id}>
-                {person.fullName?.trim() || "Unnamed user"}
+                {person.label?.trim() || "Unnamed user"}
               </NativeSelectOption>
             ))}
           </NativeSelect>

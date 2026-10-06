@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [enhancements] Dashboard and export totals are counted in the database, in one request
+
+The dashboard and the export page no longer download every session in the period, 1,000 rows
+at a time, to add them up. `console_dashboard_figures()` (`admin/0011_dashboard_totals.sql`,
+**apply it in the SQL editor**; until it is, the console counts the old way) returns the
+counts in one request of a few hundred bytes, scoped in the database: an org admin their own
+laboratory only, a super admin all or one. The console derives rates, shares and order from
+them (`figuresFromTotals`). `summariseDashboard` stays as the reference, and a database test
+runs both on one fixture and requires identical figures. With no row read there is no cap:
+the dashboard's "more than 5,000 sessions, figures partial" notice is gone, and the export
+page's count is exact. On 20,000 synthetic sessions an org admin's month went from 10.2 s to
+0.13 s, and all time from failing after 55 s to 0.28 s. The audit trail's person filter lists
+only the people who appear in the trail the reader can read (`console_audit_actors()`), not
+every profile.
+
 ## [enhancements] A sidebar click makes one access round trip, and recent pages re-show at once
 
 The session is now verified locally with `getClaims()` against the project's ECC signing key,
