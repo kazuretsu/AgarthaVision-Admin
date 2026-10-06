@@ -31,7 +31,7 @@ const NOT_PERMITTED: MemberFormState = {
   done: null,
 };
 const SIGNED_OUT: MemberFormState = {
-  error: "Your session has ended. Sign in again to manage medtechs.",
+  error: "Your session has ended. Sign in again to manage people.",
   done: null,
 };
 const NOT_FOUND: MemberFormState = {
@@ -123,7 +123,7 @@ export async function setMemberStatus(
     throw cause;
   }
 
-  revalidatePath("/medtechs");
+  revalidatePath("/people");
   revalidatePath(`/organizations/${organizationId}`);
   return {
     error: null,

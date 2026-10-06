@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-06
-commit: 1d7180f
+commit: 8121cf4
 ---
 
 # Patient assignment
@@ -24,7 +24,7 @@ change is a security-definer function.
 
 ## Who does what
 
-| Who                         | Patient page                       | Person page (`/medtechs/[id]`)           |
+| Who                         | Patient page                       | Person page (`/people/[id]`)             |
 | --------------------------- | ---------------------------------- | ---------------------------------------- |
 | Org admin of the laboratory | sees, assigns, removes, hands over | sees the person's patients, named        |
 | Super admin                 | sees who is assigned (read only)   | sees them de-identified (`?org=` needed) |
@@ -89,4 +89,4 @@ laboratory and withholds names from a super admin. Both refuse anyone else.
 ## See
 
 `src/domain/assignments.ts`, `src/app/(dashboard)/assignments/actions.ts`,
-`src/components/assignments/`, `src/app/(dashboard)/medtechs/[userId]/page.tsx`.
+`src/components/assignments/`, `src/app/(dashboard)/people/[userId]/page.tsx`.

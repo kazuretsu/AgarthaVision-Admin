@@ -2,6 +2,16 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] An org admin sees everyone in their laboratory, org admins included
+
+The Medtechs page is now **People** (`/people`; `/medtechs` and `/medtechs/[id]` redirect
+permanently, query kept). It lists every member of the laboratory, org admins and medtechs,
+with the open invitations of either role. A **Role** column and a role filter (Everyone /
+Organization admins / Medtechs) join search, sort (now also by role) and paging in the URL; the
+email sits under the name. The signed-in person's own row is marked "You". Actions are
+unchanged: a row shows only what the viewer may do. No schema change: `console_organization_people`
+already returned everyone.
+
 ## [fix] The confirmation after removing or handing over an assignment is shown
 
 Removing an assignment, handing one over, or assigning the last person left unmounted the form

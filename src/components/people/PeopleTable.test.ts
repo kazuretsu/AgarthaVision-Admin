@@ -7,18 +7,24 @@ vi.mock("@/components/invitations/InvitationForms", () => ({ InvitationActions: 
 
 const { peopleHref } = await import("./PeopleTable");
 
-const BASE = { org: "", q: "", sort: "name", dir: "asc", page: 1 } as const;
+const BASE = { org: "", q: "", role: "all", sort: "name", dir: "asc", page: 1 } as const;
 
 describe("peopleHref", () => {
   it("leaves defaults out of the URL", () => {
-    expect(peopleHref(BASE)).toBe("/medtechs");
+    expect(peopleHref(BASE)).toBe("/people");
   });
 
   it("keeps the search and organization when sorting or paging", () => {
     const query = { ...BASE, org: "lab-b", q: "ana cruz" };
     expect(peopleHref(query, { sort: "patients", dir: "desc", page: 1 })).toBe(
-      "/medtechs?org=lab-b&q=ana+cruz&sort=patients&dir=desc",
+      "/people?org=lab-b&q=ana+cruz&sort=patients&dir=desc",
     );
-    expect(peopleHref(query, { page: 3 })).toBe("/medtechs?org=lab-b&q=ana+cruz&page=3");
+    expect(peopleHref(query, { page: 3 })).toBe("/people?org=lab-b&q=ana+cruz&page=3");
+  });
+
+  it("keeps the role filter", () => {
+    expect(peopleHref({ ...BASE, role: "org_admin" }, { sort: "joined" })).toBe(
+      "/people?role=org_admin&sort=joined",
+    );
   });
 });

@@ -80,8 +80,8 @@ function ids(formData: FormData, ...names: string[]): string[] | null {
 
 function refresh(patientId: string, ...userIds: string[]) {
   revalidatePath(`/records/patients/${patientId}`);
-  revalidatePath("/medtechs");
-  for (const userId of userIds) revalidatePath(`/medtechs/${userId}`);
+  revalidatePath("/people");
+  for (const userId of userIds) revalidatePath(`/people/${userId}`);
 }
 
 /** The person, when they are an active member of this laboratory not yet assigned. */

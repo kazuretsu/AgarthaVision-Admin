@@ -2,9 +2,13 @@ import Link from "next/link";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import {
   PERSON_STATUS_LABEL,
+  PEOPLE_ROLE_FILTER_LABEL,
+  ROLE_LABEL,
   canChangeMemberStatus,
   canManageInvitation,
+  rowRole,
   type ConsoleAccess,
+  type PeopleRoleFilter,
   type PeopleRow,
   type PeopleSort,
   type PersonStatus,
@@ -38,6 +42,7 @@ import { MemberStatusForm } from "./MemberStatusForm";
 export interface PeopleQuery {
   org: string;
   q: string;
+  role: PeopleRoleFilter;
   sort: PeopleSort;
   dir: SortDirection;
   page: number;
@@ -48,11 +53,12 @@ export function peopleHref(query: PeopleQuery, change: Partial<PeopleQuery> = {}
   const params = new URLSearchParams();
   if (next.org) params.set("org", next.org);
   if (next.q) params.set("q", next.q);
+  if (next.role !== "all") params.set("role", next.role);
   if (next.sort !== "name") params.set("sort", next.sort);
   if (next.dir !== "asc") params.set("dir", next.dir);
   if (next.page > 1) params.set("page", String(next.page));
   const search = params.toString();
-  return search ? `/medtechs?${search}` : "/medtechs";
+  return search ? `/people?${search}` : "/people";
 }
 
 const BADGE: Record<PersonStatus, "ok" | "neutral" | "default" | "warn"> = {
@@ -64,7 +70,7 @@ const BADGE: Record<PersonStatus, "ok" | "neutral" | "default" | "warn"> = {
 
 const COLUMNS: { sort: PeopleSort; label: string; className?: string }[] = [
   { sort: "name", label: "Name" },
-  { sort: "email", label: "Email" },
+  { sort: "role", label: "Role" },
   { sort: "status", label: "Status" },
   { sort: "joined", label: "Joined" },
   { sort: "patients", label: "Patients", className: "text-right" },
@@ -91,8 +97,9 @@ function SortHeader({ query, column }: { query: PeopleQuery; column: (typeof COL
 }
 
 /**
- * A laboratory's medtechs and the medtechs it has invited, one page of them, with
- * deactivate, reactivate, re-send and revoke where this user may.
+ * Everyone in a laboratory — org admins and medtechs — and the people it has
+ * invited, one page of them, with deactivate, reactivate, re-send and revoke
+ * where this user may. The signed-in person's own row is marked.
  */
 export function PeopleTable({
   rows,
@@ -116,7 +123,11 @@ export function PeopleTable({
   if (total === 0) {
     return (
       <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
-        {query.q ? `No medtech matches “${query.q}”.` : `${organizationName} has no medtechs yet.`}
+        {query.q
+          ? `Nobody matches “${query.q}”.`
+          : query.role !== "all"
+            ? `${organizationName} has no ${PEOPLE_ROLE_FILTER_LABEL[query.role].toLowerCase()} yet.`
+            : `${organizationName} has nobody yet.`}
       </p>
     );
   }
@@ -124,7 +135,7 @@ export function PeopleTable({
   return (
     <div className="flex flex-col gap-3">
       <Table className="min-w-[720px]">
-        <TableCaption>Medtechs of {organizationName}</TableCaption>
+        <TableCaption>People of {organizationName}</TableCaption>
         <TableHeader>
           <TableRow>
             {COLUMNS.map((column) => (
@@ -139,19 +150,28 @@ export function PeopleTable({
             const email = row.kind === "member" ? row.person.email : row.invitation.email;
             return (
               <TableRow key={row.key}>
-                <TableCell className="font-medium text-stone-ink">
-                  {row.kind === "member" ? (
-                    <Link
-                      href={`/medtechs/${row.person.userId}${query.org ? `?org=${query.org}` : ""}`}
-                      className="hover:text-maroon"
-                    >
-                      {name?.trim() || email || "Unnamed medtech"}
-                    </Link>
-                  ) : (
-                    name?.trim() || <span className="text-stone-mid">—</span>
-                  )}
+                {/* Name with the email beneath: one column for both keeps the actions on screen. */}
+                <TableCell>
+                  <div className="flex items-center gap-2 font-medium whitespace-nowrap text-stone-ink">
+                    {row.kind === "member" ? (
+                      <Link
+                        href={`/people/${row.person.userId}${query.org ? `?org=${query.org}` : ""}`}
+                        className="hover:text-maroon"
+                      >
+                        {name?.trim() || email || "Unnamed person"}
+                      </Link>
+                    ) : (
+                      name?.trim() || <span className="text-stone-mid">—</span>
+                    )}
+                    {row.kind === "member" && row.person.userId === actorId ? (
+                      <Badge variant="gold">You</Badge>
+                    ) : null}
+                  </div>
+                  <div className="text-[12px] text-stone-mid">{email ?? "—"}</div>
                 </TableCell>
-                <TableCell>{email ?? <span className="text-stone-mid">—</span>}</TableCell>
+                <TableCell className="whitespace-nowrap text-stone-deep">
+                  {ROLE_LABEL[rowRole(row)]}
+                </TableCell>
                 <TableCell>
                   <Badge variant={BADGE[row.status]}>{PERSON_STATUS_LABEL[row.status]}</Badge>
                 </TableCell>
@@ -177,7 +197,7 @@ export function PeopleTable({
                       <MemberStatusForm
                         organizationId={organizationId}
                         userId={row.person.userId}
-                        name={name?.trim() || email || "this medtech"}
+                        name={name?.trim() || email || "this person"}
                         status={row.person.status}
                       />
                     ) : (

@@ -90,7 +90,7 @@ export function AssignmentsPanel({
                 <TableRow key={assignment.userId}>
                   <TableCell className="font-medium text-stone-ink">
                     {assignment.role && editable ? (
-                      <Link href={`/medtechs/${assignment.userId}`} className="hover:text-maroon">
+                      <Link href={`/people/${assignment.userId}`} className="hover:text-maroon">
                         {personName(assignment)}
                       </Link>
                     ) : (

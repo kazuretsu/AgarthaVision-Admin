@@ -5,8 +5,12 @@ import {
   canViewPeople,
   invitationState,
   isUuid,
-  medtechRows,
+  filterPeopleByRole,
+  parsePeopleRole,
+  peopleRows,
   parsePeopleSort,
+  PEOPLE_ROLE_FILTERS,
+  PEOPLE_ROLE_FILTER_LABEL,
   parseSortDirection,
   searchPeople,
   sortPeople,
@@ -27,10 +31,11 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * A laboratory's medtechs: who they are, whether they can sign in, how many
- * patients each is linked to, and the actions to invite, deactivate and
- * reactivate them. An org admin sees their own laboratory; a super admin chooses
- * one (`?org=`). Search, sort and page live in the URL.
+ * A laboratory's people — its org admins and medtechs, since both do fieldwork —
+ * who they are, their role, whether they can sign in, how many patients each is
+ * linked to, and the actions to invite, deactivate and reactivate them. An org
+ * admin sees their own laboratory; a super admin chooses one (`?org=`). Search,
+ * role, sort and page live in the URL.
  *
  * No route-level `loading.tsx`: it would start a 200 before the access check. The
  * page checks first and suspends only the list, keyed by its query.
@@ -77,7 +82,7 @@ async function People({
 
   const now = new Date();
   const rows = sortPeople(
-    searchPeople(medtechRows(people, invitations, now), query.q),
+    searchPeople(filterPeopleByRole(peopleRows(people, invitations, now), query.role), query.q),
     query.sort,
     query.dir,
   );
@@ -121,7 +126,7 @@ async function People({
 function PeopleFallback() {
   return (
     <div aria-busy="true" aria-live="polite" className="flex flex-col gap-2">
-      <span className="sr-only">Loading medtechs…</span>
+      <span className="sr-only">Loading people…</span>
       <Skeleton className="h-10 w-full" />
       <Skeleton className="h-10 w-full" />
       <Skeleton className="h-10 w-full" />
@@ -130,7 +135,7 @@ function PeopleFallback() {
   );
 }
 
-export default async function MedtechsPage({
+export default async function PeoplePage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -149,7 +154,7 @@ export default async function MedtechsPage({
       organizations = await (await getDatabase()).listOrganizations();
     } catch (cause) {
       if (cause instanceof MissingEnvironmentError) {
-        return <DataUnavailable title="Medtechs" variable={cause.variable} />;
+        return <DataUnavailable title="People" variable={cause.variable} />;
       }
       throw cause;
     }
@@ -166,6 +171,7 @@ export default async function MedtechsPage({
   const query: PeopleQuery = {
     org: actor.access.kind === "super_admin" ? organizationId : "",
     q: param(params.q).slice(0, 120),
+    role: parsePeopleRole(param(params.role)),
     sort: parsePeopleSort(param(params.sort)),
     dir: parseSortDirection(param(params.dir)),
     page: parsePage(param(params.page)),
@@ -175,11 +181,11 @@ export default async function MedtechsPage({
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-[22px] font-bold text-stone-ink">Medtechs</h1>
+        <h1 className="text-[22px] font-bold text-stone-ink">People</h1>
         <p className="text-[13px] text-stone-mid">
           {actor.access.kind === "org_admin"
-            ? `The medical technologists of ${organizationName}. Invite them here; each sets their own password and signs in to the AgarthaVision mobile app. Deactivating someone stops their sign-in and deletes nothing.`
-            : "Any laboratory's medical technologists. Medtechs are invited by their laboratory's organization admins."}
+            ? `Everyone in ${organizationName}: its organization admins and medical technologists, who all can sign in to the AgarthaVision mobile app. Invite medtechs here; each sets their own password. Deactivating someone stops their sign-in and deletes nothing.`
+            : "Any laboratory's organization admins and medical technologists. Organization admins are invited from the laboratory's organization page; medtechs by their laboratory's organization admins."}
         </p>
       </header>
 
@@ -191,7 +197,7 @@ export default async function MedtechsPage({
         </Card>
       ) : null}
 
-      <form method="get" action="/medtechs" className="flex flex-wrap items-end gap-2">
+      <form method="get" action="/people" className="flex flex-wrap items-end gap-2">
         {actor.access.kind === "super_admin" ? (
           <label className="flex min-w-56 flex-col gap-1">
             <span className="text-[12px] font-medium text-stone-deep">Organization</span>
@@ -209,6 +215,16 @@ export default async function MedtechsPage({
         <label className="flex min-w-64 flex-1 flex-col gap-1">
           <span className="text-[12px] font-medium text-stone-deep">Search</span>
           <Input name="q" defaultValue={query.q} maxLength={120} placeholder="Name or email" />
+        </label>
+        <label className="flex min-w-48 flex-col gap-1">
+          <span className="text-[12px] font-medium text-stone-deep">Role</span>
+          <NativeSelect name="role" defaultValue={query.role}>
+            {PEOPLE_ROLE_FILTERS.map((role) => (
+              <NativeSelectOption key={role} value={role}>
+                {PEOPLE_ROLE_FILTER_LABEL[role]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
         </label>
         {query.sort !== "name" ? <input type="hidden" name="sort" value={query.sort} /> : null}
         {query.dir !== "asc" ? <input type="hidden" name="dir" value={query.dir} /> : null}
@@ -230,7 +246,7 @@ export default async function MedtechsPage({
         </Suspense>
       ) : (
         <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
-          Choose an organization to see its medtechs.
+          Choose an organization to see its people.
         </p>
       )}
     </main>

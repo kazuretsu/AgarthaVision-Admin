@@ -132,7 +132,7 @@ async function sendLink(
 
 function refreshPages(organizationId: string) {
   revalidatePath(`/organizations/${organizationId}`);
-  revalidatePath("/medtechs");
+  revalidatePath("/people");
 }
 
 /** The organization an invite goes into: an org admin's own, whatever the form says. */

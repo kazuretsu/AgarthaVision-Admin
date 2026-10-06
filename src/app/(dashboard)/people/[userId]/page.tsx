@@ -47,7 +47,7 @@ function param(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
 }
 
-export default async function MedtechPage({
+export default async function PersonPage({
   params,
   searchParams,
 }: {
@@ -71,7 +71,7 @@ export default async function MedtechPage({
     patients = await db.listMemberPatients(userId);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
-      return <DataUnavailable title="Medtech" variable={cause.variable} />;
+      return <DataUnavailable title="Person" variable={cause.variable} />;
     }
     // A laboratory this user may not read names no one they may see.
     if (cause instanceof DatabaseReadError) notFound();
@@ -87,14 +87,14 @@ export default async function MedtechPage({
     pageOffset(page, PAGE_SIZE) + PAGE_SIZE,
   );
   const pageHref = (n: number) =>
-    `/medtechs/${userId}?${new URLSearchParams({
+    `/people/${userId}?${new URLSearchParams({
       ...(actor.access.kind === "super_admin" ? { org: organizationId } : {}),
       ...(n > 1 ? { page: String(n) } : {}),
     }).toString()}`.replace(/\?$/, "");
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
-      <Breadcrumbs items={[{ label: "Medtechs", href: `/medtechs${orgQuery}` }, { label: name }]} />
+      <Breadcrumbs items={[{ label: "People", href: `/people${orgQuery}` }, { label: name }]} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
