@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-06
-commit: 8121cf4
+commit: 8c1c346
 ---
 
 # Patient assignment
