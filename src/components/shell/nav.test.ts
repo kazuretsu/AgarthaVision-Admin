@@ -20,9 +20,9 @@ describe("organizations", () => {
   });
 });
 
-describe("medtechs", () => {
+describe("people", () => {
   it("is everyone's entry: an org admin's own laboratory, a super admin's choice", () => {
-    expect(navFor("org_admin").some((item) => item.href === "/medtechs")).toBe(true);
-    expect(navFor("super_admin").some((item) => item.href === "/medtechs")).toBe(true);
+    expect(navFor("org_admin").some((item) => item.href === "/people")).toBe(true);
+    expect(navFor("super_admin").some((item) => item.href === "/people")).toBe(true);
   });
 });

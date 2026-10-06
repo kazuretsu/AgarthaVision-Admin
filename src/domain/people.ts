@@ -3,12 +3,13 @@ import { invitationState, type Invitation } from "./invitations";
 import type { MembershipRole, OrganizationStatus } from "./organizations";
 
 /**
- * A laboratory's people, as its Medtechs page lists them (admin/0006).
+ * A laboratory's people, as its People page lists them (admin/0006, 14zcqntkd0v).
  *
- * The page shows the laboratory's medtechs together with the medtechs it has
- * invited who have not joined yet, so an org admin sees in one place who can
- * work, who cannot, and who is still to come. Deactivating a medtech blocks their
- * sign-in and deletes nothing (C8).
+ * The page shows everyone in the laboratory — its org admins and its medtechs,
+ * since both do fieldwork — together with the people it has invited who have not
+ * joined yet, so an org admin sees in one place who can work, who cannot, and who
+ * is still to come. Deactivating someone blocks their sign-in and deletes nothing
+ * (C8).
  */
 
 /** One member, with the sign-in email the console may show and their patient count. */
@@ -31,30 +32,36 @@ export type PeopleRow =
   | { kind: "member"; key: string; person: Person; status: PersonStatus }
   | { kind: "invitation"; key: string; invitation: Invitation; status: PersonStatus };
 
-/** The medtechs and the open (pending or expired) medtech invitations, as one list. */
-export function medtechRows(
+/** Every member, either role, and the open (pending or expired) invitations, as one list. */
+export function peopleRows(
   people: readonly Person[],
   invitations: readonly Invitation[],
   now: Date = new Date(),
 ): PeopleRow[] {
-  const members: PeopleRow[] = people
-    .filter((person) => person.role === "medtech")
-    .map((person) => ({ kind: "member", key: person.userId, person, status: person.status }));
-  const invited: PeopleRow[] = invitations
-    .filter((invitation) => invitation.role === "medtech")
-    .flatMap((invitation): PeopleRow[] => {
-      const state = invitationState(invitation, now);
-      if (state !== "pending" && state !== "expired") return [];
-      return [
-        {
-          kind: "invitation",
-          key: invitation.id,
-          invitation,
-          status: state === "pending" ? "invited" : "invite_expired",
-        },
-      ];
-    });
+  const members: PeopleRow[] = people.map((person) => ({
+    kind: "member",
+    key: person.userId,
+    person,
+    status: person.status,
+  }));
+  const invited: PeopleRow[] = invitations.flatMap((invitation): PeopleRow[] => {
+    const state = invitationState(invitation, now);
+    if (state !== "pending" && state !== "expired") return [];
+    return [
+      {
+        kind: "invitation",
+        key: invitation.id,
+        invitation,
+        status: state === "pending" ? "invited" : "invite_expired",
+      },
+    ];
+  });
   return [...members, ...invited];
+}
+
+/** The role they hold, or for an invitation, the role they were invited to. */
+export function rowRole(row: PeopleRow): MembershipRole {
+  return row.kind === "member" ? row.person.role : row.invitation.role;
 }
 
 export function rowName(row: PeopleRow): string | null {
@@ -83,7 +90,30 @@ export function searchPeople(rows: readonly PeopleRow[], query: string): PeopleR
   );
 }
 
-export const PEOPLE_SORTS = ["name", "email", "status", "joined", "patients"] as const;
+/** The list's role filter, kept in the URL (`role`). */
+export const PEOPLE_ROLE_FILTERS = ["all", "org_admin", "medtech"] as const;
+export type PeopleRoleFilter = (typeof PEOPLE_ROLE_FILTERS)[number];
+
+export function parsePeopleRole(value: string): PeopleRoleFilter {
+  return (PEOPLE_ROLE_FILTERS as readonly string[]).includes(value)
+    ? (value as PeopleRoleFilter)
+    : "all";
+}
+
+export function filterPeopleByRole(
+  rows: readonly PeopleRow[],
+  role: PeopleRoleFilter,
+): PeopleRow[] {
+  return role === "all" ? [...rows] : rows.filter((row) => rowRole(row) === role);
+}
+
+export const PEOPLE_ROLE_FILTER_LABEL: Record<PeopleRoleFilter, string> = {
+  all: "Everyone",
+  org_admin: "Organization admins",
+  medtech: "Medtechs",
+};
+
+export const PEOPLE_SORTS = ["name", "email", "role", "status", "joined", "patients"] as const;
 export type PeopleSort = (typeof PEOPLE_SORTS)[number];
 export type SortDirection = "asc" | "desc";
 
@@ -94,6 +124,8 @@ export function parsePeopleSort(value: string): PeopleSort {
 export function parseSortDirection(value: string): SortDirection {
   return value === "desc" ? "desc" : "asc";
 }
+
+const ROLE_RANK: Record<MembershipRole, number> = { org_admin: 0, medtech: 1 };
 
 const STATUS_RANK: Record<PersonStatus, number> = {
   active: 0,
@@ -122,6 +154,8 @@ export function sortPeople(
         return compareText(rowName(left), rowName(right), sign);
       case "email":
         return compareText(rowEmail(left), rowEmail(right), sign);
+      case "role":
+        return sign * (ROLE_RANK[rowRole(left)] - ROLE_RANK[rowRole(right)]);
       case "status":
         return sign * (STATUS_RANK[left.status] - STATUS_RANK[right.status]);
       case "joined":
@@ -154,7 +188,7 @@ export function canChangeMemberStatus(
   return access.kind === "super_admin" || access.organizationId === organizationId;
 }
 
-/** Who may open a laboratory's Medtechs page: its own org admin, or any super admin. */
+/** Who may open a laboratory's People page: its own org admin, or any super admin. */
 export function canViewPeople(access: ConsoleAccess, organizationId: string): boolean {
   return access.kind === "super_admin" || access.organizationId === organizationId;
 }

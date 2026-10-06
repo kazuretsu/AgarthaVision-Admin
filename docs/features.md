@@ -84,7 +84,7 @@ users and patients start in one "Starting laboratory". Org admins and medtechs g
 ### Invitations
 
 Nobody signs up. A super admin invites an organization's admins from its page
-(`/organizations/[id]`); an org admin invites their laboratory's medtechs from `/medtechs`.
+(`/organizations/[id]`); an org admin invites their laboratory's medtechs from `/people`.
 The inviter enters an email and, optionally, a name; the role and the organization follow
 from who is inviting. The invitee gets an email from the console's domain (Resend) with a
 link that works for 7 days and opens `/invite/<token>`, where they set their own password.
@@ -97,13 +97,16 @@ account, or already has a live invitation, is refused. Expired, revoked, used an
 links each say so. The role and organization come from the stored invitation, never from the
 invitee. Each invite, re-send, revoke and acceptance is in the audit trail.
 
-### Medtechs
+### People
 
-`/medtechs` lists a laboratory's medtechs and the medtechs it has invited: name, email,
-status (active, deactivated, invited, invite expired), date joined and number of the
-laboratory's patients each is linked to. Search by name or email, sort by any column and page
-through 50 at a time, all in the URL. An org admin sees their own laboratory and invites from
-here; a super admin chooses any laboratory (also linked from its organization page).
+`/people` (the sidebar's **People**; `/medtechs` redirects here) lists everyone in a laboratory —
+its organization admins and its medtechs, since both can sign in to the app and do fieldwork —
+and the people it has invited: name and email, role, status (active, deactivated, invited,
+invite expired), date joined and number of the laboratory's patients each is linked to. The
+signed-in person's own row is marked "You". Search by name or email, filter by role (everyone,
+organization admins, medtechs), sort by any column and page through 50 at a time, all in the
+URL. An org admin sees their own laboratory and invites medtechs from here; a super admin
+chooses any laboratory (also linked from its organization page).
 
 **Deactivate** (behind a confirmation) blocks the medtech's sign-in to the app and the console
 and deletes nothing; the app signs them out the next time it reaches the server. **Reactivate**
@@ -117,7 +120,7 @@ with their role, status and since when. Org admins do fieldwork too: a role is a
 level, not a job. The laboratory's org admin assigns any of its active members, org admins
 (themselves included) or medtechs, removes an assignment (behind a confirmation) and, for the
 last active member, hands the patient over to another instead: a patient is never left with
-nobody, and an active org admin counts. A person's page (`/medtechs/[id]`, either role) lists
+nobody, and an active org admin counts. A person's page (`/people/[id]`, either role) lists
 the patients assigned to them. Assigning across laboratories, or a deactivated member of either
 role, is refused in the page and in the database. Removing an assignment removes
 access only: the patient, every record and who read each smear stay. A super admin sees who is

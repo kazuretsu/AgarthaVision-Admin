@@ -15,7 +15,7 @@ invitation. This is the only way anyone gets an account: there is no sign-up.
 | Inviter     | Invites       | Into                       | Where in the console  |
 | ----------- | ------------- | -------------------------- | --------------------- |
 | Super admin | **org admin** | the organization they pick | `/organizations/[id]` |
-| Org admin   | **medtech**   | their own organization     | `/medtechs`           |
+| Org admin   | **medtech**   | their own organization     | `/people`             |
 
 The role is never chosen: `invitableRole` (`src/domain/invitations.ts:49`) derives it from
 the inviter, and `console_invite` (`supabase/migrations/admin/0005_invitations.sql:121`)

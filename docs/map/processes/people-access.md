@@ -3,27 +3,35 @@ verified: 2026-10-06
 commit: 4b19365
 ---
 
-# Medtech access
+# People and member access
 
-Input: an org admin (or a super admin) on `/medtechs` → Movement: the laboratory's people are
+Input: an org admin (or a super admin) on `/people` → Movement: the laboratory's people are
 read with their emails and patient counts; a deactivation blocks the login's sign-in, then
 records the membership's status → Output: a medtech who can no longer sign in to the app or
 the console, with nothing deleted.
 
 ## The page
 
-`/medtechs` (`src/app/(dashboard)/medtechs/page.tsx`) lists one laboratory's **medtechs**
-together with its **open medtech invitations** (`medtechRows`, `src/domain/people.ts:35`):
-name, email, status (Active, Deactivated, Invited, Invite expired), joined date and how many
-of the laboratory's patients each is linked to. Org admins are not listed: this page manages
-medtechs only.
+`/people` (`src/app/(dashboard)/people/page.tsx`; the sidebar's **People**, until 14zcqntkd0v
+the Medtechs page) lists **everyone** in one laboratory — its org admins and its medtechs,
+since a role is a permission level and both do fieldwork — together with its **open
+invitations** of either role (`peopleRows`, `src/domain/people.ts:36`). Each row shows the name
+with the email beneath, the role (`rowRole`, `:63`), status (Active, Deactivated, Invited,
+Invite expired), joined date and how many of the laboratory's patients each is linked to. The
+signed-in person's own row is marked **You**. `/medtechs` and `/medtechs/[id]` redirect
+permanently to `/people` and `/people/[id]`, query string kept (`next.config.ts:8`).
 
 - **Who sees which laboratory.** An org admin sees their own, whatever `?org=` says. A super
   admin picks one (`?org=`); without a valid choice the page asks for one.
-- **Search, sort and page** live in the URL (`q`, `sort`, `dir`, `page`). The list is small
-  per laboratory, so it is read whole and filtered, sorted (`sortPeople`, `:113`; blanks last
-  either way, ties by name then email) and cut into pages of 50 in the page. A page past the end
-  shows the last page.
+- **Search, role, sort and page** live in the URL (`q`, `role` = `all` · `org_admin` ·
+  `medtech`, `sort`, `dir`, `page`). The list is small per laboratory, so it is read whole and
+  filtered (`filterPeopleByRole`, `:103`), searched, sorted (`sortPeople`, `:145`; by name,
+  role, status, joined or patients — org admins first by role; `email` still sorts for old
+  links; blanks last either way, ties by name then email) and cut into pages of 50 in the
+  page. A page past the end shows the last page.
+- **Actions** are only the ones the viewer may take: deactivate/reactivate on medtechs (below),
+  re-send/revoke on invitations the viewer may manage (`canManageInvitation`: an org admin,
+  medtech invitations only; a super admin, any).
 - **Invite** (org admins) and **re-send / revoke** on invited rows are the invitation flow
   (`docs/map/processes/invitations.md`). Accepted and revoked invitations are listed below as
   history.
@@ -33,18 +41,18 @@ The people are read with `console_organization_people`
 the email lives in the auth provider's table, which no client may read. It refuses anyone but
 a super admin or that laboratory's org admin.
 
-A medtech's name opens `/medtechs/[userId]` (a super admin's link carries `?org=`): their role,
-email, joined date, status (with deactivate/reactivate, medtechs only) and the laboratory's
-patients assigned to them (`docs/map/processes/patient-assignment.md`). The page opens for an
-org admin of the laboratory too, since both roles do fieldwork (14zcqntkd0w); a patient's
-Assigned list links to it. Someone of another laboratory is a 404.
+A name opens `/people/[userId]` (a super admin's link carries `?org=`): their role, email,
+joined date, status (with deactivate/reactivate, medtechs only) and the laboratory's patients
+assigned to them (`docs/map/processes/patient-assignment.md`). It opens for a member of either
+role, since both do fieldwork (14zcqntkd0w); a patient's Assigned list links to it. Someone of
+another laboratory is a 404.
 
 ## Deactivate and reactivate
 
-`setMemberStatus` (`src/app/(dashboard)/medtechs/actions.ts:52`):
+`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:52`):
 
 1. Reads the laboratory's people and finds the member; checks `canChangeMemberStatus`
-   (`src/domain/people.ts:147`): a medtech, not the actor, and for an org admin only in their
+   (`src/domain/people.ts:181`): a medtech, not the actor, and for an org admin only in their
    own laboratory. A forged member id from elsewhere is "no longer in this laboratory".
 2. Blocks (or allows) the login's sign-in through `AccountAccessPort`: a Supabase **ban**
    (`src/adapters/supabase/account-access.ts`, service-role client). A profile whose login was

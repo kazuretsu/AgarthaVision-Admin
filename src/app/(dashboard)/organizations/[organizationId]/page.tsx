@@ -84,10 +84,10 @@ export default async function OrganizationPage({
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-[15px] font-semibold text-stone-ink">Members</h2>
           <Link
-            href={`/medtechs?org=${organization.id}`}
+            href={`/people?org=${organization.id}`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            Manage medtechs
+            Manage people
           </Link>
         </div>
         {organization.members.length === 0 ? (

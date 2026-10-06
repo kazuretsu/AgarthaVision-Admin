@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useRef } from "react";
-import { setMemberStatus } from "@/app/(dashboard)/medtechs/actions";
-import { EMPTY_MEMBER_FORM } from "@/app/(dashboard)/medtechs/state";
+import { setMemberStatus } from "@/app/(dashboard)/people/actions";
+import { EMPTY_MEMBER_FORM } from "@/app/(dashboard)/people/state";
 import type { OrganizationStatus } from "@/domain/organizations";
 import {
   AlertDialog,

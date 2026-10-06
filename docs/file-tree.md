@@ -47,7 +47,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── lab-scoping.md         Who sees which laboratory's records, enforced twice.
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
-│       │   ├── medtech-access.md      The Medtechs page; deactivate = ban the login, record, undo.
+│       │   ├── people-access.md       The People page; deactivate = ban the login, record, undo.
 │       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.

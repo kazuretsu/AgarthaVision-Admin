@@ -4,7 +4,9 @@ import type { Invitation } from "./invitations";
 import {
   canChangeMemberStatus,
   canViewPeople,
-  medtechRows,
+  filterPeopleByRole,
+  parsePeopleRole,
+  peopleRows,
   parsePeopleSort,
   parseSortDirection,
   searchPeople,
@@ -55,9 +57,9 @@ const ADMIN_A: ConsoleAccess = {
 };
 const SUPER: ConsoleAccess = { kind: "super_admin" };
 
-describe("medtechRows", () => {
-  it("lists medtechs and open medtech invitations, not admins or closed invitations", () => {
-    const rows = medtechRows(
+describe("peopleRows", () => {
+  it("lists every member and open invitation of either role, not closed invitations", () => {
+    const rows = peopleRows(
       [person({ userId: "m" }), person({ userId: "a", role: "org_admin" })],
       [
         invitation({ id: "open" }),
@@ -70,14 +72,35 @@ describe("medtechRows", () => {
     );
     expect(rows.map((row) => [row.key, row.status])).toEqual([
       ["m", "active"],
+      ["a", "active"],
       ["open", "invited"],
       ["late", "invite_expired"],
+      ["boss", "invited"],
     ]);
   });
 });
 
+describe("filterPeopleByRole", () => {
+  const rows = peopleRows(
+    [person({ userId: "m" }), person({ userId: "a", role: "org_admin" })],
+    [invitation({ id: "inv-m" }), invitation({ id: "inv-a", role: "org_admin" })],
+    NOW,
+  );
+
+  it("keeps one role, members and invitations alike", () => {
+    expect(filterPeopleByRole(rows, "org_admin").map((row) => row.key)).toEqual(["a", "inv-a"]);
+    expect(filterPeopleByRole(rows, "medtech").map((row) => row.key)).toEqual(["m", "inv-m"]);
+    expect(filterPeopleByRole(rows, "all")).toHaveLength(4);
+  });
+
+  it("parses an unknown role to everyone", () => {
+    expect(parsePeopleRole("org_admin")).toBe("org_admin");
+    expect(parsePeopleRole("admin; drop")).toBe("all");
+  });
+});
+
 describe("searchPeople", () => {
-  const rows = medtechRows(
+  const rows = peopleRows(
     [
       person({ userId: "1", fullName: "Ana Cruz", email: "ana@lab.test" }),
       person({ userId: "2", fullName: "Ben Uy", email: "ben@lab.test" }),
@@ -94,7 +117,7 @@ describe("searchPeople", () => {
 });
 
 describe("sortPeople", () => {
-  const rows = medtechRows(
+  const rows = peopleRows(
     [
       person({
         userId: "b",
@@ -104,19 +127,30 @@ describe("sortPeople", () => {
       }),
       person({ userId: "a", fullName: "ana", assignedPatients: 2, status: "deactivated" }),
       person({ userId: "x", fullName: null, assignedPatients: 9 }),
+      person({ userId: "o", fullName: "Olga", role: "org_admin" }),
     ],
     [],
     NOW,
   );
 
   it("by name, case-insensitive, unnamed last both ways", () => {
-    expect(sortPeople(rows, "name", "asc").map((row) => row.key)).toEqual(["a", "b", "x"]);
-    expect(sortPeople(rows, "name", "desc").map((row) => row.key)).toEqual(["b", "a", "x"]);
+    expect(sortPeople(rows, "name", "asc").map((row) => row.key)).toEqual(["a", "b", "o", "x"]);
+    expect(sortPeople(rows, "name", "desc").map((row) => row.key)).toEqual(["o", "b", "a", "x"]);
   });
 
   it("by patients and by status", () => {
-    expect(sortPeople(rows, "patients", "desc").map((row) => row.key)).toEqual(["x", "b", "a"]);
+    expect(sortPeople(rows, "patients", "desc").map((row) => row.key)).toEqual([
+      "x",
+      "b",
+      "a",
+      "o",
+    ]);
     expect(sortPeople(rows, "status", "asc").at(-1)?.key).toBe("a");
+  });
+
+  it("by role: org admins first, then by name", () => {
+    expect(sortPeople(rows, "role", "asc").map((row) => row.key)).toEqual(["o", "a", "b", "x"]);
+    expect(sortPeople(rows, "role", "desc")[0]?.key).toBe("a");
   });
 
   it("parses unknown sorts and directions to the defaults", () => {

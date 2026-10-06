@@ -10,7 +10,7 @@ const ICONS = {
   dashboard: LayoutDashboard,
   records: Microscope,
   export: FileDown,
-  medtechs: Users,
+  people: Users,
   organizations: Building2,
   audit: History,
 } as const;
