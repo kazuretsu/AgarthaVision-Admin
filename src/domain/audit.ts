@@ -32,8 +32,8 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "invitation.resend": "Re-sent an invitation",
   "invitation.revoke": "Revoked an invitation",
   "invitation.accept": "Accepted an invitation",
-  "member.deactivate": "Deactivated a medtech",
-  "member.reactivate": "Reactivated a medtech",
+  "member.deactivate": "Deactivated a member",
+  "member.reactivate": "Reactivated a member",
   "assignment.add": "Assigned a patient",
   "assignment.remove": "Removed a patient assignment",
 };
@@ -83,9 +83,12 @@ export function describeAuditEntry(entry: AuditEntry): string {
       return verb[entry.action];
     }
     case "member.deactivate":
-      return `Deactivated ${text(d.name) ?? "a medtech"} in ${entry.organizationName ?? "an organization"}`;
-    case "member.reactivate":
-      return `Reactivated ${text(d.name) ?? "a medtech"} in ${entry.organizationName ?? "an organization"}`;
+    case "member.reactivate": {
+      // An org admin is named as one (admin/0009); a medtech, as before, by name alone.
+      const who = `${text(d.name) ?? "a member"}${d.role === "org_admin" ? " (organization admin)" : ""}`;
+      const verb = entry.action === "member.deactivate" ? "Deactivated" : "Reactivated";
+      return `${verb} ${who} in ${entry.organizationName ?? "an organization"}`;
+    }
     case "assignment.add":
     case "assignment.remove": {
       // The patient by record id only: super admins read this trail (constraint #14).

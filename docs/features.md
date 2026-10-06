@@ -108,10 +108,14 @@ organization admins, medtechs), sort by any column and page through 50 at a time
 URL. An org admin sees their own laboratory and invites medtechs from here; a super admin
 chooses any laboratory (also linked from its organization page).
 
-**Deactivate** (behind a confirmation) blocks the medtech's sign-in to the app and the console
+**Deactivate** (behind a confirmation) blocks the person's sign-in to the app and the console
 and deletes nothing; the app signs them out the next time it reaches the server. **Reactivate**
-restores it. An org admin cannot deactivate themselves, another org admin, or anyone in another
-laboratory. Each change is in the audit trail.
+restores it. An org admin deactivates their own laboratory's medtechs; a super admin deactivates
+anyone, org admins included (here, on a person's page, or in the organization's Members table).
+Nobody deactivates themselves. Two deactivations are refused, in the page and in the database:
+the laboratory's last active organization admin (their row says "Only organization admin"), and
+anyone who is a patient's only active member — their page marks those patients, to hand over
+first. Each change is in the audit trail.
 
 ### Patient assignment
 

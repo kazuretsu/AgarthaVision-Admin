@@ -832,6 +832,12 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       .sort((left, right) => Date.parse(right.linkedAt) - Date.parse(left.linkedAt));
   }
 
+  async listSoleCoverPatients(userId: string): Promise<string[]> {
+    const { data, error } = await this.client.rpc("console_member_sole_cover", { p_user: userId });
+    if (error) throw new DatabaseReadError("listSoleCoverPatients", error);
+    return ((data as { patient_id: string }[] | null) ?? []).map((row) => row.patient_id);
+  }
+
   async getInvitation(invitationId: string): Promise<Invitation | null> {
     if (!isUuid(invitationId)) return null;
     const { data, error } = await this.client

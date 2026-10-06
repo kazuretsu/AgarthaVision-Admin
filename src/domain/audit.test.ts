@@ -83,6 +83,11 @@ describe("member entries", () => {
     expect(
       describeAuditEntry(entry({ action: "member.reactivate", details: { name: "Tess Tech" } })),
     ).toBe("Reactivated Tess Tech in Lab A");
+    expect(
+      describeAuditEntry(
+        entry({ action: "member.deactivate", details: { name: "Olga", role: "org_admin" } }),
+      ),
+    ).toBe("Deactivated Olga (organization admin) in Lab A");
   });
 });
 

@@ -3,7 +3,7 @@
 import { useActionState, useRef } from "react";
 import { setMemberStatus } from "@/app/(dashboard)/people/actions";
 import { EMPTY_MEMBER_FORM } from "@/app/(dashboard)/people/state";
-import type { OrganizationStatus } from "@/domain/organizations";
+import type { MembershipRole, OrganizationStatus } from "@/domain/organizations";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -16,17 +16,19 @@ import { Button, buttonVariants } from "@/components/ui/button";
 
 /**
  * Deactivate behind a confirmation, reactivate directly. Deactivating blocks
- * sign-in and deletes nothing.
+ * sign-in — to the app, and for an org admin the console too — and deletes nothing.
  */
 export function MemberStatusForm({
   organizationId,
   userId,
   name,
+  role,
   status,
 }: {
   organizationId: string;
   userId: string;
   name: string;
+  role: MembershipRole;
   status: OrganizationStatus;
 }) {
   const [state, action, pending] = useActionState(setMemberStatus, EMPTY_MEMBER_FORM);
@@ -53,9 +55,10 @@ export function MemberStatusForm({
           <AlertDialogContent>
             <AlertDialogTitle>Deactivate {name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              They can no longer sign in to the AgarthaVision app or sync from it, and the app signs
-              them out the next time it reaches the server. Nothing is deleted: their account, their
-              patients and every record they made stay, and you can reactivate them at any time.
+              They can no longer sign in to the AgarthaVision app or sync from it
+              {role === "org_admin" ? ", nor use this console" : ""}, and the app signs them out the
+              next time it reaches the server. Nothing is deleted: their account, their patients and
+              every record they made stay, and you can reactivate them at any time.
             </AlertDialogDescription>
             <div className="mt-2 flex justify-end gap-2">
               <AlertDialogClose className={buttonVariants({ variant: "ghost" })}>

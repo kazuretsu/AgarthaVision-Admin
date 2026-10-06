@@ -31,6 +31,11 @@ begin
     values ('60000000-0000-4000-8000-000000000001', 'People', 'One', 'F', '2010-01-01', '0722217001', f.medtech_a),
            ('60000000-0000-4000-8000-000000000002', 'People', 'Two', 'M', '2011-01-01', '0722217001', f.medtech_a),
            ('60000000-0000-4000-8000-000000000003', 'People', 'Three', 'M', '2012-01-01', '0722217001', f.medtech_b);
+    -- Lab A's org admin covers its patients too, so deactivating the medtech leaves them covered
+    -- (admin/0009 refuses a deactivation that would not; see its tests).
+    insert into public.patient_users (patient_id, user_id) values
+        ('60000000-0000-4000-8000-000000000001', f.admin_a),
+        ('60000000-0000-4000-8000-000000000002', f.admin_a);
 
     -- ── Reading the people ──
     perform tests.act_as(f.admin_a);

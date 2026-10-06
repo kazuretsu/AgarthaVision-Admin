@@ -174,9 +174,10 @@ export function sortPeople(
 }
 
 /**
- * Whether this user may deactivate or reactivate this member: a medtech, never
- * themselves, and — for an org admin — only in their own laboratory. The database
- * function checks the same (D7).
+ * Whether this user may deactivate or reactivate this member (admin/0009,
+ * 14zcqntkd0x): never themselves; a super admin, anyone in any laboratory; an org
+ * admin, only their own laboratory's medtechs — super admins make org admins, so
+ * super admins unmake them. The database function checks the same (D7).
  */
 export function canChangeMemberStatus(
   access: ConsoleAccess,
@@ -184,8 +185,25 @@ export function canChangeMemberStatus(
   organizationId: string,
   person: Pick<Person, "userId" | "role">,
 ): boolean {
-  if (person.role !== "medtech" || person.userId === actorId) return false;
-  return access.kind === "super_admin" || access.organizationId === organizationId;
+  if (person.userId === actorId) return false;
+  if (access.kind === "super_admin") return true;
+  return person.role === "medtech" && access.organizationId === organizationId;
+}
+
+/**
+ * Whether this member is their laboratory's only active org admin, whom nobody
+ * deactivates: without one, nobody there can invite medtechs or assign patients.
+ * Reactivating is never refused. The database function checks the same.
+ */
+export function isLastActiveOrgAdmin(
+  people: readonly Pick<Person, "userId" | "role" | "status">[],
+  userId: string,
+): boolean {
+  const person = people.find((candidate) => candidate.userId === userId);
+  if (!person || person.role !== "org_admin" || person.status !== "active") return false;
+  return !people.some(
+    (other) => other.userId !== userId && other.role === "org_admin" && other.status === "active",
+  );
 }
 
 /** Who may open a laboratory's People page: its own org admin, or any super admin. */
