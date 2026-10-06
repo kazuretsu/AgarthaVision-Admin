@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-06
-commit: c92e974
+commit: 2484c07
 ---
 
 # Admin gate
