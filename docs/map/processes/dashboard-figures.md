@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-06
-commit: pending
+commit: bcb2774
 ---
 
 # Dashboard figures
