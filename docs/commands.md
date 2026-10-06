@@ -42,7 +42,9 @@ configuration and the components it sees as installed. Rules: `docs/constraints.
 `bun run test:db` (`scripts/db-test.ts`) drops and recreates a local database, applies
 Supabase stubs, the app repo's migrations, a small pre-existing seed, this repo's admin
 migrations and the test helpers, then runs each `supabase/tests/*.test.sql` in a
-transaction that is always rolled back. It needs a local Postgres and a checkout of the app
+transaction that is always rolled back. A `*.test.ts` there runs the same way, its default
+export called with the transaction's connection, for a test that checks the database against
+the console's own TypeScript (the dashboard parity test). It needs a local Postgres and a checkout of the app
 repo, and is not part of the pre-commit hook.
 
 | Variable                  | Default                                                       |

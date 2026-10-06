@@ -68,7 +68,25 @@ export function weekStart(instant: string): string {
   return utc.toISOString().slice(0, 10);
 }
 
-export function summariseDashboard(records: readonly SmearRecord[]): DashboardFigures {
+/**
+ * The dashboard's counts before any rate or share is derived: what
+ * `public.console_dashboard_figures()` returns, and what {@link totalsOf} counts
+ * from session records. Both feed {@link figuresFromTotals}, so the page shows the
+ * same figures whichever counted them.
+ */
+export interface DashboardTotals {
+  /** Every session in the period, read or not: what the export's row cap is compared with. */
+  sessions: number;
+  patients: number;
+  smearsExamined: number;
+  positiveSmears: number;
+  fieldsVerified: number;
+  trend: { weekStart: string; examined: number; positive: number }[];
+  species: { species: string; positiveSmears: number }[];
+}
+
+/** Counts session records the way the database function counts sessions. */
+export function totalsOf(records: readonly SmearRecord[]): DashboardTotals {
   const examined = records.filter(isExamined);
   const positive = examined.filter((record) => record.summary.isPositive);
 
@@ -89,27 +107,53 @@ export function summariseDashboard(records: readonly SmearRecord[]): DashboardFi
   }
 
   return {
+    sessions: records.length,
     patients: new Set(examined.map((record) => record.patientId)).size,
     smearsExamined: examined.length,
     positiveSmears: positive.length,
-    positiveRate: examined.length === 0 ? null : positive.length / examined.length,
     fieldsVerified: examined.reduce((sum, record) => sum + record.summary.fieldCount, 0),
-    speciesMix: [...species.entries()]
-      .map(([name, count]) => ({
-        species: name,
-        positiveSmears: count,
-        share: positive.length === 0 ? 0 : count / positive.length,
+    trend: [...weeks.entries()].map(([key, bucket]) => ({ weekStart: key, ...bucket })),
+    species: [...species.entries()].map(([name, count]) => ({
+      species: name,
+      positiveSmears: count,
+    })),
+  };
+}
+
+/** Rates, shares and order, from counts. */
+export function figuresFromTotals(totals: DashboardTotals): DashboardFigures {
+  const { smearsExamined, positiveSmears } = totals;
+  return {
+    patients: totals.patients,
+    smearsExamined,
+    positiveSmears,
+    positiveRate: smearsExamined === 0 ? null : positiveSmears / smearsExamined,
+    fieldsVerified: totals.fieldsVerified,
+    speciesMix: totals.species
+      .map((row) => ({
+        species: row.species,
+        positiveSmears: row.positiveSmears,
+        share: positiveSmears === 0 ? 0 : row.positiveSmears / positiveSmears,
       }))
-      .sort((left, right) => right.positiveSmears - left.positiveSmears),
+      .sort(
+        (left, right) =>
+          right.positiveSmears - left.positiveSmears || compareText(left.species, right.species),
+      ),
     // Weeks with nothing examined are absent, not zero: a gap in surveillance is a
     // different claim from a week in which every smear was negative.
-    trend: [...weeks.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, bucket]) => ({
-        weekStart: key,
-        examined: bucket.examined,
-        positive: bucket.positive,
-        rate: bucket.positive / bucket.examined,
-      })),
+    trend: totals.trend
+      .filter((point) => point.examined > 0)
+      .map((point) => ({ ...point, rate: point.positive / point.examined }))
+      .sort((left, right) => compareText(left.weekStart, right.weekStart)),
   };
+}
+
+/** Code-point order: the same in every runtime and locale. */
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** The figures from session records: the reference the database function is tested against. */
+export function summariseDashboard(records: readonly SmearRecord[]): DashboardFigures {
+  return figuresFromTotals(totalsOf(records));
 }

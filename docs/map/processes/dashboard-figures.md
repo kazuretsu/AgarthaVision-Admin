@@ -1,17 +1,18 @@
 ---
-verified: 2026-09-30
-commit: e1e39b1
+verified: 2026-10-06
+commit: bcb2774
 ---
 
 # Dashboard figures
 
-Input: every session started in a period → Movement: summarise each smear, count per smear
-→ Output: the dashboard's cards, weekly trend and species mix.
+Input: a scope and a period → Movement: the database counts per smear, the console derives
+rates and order → Output: the dashboard's cards, weekly trend and species mix, and the export
+page's count.
 
 ## The unit is the smear
 
 One session is one smear from one patient. A smear is **examined** once at least one live
-field was verified (`isExamined`, `src/domain/dashboard.ts:55`), and **positive** when a
+field was verified (`isExamined`, `src/domain/dashboard.ts:57`), and **positive** when a
 live field carries a counted detection (`SessionSummary.isPositive`, from
 `lpf-session-summary.md`). That is the rule inside `public.barangay_prevalence()`, so the
 dashboard and the prevalence map count the same thing. A session opened but never read
@@ -19,24 +20,36 @@ does not dilute the denominator.
 
 ## Steps
 
-1. `listSmears` (`src/adapters/supabase/database.ts:587`) reads each session in the period
-   with only what a summary needs: a super admin's from the app's de-identified views, an
-   org admin's from the tables (constraint #14); both carry the barangay code. Period bounds
-   are Manila calendar days (`:618`). It
-   reads in pages through `readPages` (`src/adapters/supabase/paging.ts`): PostgREST stops
-   every response at the project's `db-max-rows` (1000 by default) whatever `.limit()` asks
-   for, so a single read silently came back with at most 1000 sessions.
-2. `summariseDashboard` (`src/domain/dashboard.ts:69`) counts distinct patients, examined
-   and positive smears, the positive rate, and verified fields; the species mix counts each
-   species once per positive smear, so a polyparasitic smear counts for each species it
-   carries; the trend buckets examined smears by Manila week, Monday first
-   (`weekStart`, `:60`).
-3. Weeks with nothing examined are **absent, not zero** (`:104`): a gap in surveillance is a
+1. `dashboardTotals` (`src/adapters/supabase/database.ts:747`) makes **one** request,
+   `console_dashboard_figures(organization, from, to)`
+   (`supabase/migrations/admin/0011_dashboard_totals.sql`), whatever the period holds. The
+   function decides the scope itself: a super admin all laboratories or one, an org admin
+   their own only (another laboratory is 42501), anyone else refused. It returns counts and
+   nothing else — sessions, patients, examined, positive, fields, per-week examined/positive,
+   positive smears per species — so there is nothing to de-identify. Period bounds are Manila
+   calendar days. Species are named by `console_canonical_species()`, the SQL twin of
+   `canonicalSpecies()`; the medtech's `expert_class` wins over the model's `class_label`.
+2. `figuresFromTotals` (`src/domain/dashboard.ts:124`) derives the positive rate, each
+   species' share of positive smears, and the order (most positive smears first, then name;
+   weeks oldest first). A polyparasitic smear counts once for each species it carries; weeks
+   are Manila weeks, Monday first (`weekStart`, `:62`).
+3. Weeks with nothing examined are **absent, not zero** (`:145`): a gap in surveillance is a
    different claim from a week of negative smears.
-4. The page (`src/app/(dashboard)/dashboard/page.tsx`) caps the read at 5,000 sessions
-   (`:26`). It asks for one more than that (`:47`), so "more than 5,000" is observable,
-   and says so when it is (`:56`), because a figure from a truncated set is silently wrong.
-   Before paging, the 1000-row server cap meant this warning could never fire.
+4. There is no session cap any more: the old page read at most 5,000 sessions and warned
+   that its figures were partial past that.
+
+## The reference
+
+`summariseDashboard` (`:157`) is `figuresFromTotals(totalsOf(records))`: the same derivation
+over counts taken from session records (`totalsOf`, `:89`). It is the reference the database
+function is held to. `supabase/tests/admin_0011_dashboard_parity.test.ts` builds one fixture
+(deleted duplicates, rejected detections, unread sessions, species aliases and corrections,
+Manila midnight and Monday boundaries, a patient in no laboratory), reads it back, and
+requires the function and `summariseDashboard` to give identical figures for every scope and
+period it tries. Change a counting rule in one and that test fails until the other matches.
+
+**Before `admin/0011` is applied**, `dashboardTotals` falls back to `listSmears` and
+`totalsOf` (`:766`), capped at the export's 20,000 sessions.
 
 ## Agreeing with the map
 
@@ -50,8 +63,10 @@ synthetic data the dashboard shows 19 examined / 14 positive; the barangay rows 
 
 **Hits**
 
-- The dashboard, and its agreement with the prevalence map.
-- `src/domain/dashboard.test.ts`.
+- The dashboard, the export page's count, and their agreement with the prevalence map.
+- `console_dashboard_figures()` — a counting rule lives in both it and the domain; the parity
+  test keeps them together.
+- `src/domain/dashboard.test.ts`, `supabase/tests/admin_0011_dashboard_*`.
 
 **Does not hit**
 
@@ -59,4 +74,5 @@ synthetic data the dashboard shows 19 examined / 14 positive; the barangay rows 
 
 ## See
 
-`src/domain/dashboard.ts`, `src/components/dashboard/`, `src/app/(dashboard)/dashboard/page.tsx`.
+`src/domain/dashboard.ts`, `supabase/migrations/admin/0011_dashboard_totals.sql`,
+`src/components/dashboard/`, `src/app/(dashboard)/dashboard/page.tsx`.

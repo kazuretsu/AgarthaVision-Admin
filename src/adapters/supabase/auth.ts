@@ -11,6 +11,7 @@ import {
 } from "@/ports/auth";
 import { timed } from "@/lib/timing";
 import { createRequestClient } from "./client";
+import { isFunctionNotFound } from "./errors";
 
 /**
  * Supabase Auth implementation of {@link AuthPort}.
@@ -70,9 +71,6 @@ interface ProfileNameRow {
   full_name: string | null;
 }
 
-/** PostgREST's "no such function", when `admin/0010` has not been applied yet. */
-const FUNCTION_NOT_FOUND = new Set(["PGRST202", "42883"]);
-
 /**
  * An org-admin membership only when it is `org_admin`, active, in an active
  * organization. Anything else is no membership — the lesser privilege.
@@ -107,7 +105,8 @@ export class SupabaseAuthAdapter implements AuthPort {
       "auth.actor",
       async () => await this.client.rpc("console_actor"),
     );
-    if (error && FUNCTION_NOT_FOUND.has(error.code ?? "")) return this.factsWithoutActor(userId);
+    // Before `admin/0010` is applied.
+    if (error && isFunctionNotFound(error)) return this.factsWithoutActor(userId);
     // Anything unreadable is no access at all — the lesser privilege.
     const row = error ? null : ((data as ConsoleActorRow[] | null)?.[0] ?? null);
     if (!row) return { fullName: null, isSuperAdmin: false, membership: null };

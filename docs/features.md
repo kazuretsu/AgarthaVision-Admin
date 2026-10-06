@@ -148,8 +148,8 @@ reports alike (`admin/0004`), though no page shows reports yet.
 ### Audit trail
 
 `/audit` lists every console change and every export, newest first: when, who, the action,
-and one line saying what happened. Filter by person, action and date; a super admin also by
-organization. An org admin sees only their organization's entries. Entries are written by
+and one line saying what happened. Filter by person (only people who appear in the trail),
+action and date; a super admin also by organization. An org admin sees only their organization's entries. Entries are written by
 the database with the change itself and can never be edited or deleted by anyone.
 
 ### Console shell
@@ -193,8 +193,9 @@ Counted per smear on the app's rule, for a chosen period (Manila calendar days, 
 URL): patients with a smear read, smears examined, positive smears, positive rate, and
 fields verified. A weekly bar chart shows smears examined with the positive share filled in
 and the rate above each bar, with a table view. Species bars show the share of positive
-smears carrying each species. No EPG and no WHO intensity tier. If a period holds more than
-5,000 sessions the page says the figures are partial.
+smears carrying each species. No EPG and no WHO intensity tier. The figures are counted in the
+database in one request, whatever the period holds, so there is no session cap; the console's
+own counting is kept as the reference and a test requires the two to agree.
 
 ### Records browser
 
@@ -227,8 +228,9 @@ as the signed-in user, not with the service-role key. Everything is read-only.
 per examined smear: session and patient record IDs, Manila date, barangay PSGC code, fields
 examined, result, eggs, and for each of the three species its LPF min, max, descriptor and
 eggs, plus other species in one cell. No names and no birthdates. The column set is version
-2 and the version is in the file name. A period over 20,000 sessions is refused rather than
-cut short, and the page warns before the click. Every download is recorded in the audit trail
+2 and the version is in the file name. The page's count comes from the database in one
+request. A period over 20,000 sessions is refused rather than cut short, and the page warns
+before the click. Every download is recorded in the audit trail
 first; if it cannot be recorded, no file is served.
 
 ## Not built yet, in this pass

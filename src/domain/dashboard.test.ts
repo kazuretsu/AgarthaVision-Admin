@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { SessionSummary } from "./clinical";
-import { summariseDashboard, weekStart, type SmearRecord } from "./dashboard";
+import {
+  figuresFromTotals,
+  summariseDashboard,
+  totalsOf,
+  weekStart,
+  type SmearRecord,
+} from "./dashboard";
 
 function summary(overrides: Partial<SessionSummary> = {}): SessionSummary {
   return { fieldCount: 5, eggCounts: [], totalEggs: 0, lpf: {}, isPositive: false, ...overrides };
@@ -77,5 +83,48 @@ describe("weekStart", () => {
   it("returns the Monday of the Manila week", () => {
     expect(weekStart("2026-09-06T10:00:00Z")).toBe("2026-08-31"); // Sunday 18:00 Manila
     expect(weekStart("2026-09-06T16:30:00Z")).toBe("2026-09-07"); // already Monday in Manila
+  });
+});
+
+describe("figuresFromTotals (14zcqntkg7p)", () => {
+  const totals = {
+    sessions: 6,
+    patients: 3,
+    smearsExamined: 4,
+    positiveSmears: 2,
+    fieldsVerified: 12,
+    trend: [
+      { weekStart: "2026-09-07", examined: 1, positive: 0 },
+      { weekStart: "2026-08-31", examined: 3, positive: 2 },
+    ],
+    species: [
+      { species: "Trichuris trichiura", positiveSmears: 1 },
+      { species: "Hookworm", positiveSmears: 1 },
+      { species: "Ascaris lumbricoides", positiveSmears: 2 },
+    ],
+  };
+
+  it("derives the rate, the shares and the order from counts alone", () => {
+    const figures = figuresFromTotals(totals);
+    expect(figures.positiveRate).toBe(0.5);
+    expect(figures.trend.map((point) => [point.weekStart, point.rate])).toEqual([
+      ["2026-08-31", 2 / 3],
+      ["2026-09-07", 0],
+    ]);
+    // Most positive smears first; a tie in name order, whoever counted it.
+    expect(figures.speciesMix.map((row) => [row.species, row.share])).toEqual([
+      ["Ascaris lumbricoides", 1],
+      ["Hookworm", 0.5],
+      ["Trichuris trichiura", 0.5],
+    ]);
+  });
+
+  it("is what summariseDashboard returns for the records the totals were counted from", () => {
+    const records = [
+      smear({ summary: summary({ isPositive: true, eggCounts: [hookworm, ascaris] }) }),
+      smear({ summary: summary({ fieldCount: 0 }) }),
+    ];
+    expect(totalsOf(records).sessions).toBe(2);
+    expect(summariseDashboard(records)).toEqual(figuresFromTotals(totalsOf(records)));
   });
 });

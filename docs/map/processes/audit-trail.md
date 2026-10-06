@@ -9,6 +9,13 @@ Input: an administrative write or an export → Movement: the database appends o
 the same transaction → Output: `/audit`, filtered by person, action, date and (for a super
 admin) organization.
 
+## The person filter
+
+The filter lists only the people who appear in the entries the reader can read, under the
+label their latest entry carries: `listAuditActors` → `console_audit_actors(organization)`
+(`admin/0011`), a security-invoker function, so `admin_audit_log`'s own policies decide which
+entries count. It used to list every profile the reader could see.
+
 ## Writing
 
 Nothing in the console inserts into `admin_audit_log`. Each write is a security-definer

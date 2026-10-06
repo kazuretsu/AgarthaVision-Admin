@@ -5,7 +5,6 @@ import { getDatabase } from "@/adapters/registry";
 import {
   RESEARCH_EXPORT_COLUMNS,
   RESEARCH_EXPORT_LIMIT,
-  isExamined,
   patientDisclosureFor,
   type ConsoleAccess,
   type OrganizationSummary,
@@ -25,12 +24,13 @@ import { Input } from "@/components/ui/input";
 /**
  * The research export: one row per examined smear, in LPF terms, with no names
  * and no birthdates. The page shows how many smears the file will hold before it
- * is downloaded. The count reads inside a Suspense boundary keyed by the period,
+ * is downloaded, counted in the database in one request (admin/0011) rather than by
+ * reading every row. The count reads inside a Suspense boundary keyed by the period,
  * so the form shows first and every new period shows the count's skeleton.
  */
 export const dynamic = "force-dynamic";
 
-/** How many smears the file will hold, and the download links: the slow read. */
+/** How many smears the file will hold, and the download links. */
 async function ExportCount({
   access,
   scope,
@@ -42,18 +42,15 @@ async function ExportCount({
   period: Period;
   query: string;
 }) {
-  let smears;
+  let totals;
   try {
-    // The download's own limit, so this count and the file agree, and a period the
-    // download would refuse is flagged here first.
-    smears = await (
+    totals = await (
       await getDatabase()
-    ).listSmears({
+    ).dashboardTotals({
       scope,
       disclosure: patientDisclosureFor(access),
       startedFrom: period.from,
       startedTo: period.to,
-      limit: RESEARCH_EXPORT_LIMIT + 1,
     });
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
@@ -66,8 +63,9 @@ async function ExportCount({
     throw cause;
   }
 
-  const tooLarge = smears.length > RESEARCH_EXPORT_LIMIT;
-  const examined = smears.filter(isExamined).length;
+  // The download refuses a period over its limit in sessions, read or not; say so first.
+  const tooLarge = totals.sessions > RESEARCH_EXPORT_LIMIT;
+  const examined = totals.smearsExamined;
   const href = (format: "csv" | "json") => {
     const params = new URLSearchParams(query);
     params.set("format", format);
@@ -84,11 +82,7 @@ async function ExportCount({
       ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-[14px] text-stone-ink">
-          <span className="tnum font-bold">
-            {tooLarge ? "At least " : ""}
-            {examined.toLocaleString()}
-          </span>{" "}
-          smear
+          <span className="tnum font-bold">{examined.toLocaleString()}</span> smear
           {examined === 1 ? "" : "s"} examined, {describePeriod(period)}.
         </p>
         <div className="ml-auto flex gap-2">

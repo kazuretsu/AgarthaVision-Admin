@@ -6,6 +6,9 @@
  * Order: Supabase stubs → the app's migrations (0001…, from the app repo) → a small
  * pre-existing seed → this repo's admin migrations → test helpers → each
  * `supabase/tests/*.test.sql`, inside a transaction that is always rolled back.
+ * A `*.test.ts` there runs the same way: its default export is called with the
+ * transaction's connection, for a test that needs the console's own TypeScript
+ * (the dashboard's reference counting, say) beside the SQL.
  *
  * Refuses any host but localhost and any database not ending in `_test`: this script
  * drops and recreates its database, and must never be pointed at a real project.
@@ -71,7 +74,7 @@ for (const path of migrations(join(root, "supabase/migrations/admin"))) await ap
 await apply("helpers", join(root, "supabase/tests/_helpers.sql"));
 
 const tests = readdirSync(join(root, "supabase/tests"))
-  .filter((name) => name.endsWith(".test.sql"))
+  .filter((name) => name.endsWith(".test.sql") || name.endsWith(".test.ts"))
   .sort();
 
 let failed = 0;
@@ -79,7 +82,13 @@ for (const name of tests) {
   const connection = await sql.reserve();
   try {
     await connection.unsafe("begin");
-    await connection.unsafe(read(join(root, "supabase/tests", name)));
+    const path = join(root, "supabase/tests", name);
+    if (name.endsWith(".ts")) {
+      const test = (await import(path)) as { default: (sql: typeof connection) => Promise<void> };
+      await test.default(connection);
+    } else {
+      await connection.unsafe(read(path));
+    }
     console.log(`✓ ${name}`);
   } catch (cause) {
     failed += 1;
