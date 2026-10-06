@@ -69,8 +69,9 @@ admin all, an org admin their organization's; its token hash by nobody.
 **Deactivating a medtech** (`admin/0006`, `docs/map/processes/medtech-access.md`) sets
 their membership's status and bans their login; nothing is deleted.
 
-**Assigning patients** (`admin/0007`, `docs/map/processes/patient-assignment.md`): an org
-admin links their laboratory's patients to its active medtechs through audited functions;
+**Assigning patients** (`admin/0007`, `admin/0008`, `docs/map/processes/patient-assignment.md`):
+an org admin links their laboratory's patients to its active members — org admins included,
+since a role is a permission level and not a job — through audited functions;
 `patient_users` itself still has no write policy.
 
 **Backfill** (`:363`): one "Starting laboratory" receives every existing non-admin user as a

@@ -1,12 +1,15 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { createContext, useActionState, useContext, useRef, useState } from "react";
 import {
   assignPatient,
   replaceAssignment,
   unassignPatient,
 } from "@/app/(dashboard)/assignments/actions";
-import { EMPTY_ASSIGNMENT_FORM } from "@/app/(dashboard)/assignments/state";
+import {
+  EMPTY_ASSIGNMENT_FORM,
+  type AssignmentFormState,
+} from "@/app/(dashboard)/assignments/state";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -18,47 +21,75 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
-export interface MedtechOption {
+export interface MemberOption {
   userId: string;
   label: string;
 }
 
-function Feedback({ error, done }: { error: string | null; done: string | null }) {
-  if (error) {
-    return (
-      <p role="alert" className="text-[12px] text-danger">
-        {error}
-      </p>
-    );
-  }
-  if (done) {
-    return (
-      <p role="status" className="text-[12px] text-ok">
+/**
+ * Where a successful change is announced. A change usually removes the form that
+ * made it — a removed row, a handed-over row, the Assign card once nobody is left
+ * to assign — so its own message would unmount with it before anyone saw it. The
+ * section keeps one status line instead; errors stay beside their form, which a
+ * failed change leaves in place.
+ */
+const ReportDone = createContext<(message: string | null) => void>(() => {});
+
+export function AssignmentFeedback({ children }: { children: React.ReactNode }) {
+  const [done, setDone] = useState<string | null>(null);
+  return (
+    <ReportDone.Provider value={setDone}>
+      {/* Always mounted, so screen readers announce the message when it appears. */}
+      <p role="status" className="text-[12px] text-ok empty:hidden">
         {done}
       </p>
-    );
-  }
-  return null;
+      {children}
+    </ReportDone.Provider>
+  );
 }
 
-/** Assign one more of the laboratory's active medtechs. */
+type AssignmentAction = (
+  previous: AssignmentFormState,
+  formData: FormData,
+) => Promise<AssignmentFormState>;
+
+/** The action, with its success reported to the section rather than kept in the form. */
+function useAssignmentAction(serverAction: AssignmentAction) {
+  const report = useContext(ReportDone);
+  return useActionState<AssignmentFormState, FormData>(async (previous, formData) => {
+    report(null);
+    const state = await serverAction(previous, formData);
+    if (state.done) report(state.done);
+    return state;
+  }, EMPTY_ASSIGNMENT_FORM);
+}
+
+function FormError({ error }: { error: string | null }) {
+  return error ? (
+    <p role="alert" className="text-[12px] text-danger">
+      {error}
+    </p>
+  ) : null;
+}
+
+/** Assign one more of the laboratory's active members, either role. */
 export function AssignForm({
   patientId,
   options,
 }: {
   patientId: string;
-  options: readonly MedtechOption[];
+  options: readonly MemberOption[];
 }) {
-  const [state, action, pending] = useActionState(assignPatient, EMPTY_ASSIGNMENT_FORM);
+  const [state, action, pending] = useAssignmentAction(assignPatient);
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="patientId" value={patientId} />
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex min-w-64 flex-col gap-1">
-          <span className="text-[12px] font-medium text-stone-deep">Assign a medtech</span>
+          <span className="text-[12px] font-medium text-stone-deep">Assign someone</span>
           <NativeSelect name="userId" defaultValue="" required>
             <NativeSelectOption value="" disabled>
-              Choose a medtech
+              Choose a person
             </NativeSelectOption>
             {options.map((option) => (
               <NativeSelectOption key={option.userId} value={option.userId}>
@@ -71,7 +102,7 @@ export function AssignForm({
           {pending ? "Assigning…" : "Assign"}
         </Button>
       </div>
-      <Feedback {...state} />
+      <FormError error={state.error} />
     </form>
   );
 }
@@ -86,7 +117,7 @@ export function RemoveAssignmentForm({
   userId: string;
   name: string;
 }) {
-  const [state, action, pending] = useActionState(unassignPatient, EMPTY_ASSIGNMENT_FORM);
+  const [state, action, pending] = useAssignmentAction(unassignPatient);
   const form = useRef<HTMLFormElement>(null);
   return (
     <form ref={form} action={action} className="flex flex-col items-end gap-1">
@@ -118,14 +149,14 @@ export function RemoveAssignmentForm({
           </div>
         </AlertDialogContent>
       </AlertDialog>
-      <Feedback {...state} />
+      <FormError error={state.error} />
     </form>
   );
 }
 
 /**
- * Hand the patient from this medtech to another: the only way to change the last
- * active medtech, since a patient is never left with nobody.
+ * Hand the patient from this person to another: the only way to change the last
+ * active member on it, since a patient is never left with nobody.
  */
 export function ReplaceAssignmentForm({
   patientId,
@@ -134,13 +165,13 @@ export function ReplaceAssignmentForm({
 }: {
   patientId: string;
   userId: string;
-  options: readonly MedtechOption[];
+  options: readonly MemberOption[];
 }) {
-  const [state, action, pending] = useActionState(replaceAssignment, EMPTY_ASSIGNMENT_FORM);
+  const [state, action, pending] = useAssignmentAction(replaceAssignment);
   if (options.length === 0) {
     return (
       <p className="max-w-64 text-right text-[12px] text-stone-mid">
-        The only medtech on this patient. Invite or reactivate another to hand over.
+        The only active member on this patient. Invite or reactivate someone to hand over.
       </p>
     );
   }
@@ -169,7 +200,7 @@ export function ReplaceAssignmentForm({
           {pending ? "Handing over…" : "Hand over"}
         </Button>
       </div>
-      <Feedback {...state} />
+      <FormError error={state.error} />
     </form>
   );
 }

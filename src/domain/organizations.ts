@@ -12,6 +12,15 @@ import type { ConsoleAccess } from "./access";
 export type OrganizationStatus = "active" | "deactivated";
 export type MembershipRole = "org_admin" | "medtech";
 
+/**
+ * A role is a permission level, not a job: an org admin can do everything a medtech
+ * can, plus administration (14zcqntkd0w).
+ */
+export const ROLE_LABEL: Record<MembershipRole, string> = {
+  org_admin: "Organization admin",
+  medtech: "Medtech",
+};
+
 export interface Organization {
   id: string;
   name: string;

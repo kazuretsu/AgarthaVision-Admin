@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDatabase } from "@/adapters/registry";
-import { canChangeMemberStatus, isUuid, memberPatientLabel } from "@/domain";
+import { canChangeMemberStatus, isUuid, memberPatientLabel, ROLE_LABEL } from "@/domain";
 import { DatabaseReadError } from "@/ports/db";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -33,9 +33,11 @@ import {
 } from "@/components/ui/table";
 
 /**
- * One medtech and the laboratory's patients assigned to them. An org admin opens
- * their own laboratory's medtechs; a super admin names the laboratory (`?org=`)
- * and reads the patients de-identified. Assignments change on the patient's page.
+ * One member of a laboratory — a medtech or an org admin, since both do fieldwork
+ * (14zcqntkd0w) — and the laboratory's patients assigned to them. An org admin
+ * opens their own laboratory's people; a super admin names the laboratory
+ * (`?org=`) and reads the patients de-identified. Assignments change on the
+ * patient's page.
  */
 export const dynamic = "force-dynamic";
 
@@ -64,9 +66,7 @@ export default async function MedtechPage({
   let patients;
   try {
     const db = await getDatabase();
-    person = (await db.listPeople(organizationId)).find(
-      (candidate) => candidate.userId === userId && candidate.role === "medtech",
-    );
+    person = (await db.listPeople(organizationId)).find((candidate) => candidate.userId === userId);
     if (!person) notFound();
     patients = await db.listMemberPatients(userId);
   } catch (cause) {
@@ -99,6 +99,7 @@ export default async function MedtechPage({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-[22px] font-bold text-stone-ink">{name}</h1>
+          <Badge variant="neutral">{ROLE_LABEL[person.role]}</Badge>
           {person.status === "active" ? (
             <Badge variant="ok">Active</Badge>
           ) : (

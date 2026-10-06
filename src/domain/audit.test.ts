@@ -87,13 +87,26 @@ describe("member entries", () => {
 });
 
 describe("assignment entries", () => {
-  it("name the patient by record id only, and the medtech", () => {
+  it("name the patient by record id only, and the medtech, from admin/0007 entries", () => {
     const base = { targetId: "70000000-0000-4000-8000-000000000001", details: { medtech: "Ana" } };
     expect(describeAuditEntry(entry({ ...base, action: "assignment.add" }))).toBe(
       "Assigned patient 70000000 to Ana",
     );
     expect(describeAuditEntry(entry({ ...base, action: "assignment.remove" }))).toBe(
       "Removed patient 70000000 from Ana",
+    );
+  });
+
+  it("name the member, org admins included, from entries written since admin/0008", () => {
+    const base = {
+      targetId: "70000000-0000-4000-8000-000000000001",
+      details: { member: "Olga Admin", role: "org_admin" },
+    };
+    expect(describeAuditEntry(entry({ ...base, action: "assignment.add" }))).toBe(
+      "Assigned patient 70000000 to Olga Admin",
+    );
+    expect(describeAuditEntry(entry({ ...base, details: {}, action: "assignment.remove" }))).toBe(
+      "Removed patient 70000000 from someone",
     );
   });
 });

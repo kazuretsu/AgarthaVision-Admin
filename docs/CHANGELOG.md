@@ -2,6 +2,26 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] The confirmation after removing or handing over an assignment is shown
+
+Removing an assignment, handing one over, or assigning the last person left unmounted the form
+that made the change, so its success message was never seen. Success is now announced in one
+status line under the patient's Assigned heading, which stays put; errors still show beside the
+form, which a failed change leaves in place.
+
+## [feat] Org admins do fieldwork: assignable to patients and counted as cover
+
+A membership's role is now a permission level, not a job: an org admin can be assigned their
+laboratory's patients like a medtech. `admin/0008_member_fieldwork.sql` (**apply it in the SQL
+editor**, after `admin/0007`) replaces `console_assign_patient` and `console_unassign_patient`:
+any **active** member of the patient's laboratory, in either role, can be assigned, and the
+"a patient keeps someone" rule counts an active org admin, so a patient linked to an org admin
+and a medtech can lose the medtech. Deactivated members of either role are never assignable and
+never cover. Handing over follows both. The patient page's Assigned list and pickers show org
+admins with a Role column; `/medtechs/[id]` opens for an org admin too. New audit entries record
+`member_id`, `member` and `role` (older ones keep `medtech_id` / `medtech`, and both display).
+Wording says "member" or "person" where it now means either role. No app table or policy changes.
+
 ## [feat] Assign a laboratory's patients to its medtechs
 
 A patient's page now shows its assigned medtechs, and the laboratory's org admin assigns, removes

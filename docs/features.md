@@ -112,12 +112,14 @@ laboratory. Each change is in the audit trail.
 
 ### Patient assignment
 
-A patient's page lists the medtechs assigned to it — the ones who see it in the Android app —
-with their status and since when. The laboratory's org admin assigns any of its active medtechs,
-removes an assignment (behind a confirmation) and, for the last active medtech, hands the patient
-over to another instead: a patient is never left with nobody. A medtech's page
-(`/medtechs/[id]`) lists the patients assigned to them. Assigning across laboratories, or a
-deactivated medtech, is refused in the page and in the database. Removing an assignment removes
+A patient's page lists the people assigned to it — the ones who see it in the Android app —
+with their role, status and since when. Org admins do fieldwork too: a role is a permission
+level, not a job. The laboratory's org admin assigns any of its active members, org admins
+(themselves included) or medtechs, removes an assignment (behind a confirmation) and, for the
+last active member, hands the patient over to another instead: a patient is never left with
+nobody, and an active org admin counts. A person's page (`/medtechs/[id]`, either role) lists
+the patients assigned to them. Assigning across laboratories, or a deactivated member of either
+role, is refused in the page and in the database. Removing an assignment removes
 access only: the patient, every record and who read each smear stay. A super admin sees who is
 assigned and nothing more. Each change is in the audit trail, naming the patient by record id.
 

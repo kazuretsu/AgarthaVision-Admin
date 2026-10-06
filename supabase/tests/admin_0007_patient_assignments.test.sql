@@ -67,9 +67,7 @@ begin
     perform tests.expect_error(
         format('select public.console_assign_patient(%L, %L)', f.patient_a, f.tech_off),
         '42501', 'a deactivated medtech cannot be assigned');
-    perform tests.expect_error(
-        format('select public.console_assign_patient(%L, %L)', f.patient_a, f.admin_a),
-        '42501', 'an org admin is not assigned as a medtech');
+    -- Whether an org admin can be assigned is admin/0008's rule (they can); see its tests.
     perform tests.expect_error(
         format('select public.console_assign_patient(%L, %L)', f.patient_b, f.tech_1),
         '42501', 'another laboratory''s patient cannot be assigned');

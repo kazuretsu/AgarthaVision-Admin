@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAdminWrites, getDatabase } from "@/adapters/registry";
-import { assignableMedtechs, canAssignPatients, canRemoveAssignment, isUuid } from "@/domain";
+import { assignableMembers, canAssignPatients, canRemoveAssignment, isUuid } from "@/domain";
 import {
   AdminWriteError,
   DatabaseReadError,
@@ -17,9 +17,10 @@ import type { AssignmentFormState } from "./state";
 
 /**
  * Assign, remove and hand over a patient. Org admins only, for their own
- * laboratory's patients and active medtechs. Each checks the rule here first
- * (D7); the database function checks again and writes the audit row. Removing an
- * assignment removes access only: the patient and every record stay.
+ * laboratory's patients and its active members, org admins included. Each checks
+ * the rule here first (D7); the database function checks again and writes the
+ * audit row. Removing an assignment removes access only: the patient and every
+ * record stay.
  */
 
 const NOT_PERMITTED: AssignmentFormState = {
@@ -31,10 +32,11 @@ const SIGNED_OUT: AssignmentFormState = {
   done: null,
 };
 const NOT_FOUND: AssignmentFormState = {
-  error: "That patient or medtech is not in this laboratory.",
+  error: "That patient or person is not in this laboratory.",
   done: null,
 };
-const LAST = "A patient always keeps at least one active medtech. Choose who takes over instead.";
+const LAST =
+  "A patient always keeps at least one active member of the laboratory. Choose who takes over instead.";
 
 type Actor = ConsoleActor & {
   access: { kind: "org_admin"; organizationId: string; organizationName: string };
@@ -56,10 +58,10 @@ function explain(cause: unknown): AssignmentFormState {
   if (cause instanceof AdminWriteError) {
     if (cause.hint === "last_assignment") return { error: LAST, done: null };
     const messages = {
-      forbidden: "That medtech cannot be assigned to this patient.",
+      forbidden: "That person cannot be assigned to this patient.",
       not_found: "That assignment no longer exists.",
       conflict: "That changed in the meantime. Reload and try again.",
-      invalid: "Choose a different medtech.",
+      invalid: "Choose a different person.",
       failed: "The change could not be saved. Try again.",
     } as const;
     return { error: messages[cause.reason], done: null };
@@ -82,14 +84,14 @@ function refresh(patientId: string, ...userIds: string[]) {
   for (const userId of userIds) revalidatePath(`/medtechs/${userId}`);
 }
 
-/** The medtech, when they are one of this laboratory's active medtechs not yet assigned. */
+/** The person, when they are an active member of this laboratory not yet assigned. */
 async function assignable(actor: Actor, patientId: string, userId: string) {
   const db = await getDatabase();
   const [people, assignments] = await Promise.all([
     db.listPeople(actor.access.organizationId),
     db.listPatientAssignments(patientId),
   ]);
-  return assignableMedtechs(people, assignments).find((person) => person.userId === userId);
+  return assignableMembers(people, assignments).find((person) => person.userId === userId);
 }
 
 export async function assignPatient(
@@ -99,7 +101,7 @@ export async function assignPatient(
   const actor = await requireAssigner();
   if (!("user" in actor)) return actor;
   const values = ids(formData, "patientId", "userId");
-  if (!values) return { error: "Choose a medtech to assign.", done: null };
+  if (!values) return { error: "Choose someone to assign.", done: null };
   const [patientId, userId] = values;
 
   let person;
