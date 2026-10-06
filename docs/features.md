@@ -60,12 +60,14 @@ invited person's account when they accept, and banning or unbanning a medtech's 
 
 ### Authentication and the admin gate
 
-Supabase Auth behind `AuthPort`. Identity comes from `getUser()`; access comes from
-an active `super_admins` grant through `is_admin()` (super admin) or an org-admin
-membership (organization admin), read server-side on every request, never from a token
-claim or the retired `profiles.role`. A super admin whose grant is revoked, and an
-organization admin whose membership or organization is deactivated, are turned away on
-their next request. The `(dashboard)` segment layout resolves the actor
+Supabase Auth behind `AuthPort`. Identity comes from `getClaims()`, which verifies the
+session's JWT locally against the project's published signing key; access comes from an
+active `super_admins` grant through `is_admin()` (super admin) or an org-admin membership
+(organization admin), read server-side on every request in **one** database call
+(`console_actor()`, `admin/0010`), never from a token claim or the retired `profiles.role`.
+A super admin whose grant is revoked, and an organization admin whose membership or
+organization is deactivated, are turned away on their next page that is not in the
+browser's 30-second router cache. The `(dashboard)` segment layout resolves the actor
 once, so every page under it is guarded on creation; narrower pages add
 `requirePageAccess()`, and route handlers repeat the check with `requireRouteAccess()`. A
 medtech who signs in is signed back out and told to use the mobile app; a medtech with a
@@ -160,6 +162,16 @@ role, theme choice (light, dark, system) and sign out. Components are shadcn on 
 **Desktop only.** Super admins and organization admins work at a computer; medtechs use the
 mobile app. The shell holds a 1024px minimum width and a narrower window scrolls sideways.
 Pages lay out for a desktop and do not collapse into a phone layout.
+
+### Fast navigation
+
+A sidebar click costs one database round trip for access before the page's own reads: the
+session is verified locally, and name, grant and membership come back in one call
+(14zcqntkd0y). A page already opened in the tab within 30 seconds re-shows without a server
+request; saving a change or signing out empties that cache. Each request logs how long the
+access check and each read or write took (`[timing] db.listPeople 84ms`, Vercel → Logs; set
+`CONSOLE_TIMING=off` to silence), and the proxy sends a `Server-Timing` header. On a local
+stack with 300 ms per call, `/people` went from 1.6 s to 0.66 s.
 
 ### Loading states
 

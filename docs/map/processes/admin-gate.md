@@ -1,13 +1,13 @@
 ---
-verified: 2026-10-02
-commit: 0e56473
+verified: 2026-10-06
+commit: 2484c07
 ---
 
 # Admin gate
 
-Input: an HTTP request → Movement: refresh session, resolve identity, resolve console access
-→ Output: a rendered console page, the "use the mobile app" notice, or a redirect to
-`/login`.
+Input: an HTTP request → Movement: refresh session, verify identity locally, resolve console
+access in one database call → Output: a rendered console page, the "use the mobile app"
+notice, or a redirect to `/login`.
 
 ## Who gets in
 
@@ -21,29 +21,36 @@ The rule is `resolveConsoleAccess` (`src/domain/access.ts:40`). It is plain doma
 it runs before any read or write, whichever provider sits behind the ports (D7). Being a
 super admin wins: a super admin who also holds a membership stays a super admin.
 
-`isSuperAdmin` (`src/adapters/supabase/auth.ts:63`) calls the app's `is_admin()` (app
-`0014`, D22) as the signed-in user: the same function every database policy calls, so the
-console and the database never disagree. `super_admins` itself is closed to every client.
-`profiles.role` is retired and the console never reads it. A revoked grant turns the super
-admin away on their next request.
-
-`findOrgAdminMembership` (`src/adapters/supabase/auth.ts:74`) reads the user's own
-`organization_members` row (`docs/map/objects/organizations.md`). Only an active `org_admin`
-membership in an active organization counts, so deactivating either locks the org admin
-out on their next request.
+`console_actor()` (`supabase/migrations/admin/0010_console_actor.sql`) returns, about the
+caller only, their name, the app's `is_admin()` (app `0014`, D22) — the same function every
+database policy calls, so the console and the database never disagree — and their own
+membership and organization (`docs/map/objects/organizations.md`). `super_admins` itself is
+closed to every client. `profiles.role` is retired and the console never reads it. Only an
+active `org_admin` membership in an active organization counts (`orgAdminMembership`,
+`src/adapters/supabase/auth.ts:80`), so revoking a grant or deactivating a membership or an
+organization locks the person out on their next uncached page.
 
 ## Steps
 
-1. **Refresh.** `src/proxy.ts:46` touches `supabase.auth.getUser()` on every matched
-   request to trigger the refresh-and-set-cookie cycle. A Server Component cannot write
-   cookies. **This is refresh only — it is not the authorisation point.**
-2. **Resolve identity.** `getCurrentUser` (`src/adapters/supabase/auth.ts:96`) calls
-   `getUser()`, not `getSession()`, which only decodes a cookie the browser can set.
-3. **Resolve super admin.** `toAuthenticatedUser` (`:42`) reads the name from `profiles`
-   and asks `is_admin()` in parallel (`:63`), never a JWT claim, `user_metadata` or
-   `profiles.role`. An error or anything but `true` resolves to not a super admin (`:65`).
-4. **Resolve access.** `toActor` (`:88`) looks up the membership (skipped for a super admin)
-   and applies `resolveConsoleAccess`. No access throws `NotAuthorizedError`.
+1. **Refresh.** `src/proxy.ts:50` calls `supabase.auth.getClaims()` on every matched
+   request. It verifies the access token locally and refreshes it only when it has
+   expired, which triggers the refresh-and-set-cookie cycle a Server Component cannot do.
+   It sends `Server-Timing: session;dur=…` (`:55`). **This is refresh only — it is not the
+   authorisation point.**
+2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:96`) calls `getClaims()`,
+   which checks the JWT's signature and expiry against the project's published signing key
+   (ECC P-256, fetched once from `/auth/v1/.well-known/jwks.json` and cached ten minutes per
+   server instance): **no auth-server round trip**. A legacy shared-secret project falls back
+   to asking the server. Never `getSession()`, which only decodes a cookie the browser can
+   set.
+3. **Resolve the facts, in one call.** `facts` (`:105`) calls `console_actor()`: name,
+   super-admin grant and membership. An error, or no row, is no access at all — the lesser
+   privilege. If the function is not installed yet (`PGRST202`/`42883`, `:74`),
+   `factsWithoutActor` (`:132`) runs the three reads it replaced (profile name and
+   `is_admin()` in parallel, then the membership), so a deployment ahead of its migration
+   keeps working.
+4. **Resolve access.** `toActor` (`:177`) applies `resolveConsoleAccess`. No access throws
+   `NotAuthorizedError`.
 5. **Gate the segment.** The `(dashboard)` layout calls `getConsoleActor()`
    (`src/app/(dashboard)/layout.tsx:29`): no session redirects to `/login` (`:31`); no access
    renders `NoConsoleAccess` (`:32`, `:98`) — a message and a sign-out button, no data, no
@@ -60,7 +67,20 @@ out on their next request.
    (`src/app/(dashboard)/export/download/route.ts:35`).
 
 `getConsoleActor` is wrapped in React's `cache()` (`src/lib/console-access.ts:19`), so the
-layout and the page share one lookup per request.
+layout and the page share one lookup per request. A warm page therefore makes **one**
+database round trip for access (`auth.actor`) before its own reads; the timing log lines
+(`src/lib/timing.ts`) show it per request.
+
+## The browser's router cache (14zcqntkd0y)
+
+`next.config.ts:11` keeps a page the person already opened in the tab for 30 seconds
+(`staleTimes.dynamic`), so moving back and forth between sidebar pages makes no server
+request. The trade-off, chosen deliberately: a page seen in the last 30 seconds re-shows
+without a server check, so a revoked admin is refused on their next page **not** in that
+cache — at most 30 seconds later. It never fetches anything new for them. Every server action
+that changes data calls `revalidatePath`, which empties the cache, so one's own changes show
+at once; signing out empties it too (`src/app/(auth)/login/actions.ts:58`), so Back after
+sign-out shows nothing of the console.
 
 ## Why the gate is in the layout
 
@@ -91,8 +111,9 @@ can do is described in `docs/map/processes/invitations.md`.
 
 ## Consumes / produces
 
-Consumes `AuthPort` (`docs/map/objects/ports.md`), `profiles`
-(`docs/map/objects/domain-model.md`) and the app's `is_admin()`. Produces a `ConsoleActor`, the notice, or a redirect.
+Consumes `AuthPort` (`docs/map/objects/ports.md`), `console_actor()` (`admin/0010`) — or,
+before it is applied, `profiles` (`docs/map/objects/domain-model.md`), the app's `is_admin()`
+and `organization_members`. Produces a `ConsoleActor`, the notice, or a redirect.
 
 ## If you change this
 
@@ -100,6 +121,8 @@ Consumes `AuthPort` (`docs/map/objects/ports.md`), `profiles`
 
 - Every page under `(dashboard)/`, and every route handler that calls
   `requireRouteAccess`.
+- `console_actor()` and `factsWithoutActor` must return the same facts;
+  `supabase/tests/admin_0010_console_actor.test.sql`, `src/adapters/supabase/auth.test.ts`.
 - `src/app/(auth)/login/actions.ts`, which applies the same rule at sign-in.
 - `src/components/shell/nav.ts`, whose `visibleTo` must agree with each page's
   `requirePageAccess` call or a link leads to a 404.
@@ -108,6 +131,8 @@ Consumes `AuthPort` (`docs/map/objects/ports.md`), `profiles`
 
 - Row visibility. RLS decides what a query returns; this gate decides who may ask.
 - `src/proxy.ts`, which never reads a role.
+- Caching of data: there is none on the server. Every read runs as the signed-in user, so
+  RLS decides; only the browser's 30-second router cache above re-shows a page.
 - `super_admins` and `is_admin()`, which the app owns. Granting and revoking are a separate
   ticket (14zcqntjwjg).
 

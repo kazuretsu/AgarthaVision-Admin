@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/adapters/registry";
 import { AuthenticationFailedError, NotAuthorizedError, type AuthPort } from "@/ports/auth";
@@ -57,5 +58,8 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
 export async function signOut(): Promise<void> {
   const auth = await getAuth();
   await auth.signOut();
+  // Empty the browser's router cache (`staleTimes`, 14zcqntkd0y), so a page the person had
+  // open can never be shown again from it on this browser, by Back or otherwise.
+  revalidatePath("/", "layout");
   redirect("/login");
 }

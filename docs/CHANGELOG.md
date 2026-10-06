@@ -2,6 +2,20 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [enhancements] A sidebar click makes one access round trip, and recent pages re-show at once
+
+The session is now verified locally with `getClaims()` against the project's ECC signing key,
+in `src/proxy.ts` and in the gate, instead of asking the auth server on every request, and
+the name, super-admin grant and membership come back in **one** call, `console_actor()`
+(`admin/0010_console_actor.sql`, **apply it in the SQL editor**; until it is, the console falls
+back to the three reads it replaces). A warm page now makes one round trip for access before
+its own reads; on a local stack with 300 ms per call, `/people` went from 1.6 s to 0.66 s. The
+browser keeps a page opened in the last 30 seconds (`staleTimes.dynamic`), so moving back and
+forth is instant; every write and sign-out empties it, and a revoked admin is refused on their
+next page not in it. Each request logs its access check and reads as
+`[timing] <operation> <ms>` (`CONSOLE_TIMING=off` silences them) and the proxy sends a
+`Server-Timing` header. No server-side data cache: every read still runs as the signed-in user.
+
 ## [ux] Every console page shows that a click registered, in the shape of what is coming
 
 The dashboard, records list, People, export and audit trail now have a route-level skeleton of
