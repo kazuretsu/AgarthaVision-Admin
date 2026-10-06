@@ -161,6 +161,20 @@ role, theme choice (light, dark, system) and sign out. Components are shadcn on 
 mobile app. The shell holds a 1024px minimum width and a narrower window scrolls sideways.
 Pages lay out for a desktop and do not collapse into a phone layout.
 
+### Loading states
+
+Every console page shows that a click registered, in the shape of what is coming
+(14zcqntk6h5):
+
+- **Dashboard, records list, people, export, audit trail** show a skeleton of their own layout at
+  once: header, filters, stat cards, charts or table rows. Their figures or tables read inside
+  the page, so a client-side change of sort or page swaps only the table for its skeleton.
+- **Organizations** (super admins only) shows its header and form, then the table's skeleton.
+- **A patient, session, field, organization or person page** decides "not found" first, so it
+  keeps a real 404. Until then the clicked link — in the sidebar, a list or a table — shows a
+  spinner. A person's page then shows its header at once and the patients table's skeleton.
+- Skeletons are marked busy for screen readers, with what is loading, and follow the theme.
+
 ### Dashboard
 
 Counted per smear on the app's rule, for a chosen period (Manila calendar days, held in the

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { getDatabase } from "@/adapters/registry";
 import {
   AUDIT_ACTIONS,
@@ -6,14 +7,16 @@ import {
   describeAuditEntry,
   type OrganizationSummary,
   type Profile,
+  type ReadScope,
 } from "@/domain";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { MissingEnvironmentError } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
-import { parsePeriod } from "@/lib/period";
+import { parsePeriod, type Period } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
+import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +36,9 @@ import {
  * transaction as the write, and no one — not a super admin, not the table owner —
  * can change or delete an entry. An org admin reads their own organization's
  * entries; a super admin reads all of them.
+ *
+ * The filters render first; the entries read inside a Suspense boundary keyed by
+ * the filters, so a new filter shows the table's skeleton too.
  */
 export const dynamic = "force-dynamic";
 
@@ -41,6 +47,98 @@ const AUDIT_LIMIT = 500;
 
 function first(value: string | string[] | undefined): string | undefined {
   return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
+}
+
+/** One read of the trail for the filters, streamed into the table's skeleton. */
+async function AuditEntries({
+  scope,
+  actorId,
+  action,
+  period,
+  filtered,
+  isSuperAdmin,
+}: {
+  scope: ReadScope;
+  actorId: string | undefined;
+  action: string | undefined;
+  period: Period;
+  filtered: boolean;
+  isSuperAdmin: boolean;
+}) {
+  let entries;
+  try {
+    entries = await (
+      await getDatabase()
+    ).listAuditEntries({
+      scope,
+      actorId,
+      action: action && Object.hasOwn(AUDIT_ACTIONS, action) ? action : undefined,
+      from: period.from,
+      to: period.to,
+      limit: AUDIT_LIMIT,
+    });
+  } catch (cause) {
+    if (cause instanceof MissingEnvironmentError) {
+      return (
+        <p className="text-[13px] text-stone-deep">
+          <code className="font-mono">{cause.variable}</code> is not set, so nothing could be read.
+        </p>
+      );
+    }
+    throw cause;
+  }
+
+  return (
+    <>
+      {entries.length >= AUDIT_LIMIT ? (
+        <p role="status" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
+          Showing the newest {AUDIT_LIMIT} entries. Narrow the filters to see older ones.
+        </p>
+      ) : null}
+
+      {entries.length === 0 ? (
+        <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
+          {filtered ? "No entries match these filters." : "Nothing has been recorded yet."}
+        </p>
+      ) : (
+        <Table className="min-w-[720px]">
+          <TableCaption>Audit entries, newest first</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>When</TableHead>
+              <TableHead>Who</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>What happened</TableHead>
+              {isSuperAdmin ? <TableHead>Organization</TableHead> : null}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {entries.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell className="tnum whitespace-nowrap">{formatDateTime(entry.at)}</TableCell>
+                <TableCell>
+                  {entry.actorLabel ?? (
+                    <span className="text-stone-mid">
+                      {entry.actorId ? "Unnamed user" : "System"}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="neutral">{auditActionLabel(entry.action)}</Badge>
+                </TableCell>
+                <TableCell className="text-stone-ink">{describeAuditEntry(entry)}</TableCell>
+                {isSuperAdmin ? (
+                  <TableCell>
+                    {entry.organizationName ?? <span className="text-stone-mid">—</span>}
+                  </TableCell>
+                ) : null}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </>
+  );
 }
 
 export default async function AuditPage({
@@ -59,20 +157,11 @@ export default async function AuditPage({
   const { actor, scope } = await scopeForRequest(params.org);
   const isSuperAdmin = actor.access.kind === "super_admin";
 
-  let entries;
   let people: Profile[];
   let organizations: OrganizationSummary[] = [];
   try {
     const db = await getDatabase();
-    [entries, people, organizations] = await Promise.all([
-      db.listAuditEntries({
-        scope,
-        actorId,
-        action: action && Object.hasOwn(AUDIT_ACTIONS, action) ? action : undefined,
-        from: period.from,
-        to: period.to,
-        limit: AUDIT_LIMIT,
-      }),
+    [people, organizations] = await Promise.all([
       db.listProfiles(),
       isSuperAdmin ? db.listOrganizations() : Promise.resolve([]),
     ]);
@@ -139,53 +228,23 @@ export default async function AuditPage({
         ) : null}
       </form>
 
-      {entries.length >= AUDIT_LIMIT ? (
-        <p role="status" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
-          Showing the newest {AUDIT_LIMIT} entries. Narrow the filters to see older ones.
-        </p>
-      ) : null}
-
-      {entries.length === 0 ? (
-        <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
-          {filtered ? "No entries match these filters." : "Nothing has been recorded yet."}
-        </p>
-      ) : (
-        <Table className="min-w-[720px]">
-          <TableCaption>Audit entries, newest first</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>When</TableHead>
-              <TableHead>Who</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>What happened</TableHead>
-              {isSuperAdmin ? <TableHead>Organization</TableHead> : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.map((entry) => (
-              <TableRow key={entry.id}>
-                <TableCell className="tnum whitespace-nowrap">{formatDateTime(entry.at)}</TableCell>
-                <TableCell>
-                  {entry.actorLabel ?? (
-                    <span className="text-stone-mid">
-                      {entry.actorId ? "Unnamed user" : "System"}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="neutral">{auditActionLabel(entry.action)}</Badge>
-                </TableCell>
-                <TableCell className="text-stone-ink">{describeAuditEntry(entry)}</TableCell>
-                {isSuperAdmin ? (
-                  <TableCell>
-                    {entry.organizationName ?? <span className="text-stone-mid">—</span>}
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <Suspense
+        key={JSON.stringify({ actorId, action, period, scope })}
+        fallback={
+          <Busy label="Loading audit entries…">
+            <TableSkeleton rows={10} columns={isSuperAdmin ? 5 : 4} />
+          </Busy>
+        }
+      >
+        <AuditEntries
+          scope={scope}
+          actorId={actorId}
+          action={action}
+          period={period}
+          filtered={filtered}
+          isSuperAdmin={isSuperAdmin}
+        />
+      </Suspense>
     </main>
   );
 }

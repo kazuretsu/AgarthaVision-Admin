@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, FileDown, History, LayoutDashboard, Microscope, Users } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "./nav";
 
@@ -15,6 +16,20 @@ const ICONS = {
   audit: History,
 } as const;
 
+/**
+ * The item's icon, or a spinner while its page is on the way: the click shows at
+ * once, before any skeleton can (14zcqntk6h5). Must render inside the `<Link>`.
+ */
+function NavIcon({ icon }: { icon: NavItem["icon"] }) {
+  const { pending } = useLinkStatus();
+  const Icon = ICONS[icon];
+  return pending ? (
+    <Spinner aria-label="Opening…" className="size-4" />
+  ) : (
+    <Icon className="size-4" aria-hidden />
+  );
+}
+
 /** The sidebar links, marking the section the visitor is in. */
 export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
@@ -22,7 +37,6 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   return (
     <nav aria-label="Console" className="flex flex-col gap-1">
       {items.map((item) => {
-        const Icon = ICONS[item.icon];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
@@ -36,7 +50,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
                 : "text-stone-deep hover:bg-surface-sunken hover:text-stone-ink",
             )}
           >
-            <Icon className="size-4" aria-hidden />
+            <NavIcon icon={item.icon} />
             {item.label}
           </Link>
         );

@@ -1,8 +1,15 @@
+import {
+  Busy,
+  FiltersSkeleton,
+  HeaderSkeleton,
+  TableSkeleton,
+} from "@/components/loading/PageSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Shown while the patient list reads; without it the previous page stays on
- * screen with no sign the click registered.
+ * Shown while the patient list reads, in its shape: title, the search form, the
+ * count and the patients table. Without it the previous page stays on screen with
+ * no sign the click registered.
  *
  * It covers the list only, through the `(list)` route group. A route-level
  * loading state starts streaming the response with a 200 before the page runs, so
@@ -12,15 +19,13 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export default function RecordsLoading() {
   return (
-    <main
-      className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-10"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <span className="sr-only">Loading records…</span>
-      <Skeleton className="h-6 w-48" />
-      <Skeleton className="h-4 w-80" />
-      <Skeleton className="mt-4 h-64 w-full rounded-[12px]" />
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
+      <HeaderSkeleton />
+      <FiltersSkeleton fields={2} />
+      <Busy label="Loading records…" className="flex flex-col gap-6">
+        <Skeleton className="h-4 w-56" />
+        <TableSkeleton rows={8} columns={5} />
+      </Busy>
     </main>
   );
 }

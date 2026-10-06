@@ -10,6 +10,7 @@ import {
   type Person,
 } from "@/domain";
 import { formatDate, personName } from "@/lib/format";
+import { LinkPending } from "@/components/loading/LinkPending";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -92,6 +93,7 @@ export function AssignmentsPanel({
                     {assignment.role && editable ? (
                       <Link href={`/people/${assignment.userId}`} className="hover:text-maroon">
                         {personName(assignment)}
+                        <LinkPending />
                       </Link>
                     ) : (
                       personName(assignment)

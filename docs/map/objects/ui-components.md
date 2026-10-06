@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-05
-commit: 0d6a1c5
+verified: 2026-10-06
+commit: a62ef7a
 ---
 
 # UI components
@@ -60,8 +60,15 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   | `pagination.tsx`    | `pagination`    | none              | hand-ported        |
   | `separator.tsx`     | `separator`     | `separator`       | hand-ported        |
   | `skeleton.tsx`      | `skeleton`      | none              | hand-ported        |
+  | `spinner.tsx`       | `spinner`       | none (lucide)     | hand-ported        |
   | `table.tsx`         | `table`         | none              | hand-ported        |
 
+- **`spinner`** was ported from the registry's `base` source (lucide's `Loader2Icon`) in
+  14zcqntk6h5, where the CLI could not reach `ui.shadcn.com`; only its `cn` import changed.
+  `LinkPending` and the sidebar use it for a pending navigation.
+- **Loading states** compose `Skeleton` and `Card` into page shapes in
+  `src/components/loading/PageSkeletons.tsx` — header, filters, table, stat cards, chart
+  cards — so every page's skeleton looks like that page and none is hand-drawn.
 - **`pagination`'s page links** are `next/link` styled with `buttonVariants`, not a Base UI
   `Button` rendering an `<a>`: a page change keeps link semantics and is a client navigation,
   not a document reload.

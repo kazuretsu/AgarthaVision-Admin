@@ -21,6 +21,7 @@ import {
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { pageCount, pageOffset, parsePage } from "@/lib/pagination";
+import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { InviteForm } from "@/components/invitations/InvitationForms";
 import { InvitationTable } from "@/components/invitations/InvitationTable";
@@ -29,7 +30,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * A laboratory's people — its org admins and medtechs, since both do fieldwork —
@@ -38,8 +38,9 @@ import { Skeleton } from "@/components/ui/skeleton";
  * admin sees their own laboratory; a super admin chooses one (`?org=`). Search,
  * role, sort and page live in the URL.
  *
- * No route-level `loading.tsx`: it would start a 200 before the access check. The
- * page checks first and suspends only the list, keyed by its query.
+ * Its `loading.tsx` sits in the `(list)` route group, so it never covers
+ * `/people/[userId]`, which can answer 404. The list itself suspends inside the
+ * page, keyed by its query, so a new search, filter or page shows the skeleton too.
  */
 export const dynamic = "force-dynamic";
 
@@ -129,13 +130,9 @@ async function People({
 
 function PeopleFallback() {
   return (
-    <div aria-busy="true" aria-live="polite" className="flex flex-col gap-2">
-      <span className="sr-only">Loading people…</span>
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-    </div>
+    <Busy label="Loading people…">
+      <TableSkeleton rows={6} columns={6} />
+    </Busy>
   );
 }
 
