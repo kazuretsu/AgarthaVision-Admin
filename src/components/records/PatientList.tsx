@@ -10,6 +10,7 @@ import {
 import type { DatabasePort } from "@/ports/db";
 import { formatDate, personName } from "@/lib/format";
 import { pageCount, pageLinks, pageOffset, pageRange } from "@/lib/pagination";
+import { LinkPending } from "@/components/loading/LinkPending";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
@@ -136,6 +137,7 @@ export async function PatientList({ db, query }: { db: DatabasePort; query: Pati
                     className="font-semibold text-stone-ink hover:text-maroon"
                   >
                     {patientLabel(patient)}
+                    <LinkPending />
                   </Link>
                   {patient.identity && isCodenamed(patient.identity) ? (
                     <Badge variant="neutral" className="ml-2">

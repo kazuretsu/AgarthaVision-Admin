@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [ux] Every console page shows that a click registered, in the shape of what is coming
+
+The dashboard, records list, People, export and audit trail now have a route-level skeleton of
+their own layout (header, filters, stat cards and charts, or table rows), so a sidebar click
+shows the new page's shape at once instead of leaving the previous page on screen. Their slow
+reads (figures, entries, count, table) moved into Suspense boundaries keyed by the query, so the
+header shows first and a client-side sort or page swaps only the table. `/organizations` (super
+admins only) keeps its real 404 for org admins: it has no route-level skeleton, shows its header
+and form at once and suspends the table. Pages that decide 404 first — patient, session, field,
+organization, person — keep their 404s; the clicked link (sidebar icon, list and table names)
+shows a spinner meanwhile (`LinkPending`, shadcn `spinner`), and a person's page shows its
+header before its patients. People's list moved into `people/(list)/` so its skeleton never
+covers `/people/[id]`. `not-found-status.test.ts` now also treats super-admin-only pages as 404
+pages and requires a loading state above every other dashboard page.
+
 ## [feat] Deactivate and reactivate an org admin
 
 A super admin now deactivates and reactivates organization admins the way medtechs are: the

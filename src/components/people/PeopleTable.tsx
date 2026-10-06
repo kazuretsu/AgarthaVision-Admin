@@ -17,6 +17,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { pageLinks } from "@/lib/pagination";
 import { InvitationActions } from "@/components/invitations/InvitationForms";
+import { LinkPending } from "@/components/loading/LinkPending";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
@@ -162,6 +163,7 @@ export function PeopleTable({
                         className="hover:text-maroon"
                       >
                         {name?.trim() || email || "Unnamed person"}
+                        <LinkPending />
                       </Link>
                     ) : (
                       name?.trim() || <span className="text-stone-mid">—</span>

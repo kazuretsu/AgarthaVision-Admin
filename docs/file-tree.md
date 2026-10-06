@@ -64,13 +64,16 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
-    │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter.
+    │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter;
+    │                          loading.tsx. audit/ and export/ have one too.
     │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
     │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
     │       ├── organizations/ Super admin: list, detail (invitations too), audited actions.
-    │       ├── medtechs/      A laboratory's medtechs: invite, search, sort, deactivate;
-    │                          [userId]/ one medtech and their assigned patients.
+    │                          No loading.tsx: an org admin's 404 must stay a 404.
+    │       ├── people/        (list)/ a laboratory's people and its loading.tsx: invite,
+    │                          search, role filter, sort, deactivate; [userId]/ one person and
+    │                          their assigned patients; the member-status action.
     │       ├── assignments/   Assign, remove and hand-over server actions (no page).
     │       ├── invitations/   Invite, re-send and revoke server actions (no page).
     │       └── audit/         The audit trail, filtered and scoped.
@@ -89,7 +92,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.
-    │   ├── people/            The medtechs table (sortable, paged) and the deactivate form.
+    │   ├── people/            The people table (sortable, paged) and the deactivate form.
+    │   ├── loading/           Page-shaped skeletons (PageSkeletons) and LinkPending, the
+    │                          spinner on a clicked link while its page decides 404.
     │   ├── assignments/       Who is assigned to a patient, with assign/remove/hand over.
     │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image

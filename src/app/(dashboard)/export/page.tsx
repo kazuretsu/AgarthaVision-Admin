@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Download } from "lucide-react";
 import { getDatabase } from "@/adapters/registry";
 import {
@@ -6,14 +7,17 @@ import {
   RESEARCH_EXPORT_LIMIT,
   isExamined,
   patientDisclosureFor,
+  type ConsoleAccess,
   type OrganizationSummary,
+  type ReadScope,
 } from "@/domain";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { MissingEnvironmentError } from "@/lib/env";
-import { describePeriod, parsePeriod } from "@/lib/period";
+import { describePeriod, parsePeriod, type Period } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
+import { ExportBodySkeleton } from "@/components/loading/PageSkeletons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,9 +25,84 @@ import { Input } from "@/components/ui/input";
 /**
  * The research export: one row per examined smear, in LPF terms, with no names
  * and no birthdates. The page shows how many smears the file will hold before it
- * is downloaded.
+ * is downloaded. The count reads inside a Suspense boundary keyed by the period,
+ * so the form shows first and every new period shows the count's skeleton.
  */
 export const dynamic = "force-dynamic";
+
+/** How many smears the file will hold, and the download links: the slow read. */
+async function ExportCount({
+  access,
+  scope,
+  period,
+  query,
+}: {
+  access: ConsoleAccess;
+  scope: ReadScope;
+  period: Period;
+  query: string;
+}) {
+  let smears;
+  try {
+    // The download's own limit, so this count and the file agree, and a period the
+    // download would refuse is flagged here first.
+    smears = await (
+      await getDatabase()
+    ).listSmears({
+      scope,
+      disclosure: patientDisclosureFor(access),
+      startedFrom: period.from,
+      startedTo: period.to,
+      limit: RESEARCH_EXPORT_LIMIT + 1,
+    });
+  } catch (cause) {
+    if (cause instanceof MissingEnvironmentError) {
+      return (
+        <p className="text-[13px] text-stone-deep">
+          <code className="font-mono">{cause.variable}</code> is not set, so nothing could be read.
+        </p>
+      );
+    }
+    throw cause;
+  }
+
+  const tooLarge = smears.length > RESEARCH_EXPORT_LIMIT;
+  const examined = smears.filter(isExamined).length;
+  const href = (format: "csv" | "json") => {
+    const params = new URLSearchParams(query);
+    params.set("format", format);
+    return `/export/download?${params.toString()}`;
+  };
+
+  return (
+    <>
+      {tooLarge ? (
+        <p role="status" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
+          This period holds more than {RESEARCH_EXPORT_LIMIT.toLocaleString()} sessions, more than
+          one file may hold. Narrow the period to export it.
+        </p>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-[14px] text-stone-ink">
+          <span className="tnum font-bold">
+            {tooLarge ? "At least " : ""}
+            {examined.toLocaleString()}
+          </span>{" "}
+          smear
+          {examined === 1 ? "" : "s"} examined, {describePeriod(period)}.
+        </p>
+        <div className="ml-auto flex gap-2">
+          <a href={href("csv")} className={buttonVariants()}>
+            <Download aria-hidden /> CSV
+          </a>
+          <a href={href("json")} className={buttonVariants({ variant: "outline" })}>
+            <Download aria-hidden /> JSON
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default async function ExportPage({
   searchParams,
@@ -38,22 +117,11 @@ export default async function ExportPage({
   const period = parsePeriod(params);
   const { actor, scope } = await scopeForRequest(params.org);
 
-  let smears;
   let organizations: OrganizationSummary[] = [];
   try {
-    const db = await getDatabase();
-    [smears, organizations] = await Promise.all([
-      // The download's own limit, so this count and the file agree, and a period
-      // the download would refuse is flagged here first.
-      db.listSmears({
-        scope,
-        disclosure: patientDisclosureFor(actor.access),
-        startedFrom: period.from,
-        startedTo: period.to,
-        limit: RESEARCH_EXPORT_LIMIT + 1,
-      }),
-      actor.access.kind === "super_admin" ? db.listOrganizations() : Promise.resolve([]),
-    ]);
+    if (actor.access.kind === "super_admin") {
+      organizations = await (await getDatabase()).listOrganizations();
+    }
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Export" variable={cause.variable} />;
@@ -61,19 +129,12 @@ export default async function ExportPage({
     throw cause;
   }
 
-  const tooLarge = smears.length > RESEARCH_EXPORT_LIMIT;
-  const examined = smears.filter(isExamined).length;
   const query = new URLSearchParams();
   if (period.from) query.set("from", period.from);
   if (period.to) query.set("to", period.to);
   if (scope.kind === "organization" && actor.access.kind === "super_admin") {
     query.set("org", scope.organizationId);
   }
-  const href = (format: "csv" | "json") => {
-    const params = new URLSearchParams(query);
-    params.set("format", format);
-    return `/export/download?${params.toString()}`;
-  };
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8">
@@ -114,33 +175,14 @@ export default async function ExportPage({
             ) : null}
           </form>
 
-          {tooLarge ? (
-            <p
-              role="status"
-              className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn"
-            >
-              This period holds more than {RESEARCH_EXPORT_LIMIT.toLocaleString()} sessions, more
-              than one file may hold. Narrow the period to export it.
-            </p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-[14px] text-stone-ink">
-              <span className="tnum font-bold">
-                {tooLarge ? "At least " : ""}
-                {examined.toLocaleString()}
-              </span>{" "}
-              smear
-              {examined === 1 ? "" : "s"} examined, {describePeriod(period)}.
-            </p>
-            <div className="ml-auto flex gap-2">
-              <a href={href("csv")} className={buttonVariants()}>
-                <Download aria-hidden /> CSV
-              </a>
-              <a href={href("json")} className={buttonVariants({ variant: "outline" })}>
-                <Download aria-hidden /> JSON
-              </a>
-            </div>
-          </div>
+          <Suspense key={query.toString()} fallback={<ExportBodySkeleton />}>
+            <ExportCount
+              access={actor.access}
+              scope={scope}
+              period={period}
+              query={query.toString()}
+            />
+          </Suspense>
         </CardContent>
       </Card>
 

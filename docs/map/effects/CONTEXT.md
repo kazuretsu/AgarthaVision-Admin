@@ -46,18 +46,26 @@ handler that forgets to is an open dataset.
 
 **A route-level `loading.tsx` turns every 404 under it into a 200.** It starts streaming the
 response before the page runs, so `notFound()` can only swap the content, not the status.
-Record pages therefore have none: the list's lives in `records/(list)/`, and the detail pages
-read first and suspend only their frames. Put a new loading state inside the page, below its
-not-found check. `src/app/not-found-status.test.ts` fails if any page that calls `notFound()`
-sits under a loading file, or suspends before its not-found check. The same holds for
+Record pages therefore have none: the list's lives in `records/(list)/` (and People's in
+`people/(list)/`), and the detail pages read first and suspend only what comes after. A page
+admitting fewer kinds of user than the whole console (`requirePageAccess([...])`, e.g.
+`/organizations`) answers 404 to the rest and counts the same. Put a loading state for such a
+page inside it, below its not-found check, and let the clicked link show it is pending
+(`LinkPending`, `src/components/loading/`). `src/app/not-found-status.test.ts` fails if any
+page that can answer 404 sits under a loading file or suspends before its not-found check —
+and if any other `(dashboard)` page has **no** loading file above it, so a new page always gets
+a skeleton (14zcqntk6h5). The same holds for
 `redirect()`: under the records list's loading state it arrives in the browser (the router,
 or a meta refresh) rather than as a 307, which is fine for the list's page-past-the-end
 redirect but not for anything a non-browser client must follow.
 
 **A `loading.tsx` does not show when only the query string changes.** A new search or page
 on the same route keeps the previous page on screen until the next one is ready. The records
-list wraps its table in a Suspense boundary keyed by its query (`PatientList`), so the
-skeleton shows there; do the same for any list that pages or filters through the URL.
+list wraps its table in a Suspense boundary keyed by its query (`PatientList`), as do People,
+the dashboard's figures, the audit trail's entries and the export's count, so the skeleton
+shows there; do the same for any list that pages or filters through the URL. The filter forms
+on the dashboard, audit trail and export are plain GET forms, so Apply reloads the document:
+the route's `loading.tsx` streams in once the server answers.
 
 **`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
 (1000 on Supabase by default) and does not say so. A read that can exceed it goes through

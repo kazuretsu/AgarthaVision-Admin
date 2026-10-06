@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getDatabase } from "@/adapters/registry";
 import {
   canChangeMemberStatus,
@@ -7,6 +8,7 @@ import {
   isUuid,
   memberPatientLabel,
   ROLE_LABEL,
+  type MemberPatient,
 } from "@/domain";
 import { DatabaseReadError } from "@/ports/db";
 import { MissingEnvironmentError } from "@/lib/env";
@@ -17,6 +19,8 @@ import { Breadcrumbs } from "@/components/records/Breadcrumbs";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Fact } from "@/components/records/Fact";
 import { MemberStatusForm } from "@/components/people/MemberStatusForm";
+import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
+import { LinkPending } from "@/components/loading/LinkPending";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -44,6 +48,9 @@ import {
  * opens their own laboratory's people; a super admin names the laboratory
  * (`?org=`) and reads the patients de-identified. Assignments change on the
  * patient's page.
+ *
+ * The person is read first, since a missing one is a 404; their patients then read
+ * inside a Suspense boundary below that check, so the header shows at once.
  */
 export const dynamic = "force-dynamic";
 
@@ -51,6 +58,133 @@ const PAGE_SIZE = 50;
 
 function param(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
+}
+
+/**
+ * The laboratory's patients assigned to this person, and — for someone who could
+ * deactivate them — which of those only they cover, to hand over first.
+ */
+async function AssignedPatients({
+  userId,
+  name,
+  orgQuery,
+  checkCover,
+  requestedPage,
+}: {
+  userId: string;
+  name: string;
+  /** The laboratory a super admin named, carried in page links; null for an org admin. */
+  orgQuery: string | null;
+  checkCover: boolean;
+  requestedPage: number;
+}) {
+  const db = await getDatabase();
+  const [patients, soleCover]: [MemberPatient[], Set<string>] = await Promise.all([
+    db.listMemberPatients(userId),
+    checkCover
+      ? db.listSoleCoverPatients(userId).then((ids) => new Set(ids))
+      : Promise.resolve(new Set<string>()),
+  ]);
+
+  const pages = pageCount(patients.length, PAGE_SIZE);
+  const page = Math.min(requestedPage, pages);
+  const shown = patients.slice(
+    pageOffset(page, PAGE_SIZE),
+    pageOffset(page, PAGE_SIZE) + PAGE_SIZE,
+  );
+  const pageHref = (n: number) =>
+    `/people/${userId}?${new URLSearchParams({
+      ...(orgQuery ? { org: orgQuery } : {}),
+      ...(n > 1 ? { page: String(n) } : {}),
+    }).toString()}`.replace(/\?$/, "");
+
+  return (
+    <>
+      {soleCover.size > 0 ? (
+        <p
+          role="note"
+          className="rounded-[12px] border border-stone-hair bg-warn-tint px-4 py-3 text-[13px] text-warn"
+        >
+          {name} is the only active member on {soleCover.size} patient
+          {soleCover.size === 1 ? "" : "s"}, marked below. Hand{" "}
+          {soleCover.size === 1 ? "it" : "them"} over on the patient&apos;s page before deactivating{" "}
+          {name}: a patient always keeps an active member of its laboratory.
+        </p>
+      ) : null}
+      {patients.length === 0 ? (
+        <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
+          {name} is not assigned to any patient.
+        </p>
+      ) : (
+        <>
+          <Table className="min-w-[560px]">
+            <TableCaption>Patients assigned to {name}</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Patient</TableHead>
+                <TableHead>Barangay PSGC</TableHead>
+                <TableHead>Assigned</TableHead>
+                {soleCover.size > 0 ? <TableHead>Cover</TableHead> : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shown.map((patient) => (
+                <TableRow key={patient.patientId}>
+                  <TableCell>
+                    <Link
+                      href={`/records/patients/${patient.patientId}`}
+                      className="font-semibold text-stone-ink hover:text-maroon"
+                    >
+                      {memberPatientLabel(patient)}
+                      <LinkPending />
+                    </Link>
+                  </TableCell>
+                  <TableCell className="font-mono text-[12px]">
+                    {patient.psgcBarangayCode}
+                  </TableCell>
+                  <TableCell className="tnum">{formatDate(patient.linkedAt)}</TableCell>
+                  {soleCover.size > 0 ? (
+                    <TableCell>
+                      {soleCover.has(patient.patientId) ? (
+                        <Badge variant="warn">Only active member</Badge>
+                      ) : null}
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {pages > 1 ? (
+            <Pagination>
+              <PaginationContent>
+                {page > 1 ? (
+                  <PaginationItem>
+                    <PaginationPrevious href={pageHref(page - 1)} />
+                  </PaginationItem>
+                ) : null}
+                {pageLinks(page, pages).map((link, index) => (
+                  <PaginationItem key={link === "ellipsis" ? `gap-${index}` : link}>
+                    {link === "ellipsis" ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink href={pageHref(link)} isActive={link === page}>
+                        {link}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                {page < pages ? (
+                  <PaginationItem>
+                    <PaginationNext href={pageHref(page + 1)} />
+                  </PaginationItem>
+                ) : null}
+              </PaginationContent>
+            </Pagination>
+          ) : null}
+        </>
+      )}
+    </>
+  );
 }
 
 export default async function PersonPage({
@@ -70,23 +204,10 @@ export default async function PersonPage({
 
   let people;
   let person;
-  let patients;
-  let changeable = false;
-  // The patients only this person covers, which must be handed over before they can be
-  // deactivated; read only for someone who could deactivate them.
-  let soleCover = new Set<string>();
   try {
-    const db = await getDatabase();
-    people = await db.listPeople(organizationId);
+    people = await (await getDatabase()).listPeople(organizationId);
     person = people.find((candidate) => candidate.userId === userId);
     if (!person) notFound();
-    changeable = canChangeMemberStatus(actor.access, actor.user.id, organizationId, person);
-    [patients, soleCover] = await Promise.all([
-      db.listMemberPatients(userId),
-      changeable && person.status === "active"
-        ? db.listSoleCoverPatients(userId).then((ids) => new Set(ids))
-        : Promise.resolve(new Set<string>()),
-    ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Person" variable={cause.variable} />;
@@ -98,17 +219,8 @@ export default async function PersonPage({
 
   const name = personName(person);
   const orgQuery = actor.access.kind === "super_admin" ? `?org=${organizationId}` : "";
-  const pages = pageCount(patients.length, PAGE_SIZE);
-  const page = Math.min(parsePage(param(query.page)), pages);
-  const shown = patients.slice(
-    pageOffset(page, PAGE_SIZE),
-    pageOffset(page, PAGE_SIZE) + PAGE_SIZE,
-  );
-  const pageHref = (n: number) =>
-    `/people/${userId}?${new URLSearchParams({
-      ...(actor.access.kind === "super_admin" ? { org: organizationId } : {}),
-      ...(n > 1 ? { page: String(n) } : {}),
-    }).toString()}`.replace(/\?$/, "");
+  const changeable = canChangeMemberStatus(actor.access, actor.user.id, organizationId, person);
+  const requestedPage = parsePage(param(query.page));
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
@@ -140,23 +252,11 @@ export default async function PersonPage({
         )}
       </header>
 
-      {soleCover.size > 0 ? (
-        <p
-          role="note"
-          className="rounded-[12px] border border-stone-hair bg-warn-tint px-4 py-3 text-[13px] text-warn"
-        >
-          {name} is the only active member on {soleCover.size} patient
-          {soleCover.size === 1 ? "" : "s"}, marked below. Hand{" "}
-          {soleCover.size === 1 ? "it" : "them"} over on the patient&apos;s page before deactivating{" "}
-          {name}: a patient always keeps an active member of its laboratory.
-        </p>
-      ) : null}
-
       <Card>
         <CardContent className="grid grid-cols-3 gap-4">
           <Fact label="Email" value={person.email ?? "—"} />
           <Fact label="Joined" value={formatDate(person.addedAt)} />
-          <Fact label="Assigned patients" value={String(patients.length)} mono />
+          <Fact label="Assigned patients" value={String(person.assignedPatients)} mono />
         </CardContent>
       </Card>
 
@@ -169,77 +269,22 @@ export default async function PersonPage({
               : "Patients are named by record id."}
           </p>
         </div>
-        {patients.length === 0 ? (
-          <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
-            {name} is not assigned to any patient.
-          </p>
-        ) : (
-          <>
-            <Table className="min-w-[560px]">
-              <TableCaption>Patients assigned to {name}</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Patient</TableHead>
-                  <TableHead>Barangay PSGC</TableHead>
-                  <TableHead>Assigned</TableHead>
-                  {soleCover.size > 0 ? <TableHead>Cover</TableHead> : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {shown.map((patient) => (
-                  <TableRow key={patient.patientId}>
-                    <TableCell>
-                      <Link
-                        href={`/records/patients/${patient.patientId}`}
-                        className="font-semibold text-stone-ink hover:text-maroon"
-                      >
-                        {memberPatientLabel(patient)}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-[12px]">
-                      {patient.psgcBarangayCode}
-                    </TableCell>
-                    <TableCell className="tnum">{formatDate(patient.linkedAt)}</TableCell>
-                    {soleCover.size > 0 ? (
-                      <TableCell>
-                        {soleCover.has(patient.patientId) ? (
-                          <Badge variant="warn">Only active member</Badge>
-                        ) : null}
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {pages > 1 ? (
-              <Pagination>
-                <PaginationContent>
-                  {page > 1 ? (
-                    <PaginationItem>
-                      <PaginationPrevious href={pageHref(page - 1)} />
-                    </PaginationItem>
-                  ) : null}
-                  {pageLinks(page, pages).map((link, index) => (
-                    <PaginationItem key={link === "ellipsis" ? `gap-${index}` : link}>
-                      {link === "ellipsis" ? (
-                        <PaginationEllipsis />
-                      ) : (
-                        <PaginationLink href={pageHref(link)} isActive={link === page}>
-                          {link}
-                        </PaginationLink>
-                      )}
-                    </PaginationItem>
-                  ))}
-                  {page < pages ? (
-                    <PaginationItem>
-                      <PaginationNext href={pageHref(page + 1)} />
-                    </PaginationItem>
-                  ) : null}
-                </PaginationContent>
-              </Pagination>
-            ) : null}
-          </>
-        )}
+        <Suspense
+          key={requestedPage}
+          fallback={
+            <Busy label="Loading assigned patients…">
+              <TableSkeleton rows={Math.min(Math.max(person.assignedPatients, 1), 6)} columns={3} />
+            </Busy>
+          }
+        >
+          <AssignedPatients
+            userId={userId}
+            name={name}
+            orgQuery={actor.access.kind === "super_admin" ? organizationId : null}
+            checkCover={changeable && person.status === "active"}
+            requestedPage={requestedPage}
+          />
+        </Suspense>
       </section>
     </main>
   );
