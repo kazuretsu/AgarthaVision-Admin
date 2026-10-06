@@ -4,13 +4,15 @@ import type { Person } from "./people";
 import { patientDisplayName } from "./patients";
 
 /**
- * Which medtechs a patient is assigned to (admin/0007, D12).
+ * Who a patient is assigned to (admin/0007, admin/0008, D12).
  *
- * A medtech sees a patient in the app only through an assignment (`patient_users`).
- * An org admin assigns their laboratory's patients to its active medtechs and
- * removes assignments; removing one only removes access and never touches the
- * patient, a record, or who authored it. A patient always keeps at least one
- * active medtech: the last one can only be replaced, not removed.
+ * A person sees a patient in the app only through an assignment (`patient_users`).
+ * Anyone active in the laboratory does fieldwork, org admins included: a role is a
+ * permission level, not a job (14zcqntkd0w). An org admin assigns their
+ * laboratory's patients to its active members and removes assignments; removing
+ * one only removes access and never touches the patient, a record, or who
+ * authored it. A patient always keeps at least one active member of its
+ * laboratory: the last one can only be replaced, not removed.
  */
 
 export interface PatientAssignment {
@@ -36,12 +38,15 @@ export function canAssignPatients(access: ConsoleAccess): boolean {
   return access.kind === "org_admin";
 }
 
-/** An assignment that keeps the patient covered: an active medtech of the laboratory. */
+/**
+ * An assignment that keeps the patient covered: an active member of the patient's
+ * laboratory, in either role. A link from outside the laboratory has no role here.
+ */
 export function isCovering(assignment: Pick<PatientAssignment, "role" | "status">): boolean {
-  return assignment.role === "medtech" && assignment.status === "active";
+  return assignment.role !== null && assignment.status === "active";
 }
 
-/** Whether removing this person would still leave an active medtech on the patient. */
+/** Whether removing this person would still leave an active member on the patient. */
 export function canRemoveAssignment(
   assignments: readonly PatientAssignment[],
   userId: string,
@@ -49,14 +54,14 @@ export function canRemoveAssignment(
   return assignments.some((other) => other.userId !== userId && isCovering(other));
 }
 
-/** The laboratory's active medtechs not yet assigned, by name. */
-export function assignableMedtechs(
+/** The laboratory's active members, either role, not yet assigned, by name. */
+export function assignableMembers(
   people: readonly Person[],
   assignments: readonly Pick<PatientAssignment, "userId">[],
 ): Person[] {
   const linked = new Set(assignments.map((assignment) => assignment.userId));
   return people
-    .filter((p) => p.role === "medtech" && p.status === "active" && !linked.has(p.userId))
+    .filter((p) => p.status === "active" && !linked.has(p.userId))
     .sort((left, right) =>
       (left.fullName ?? left.email ?? "").localeCompare(right.fullName ?? right.email ?? ""),
     );
@@ -68,7 +73,7 @@ export function memberPatientLabel(patient: MemberPatient): string {
     : `Patient ${patient.patientId.slice(0, 8)}`;
 }
 
-/** Covering medtechs first, then by name. */
+/** Covering members first, then by name. */
 export function sortAssignments(assignments: readonly PatientAssignment[]): PatientAssignment[] {
   return [...assignments].sort(
     (left, right) =>

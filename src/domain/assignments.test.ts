@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  assignableMedtechs,
+  assignableMembers,
   canAssignPatients,
   canRemoveAssignment,
   isCovering,
@@ -44,14 +44,25 @@ describe("who assigns", () => {
   });
 });
 
-describe("a patient keeps an active medtech", () => {
-  it("only an active medtech of the laboratory covers a patient", () => {
+describe("a patient keeps an active member", () => {
+  it("an active member of the laboratory, in either role, covers a patient", () => {
     expect(isCovering(assignment({}))).toBe(true);
+    expect(isCovering(assignment({ role: "org_admin" }))).toBe(true);
     expect(isCovering(assignment({ status: "deactivated" }))).toBe(false);
+    expect(isCovering(assignment({ role: "org_admin", status: "deactivated" }))).toBe(false);
     expect(isCovering(assignment({ role: null, status: null }))).toBe(false);
   });
 
-  it("the last active medtech cannot be removed, even with deactivated ones left", () => {
+  it("a patient with an active org admin can lose its medtech", () => {
+    const links = [
+      assignment({ userId: "tech" }),
+      assignment({ userId: "boss", role: "org_admin" }),
+    ];
+    expect(canRemoveAssignment(links, "tech")).toBe(true);
+    expect(canRemoveAssignment(links.slice(1), "boss")).toBe(false);
+  });
+
+  it("the last active member cannot be removed, even with deactivated ones left", () => {
     const links = [
       assignment({ userId: "a" }),
       assignment({ userId: "off", status: "deactivated" }),
@@ -62,17 +73,19 @@ describe("a patient keeps an active medtech", () => {
   });
 });
 
-describe("assignableMedtechs", () => {
-  it("offers active medtechs not yet assigned, by name", () => {
+describe("assignableMembers", () => {
+  it("offers active members of either role not yet assigned, by name", () => {
     const people = [
       person({ userId: "z", fullName: "Zed" }),
       person({ userId: "a", fullName: "Ana" }),
       person({ userId: "linked", fullName: "Linked" }),
       person({ userId: "off", fullName: "Off", status: "deactivated" }),
       person({ userId: "boss", fullName: "Boss", role: "org_admin" }),
+      person({ userId: "gone", fullName: "Gone", role: "org_admin", status: "deactivated" }),
     ];
-    expect(assignableMedtechs(people, [{ userId: "linked" }]).map((p) => p.userId)).toEqual([
+    expect(assignableMembers(people, [{ userId: "linked" }]).map((p) => p.userId)).toEqual([
       "a",
+      "boss",
       "z",
     ]);
   });
@@ -90,7 +103,7 @@ describe("labels and order", () => {
     expect(memberPatientLabel({ ...base, name: null })).toBe("Patient 70000000");
   });
 
-  it("lists covering medtechs first", () => {
+  it("lists covering members first", () => {
     const rows = sortAssignments([
       assignment({ userId: "off", fullName: "Aaa", status: "deactivated" }),
       assignment({ userId: "on", fullName: "Zzz" }),

@@ -18,7 +18,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
-export interface MedtechOption {
+export interface MemberOption {
   userId: string;
   label: string;
 }
@@ -41,13 +41,13 @@ function Feedback({ error, done }: { error: string | null; done: string | null }
   return null;
 }
 
-/** Assign one more of the laboratory's active medtechs. */
+/** Assign one more of the laboratory's active members, either role. */
 export function AssignForm({
   patientId,
   options,
 }: {
   patientId: string;
-  options: readonly MedtechOption[];
+  options: readonly MemberOption[];
 }) {
   const [state, action, pending] = useActionState(assignPatient, EMPTY_ASSIGNMENT_FORM);
   return (
@@ -55,10 +55,10 @@ export function AssignForm({
       <input type="hidden" name="patientId" value={patientId} />
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex min-w-64 flex-col gap-1">
-          <span className="text-[12px] font-medium text-stone-deep">Assign a medtech</span>
+          <span className="text-[12px] font-medium text-stone-deep">Assign someone</span>
           <NativeSelect name="userId" defaultValue="" required>
             <NativeSelectOption value="" disabled>
-              Choose a medtech
+              Choose a person
             </NativeSelectOption>
             {options.map((option) => (
               <NativeSelectOption key={option.userId} value={option.userId}>
@@ -124,8 +124,8 @@ export function RemoveAssignmentForm({
 }
 
 /**
- * Hand the patient from this medtech to another: the only way to change the last
- * active medtech, since a patient is never left with nobody.
+ * Hand the patient from this person to another: the only way to change the last
+ * active member on it, since a patient is never left with nobody.
  */
 export function ReplaceAssignmentForm({
   patientId,
@@ -134,13 +134,13 @@ export function ReplaceAssignmentForm({
 }: {
   patientId: string;
   userId: string;
-  options: readonly MedtechOption[];
+  options: readonly MemberOption[];
 }) {
   const [state, action, pending] = useActionState(replaceAssignment, EMPTY_ASSIGNMENT_FORM);
   if (options.length === 0) {
     return (
       <p className="max-w-64 text-right text-[12px] text-stone-mid">
-        The only medtech on this patient. Invite or reactivate another to hand over.
+        The only active member on this patient. Invite or reactivate someone to hand over.
       </p>
     );
   }

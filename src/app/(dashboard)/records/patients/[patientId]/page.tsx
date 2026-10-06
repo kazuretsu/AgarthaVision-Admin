@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { getDatabase } from "@/adapters/registry";
 import {
   ageYears,
-  assignableMedtechs,
+  assignableMembers,
   isSessionRead,
   isUuid,
   patientDisclosureFor,
@@ -48,7 +48,7 @@ async function Assignments({ patientId, access }: { patientId: string; access: C
     <AssignmentsPanel
       patientId={patientId}
       assignments={assignments}
-      assignable={assignableMedtechs(people, assignments)}
+      assignable={assignableMembers(people, assignments)}
       access={access}
     />
   );
@@ -117,7 +117,7 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
       <Suspense
         fallback={
           <div aria-busy="true" className="flex flex-col gap-2">
-            <span className="sr-only">Loading assigned medtechs…</span>
+            <span className="sr-only">Loading who is assigned…</span>
             <Skeleton className="h-5 w-48" />
             <Skeleton className="h-24 w-full rounded-[12px]" />
           </div>
