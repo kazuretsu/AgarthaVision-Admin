@@ -2,6 +2,33 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] A training snapshot can keep frames with unboxed eggs, marked incomplete
+
+"Frames with unboxed eggs" on `/training-data`, off by default, keeps a frame whose only reason
+to be left out is an egg counted but never boxed. It goes in with the boxes it has, and the
+number of eggs it lacks is frozen with it: `incomplete` and `unboxed_eggs` in the manifest,
+`incomplete` on the COCO image, and an Incomplete frames column and section in the data card.
+Such a frame is never counted as background. The preview warns how many frames and eggs are
+incomplete. `admin/0013_training_unboxed_frames.sql` adds the column and replaces two functions,
+**apply it in the SQL editor**; until it is, the option is disabled with a note and the create
+action refuses it, so no frame is stored without its mark.
+
+## [feat] Super admins gather model training data as frozen, de-identified snapshots
+
+A **Training data** page (`/training-data`, super admins only; org admins get a 404) filters
+verified frames by period, laboratory, species and model version, previews what a snapshot
+would hold by the label rules, freezes it, and downloads it as a zip a YOLO or COCO training
+run reads: images and label files per split, `data.yaml`, COCO annotations, a manifest with
+each box's origin and the hard negatives, and a data card. Frames split by patient,
+deterministically. A frame with an egg counted but never boxed is left out whole rather than
+taught as background. Labels are stored as values, so a medtech re-opening a sample changes
+nothing in a snapshot; neither table can be changed or deleted. Nothing in the file names a
+patient, medtech, barangay or laboratory. Images are read as the signed-in super admin; no
+service-role key. Creating and downloading are audited, the download before a byte is
+served. `admin/0012_training_snapshots.sql`, **apply it in the SQL editor**; until it is, the
+page says so. The audit trail's action filter no longer offers an org admin actions they can
+never see. Adds `fflate` and the shadcn `checkbox`.
+
 ## [enhancements] Dashboard and export totals are counted in the database, in one request
 
 The dashboard and the export page no longer download every session in the period, 1,000 rows

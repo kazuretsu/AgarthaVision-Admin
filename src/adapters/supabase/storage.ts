@@ -46,6 +46,16 @@ export class SupabaseStorageAdapter implements StoragePort {
       expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
     };
   }
+
+  async download(objectKey: string): Promise<Uint8Array> {
+    const key = objectKey.trim();
+    if (key.length === 0) {
+      throw new StorageAccessError(objectKey, new Error("Object key is empty."));
+    }
+    const { data, error } = await this.client.storage.from(this.bucket).download(key);
+    if (error || !data) throw new StorageAccessError(key, error);
+    return new Uint8Array(await data.arrayBuffer());
+  }
 }
 
 /** Builds the adapter against a request-scoped, session-carrying client. */

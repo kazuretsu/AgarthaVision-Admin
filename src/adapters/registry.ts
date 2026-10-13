@@ -132,7 +132,7 @@ export async function getOnboarding(): Promise<OnboardingPort> {
 }
 
 /**
- * Blocking and allowing sign-in, for deactivating a medtech. Server-side only.
+ * Blocking and allowing sign-in, for deactivating a member. Server-side only.
  * Follows the auth provider: the login lives there.
  */
 export async function getAccountAccess(): Promise<AccountAccessPort> {

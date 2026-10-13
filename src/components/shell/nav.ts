@@ -10,7 +10,7 @@ import type { ConsoleAccessKind } from "@/domain/access";
 export interface NavItem {
   href: string;
   label: string;
-  icon: "dashboard" | "records" | "export" | "people" | "organizations" | "audit";
+  icon: "dashboard" | "records" | "export" | "training" | "people" | "organizations" | "audit";
   visibleTo: readonly ConsoleAccessKind[];
 }
 
@@ -23,6 +23,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   { href: "/records", label: "Records", icon: "records", visibleTo: ["super_admin", "org_admin"] },
   { href: "/export", label: "Export", icon: "export", visibleTo: ["super_admin", "org_admin"] },
+  {
+    href: "/training-data",
+    label: "Training data",
+    icon: "training",
+    visibleTo: ["super_admin"],
+  },
   {
     href: "/people",
     label: "People",

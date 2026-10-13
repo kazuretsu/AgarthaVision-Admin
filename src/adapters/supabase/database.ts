@@ -37,19 +37,35 @@ import type {
   OrganizationStatus,
   OrganizationSummary,
   ReadScope,
+  TrainingFrames,
+  TrainingSnapshot,
+  TrainingSnapshotListing,
 } from "@/domain";
 import {
   DatabaseReadError,
   INVITATION_LIST_LIMIT,
+  MigrationNotAppliedError,
   type AuditQuery,
   type DashboardTotalsQuery,
   type DatabasePort,
   type PatientQuery,
   type SmearQuery,
+  type TrainingFramesQuery,
 } from "@/ports/db";
 import { createRequestClient } from "./client";
 import { isFunctionNotFound } from "./errors";
 import { PAGE_SIZE, readPages } from "./paging";
+import {
+  parsed,
+  toTrainingFrames,
+  toTrainingSnapshot,
+  toTrainingSnapshotListing,
+  type TrainingFramesRow,
+  type TrainingSnapshotListingRow,
+  type TrainingSnapshotRow,
+} from "./training-rows";
+
+const TRAINING_MIGRATION = "admin/0012_training_snapshots.sql";
 
 /**
  * Supabase implementation of {@link DatabasePort}.
@@ -997,6 +1013,64 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
 
     if (error) throw new DatabaseReadError("listAuditActors", error);
     return ((data ?? []) as ProfileRow[]).map((row) => ({ id: row.id, label: row.full_name }));
+  }
+
+  /** A training function's result, or the reason it has none. */
+  private async trainingCall<T>(
+    operation: string,
+    fn: string,
+    args: Record<string, unknown> = {},
+  ): Promise<T> {
+    const { data, error } = await this.client.rpc(fn, args);
+    if (error && isFunctionNotFound(error)) throw new MigrationNotAppliedError(TRAINING_MIGRATION);
+    if (error) throw new DatabaseReadError(operation, error);
+    return data as T;
+  }
+
+  async trainingFrames(query: TrainingFramesQuery): Promise<TrainingFrames> {
+    // One jsonb value, not rows, so PostgREST's row cap never cuts the frames short.
+    const data = await this.trainingCall<unknown>("trainingFrames", "console_training_frames", {
+      p_from: query.startedFrom ?? null,
+      p_to: query.startedTo ?? null,
+      p_organizations: query.organizationIds.length > 0 ? query.organizationIds : null,
+      p_model_versions: query.modelVersions.length > 0 ? query.modelVersions : null,
+    });
+    return toTrainingFrames(parsed<TrainingFramesRow>(data));
+  }
+
+  async trainingSupportsUnboxed(): Promise<boolean> {
+    const { data, error } = await this.client.rpc("console_training_schema_version");
+    if (error && isFunctionNotFound(error)) return false;
+    if (error) throw new DatabaseReadError("trainingSupportsUnboxed", error);
+    return Number(data) >= 13;
+  }
+
+  async trainingModelVersions(): Promise<{ modelVersion: string; frames: number }[]> {
+    type Row = { model_version: string; frames: number };
+    const rows = await this.trainingCall<Row[] | null>(
+      "trainingModelVersions",
+      "console_training_model_versions",
+    );
+    return (rows ?? []).map((row) => ({ modelVersion: row.model_version, frames: row.frames }));
+  }
+
+  async listTrainingSnapshots(): Promise<TrainingSnapshotListing[]> {
+    const rows = await this.trainingCall<TrainingSnapshotListingRow[] | null>(
+      "listTrainingSnapshots",
+      "console_training_snapshots",
+    );
+    return (rows ?? []).map(toTrainingSnapshotListing);
+  }
+
+  async getTrainingSnapshot(snapshotId: string): Promise<TrainingSnapshot | null> {
+    if (!isUuid(snapshotId)) return null;
+    const { data, error } = await this.client.rpc("console_training_snapshot", {
+      p_id: snapshotId,
+    });
+    if (error?.code === "P0002") return null;
+    if (error && isFunctionNotFound(error)) throw new MigrationNotAppliedError(TRAINING_MIGRATION);
+    if (error || !data) throw new DatabaseReadError("getTrainingSnapshot", error);
+    return toTrainingSnapshot(parsed<TrainingSnapshotRow>(data));
   }
 }
 

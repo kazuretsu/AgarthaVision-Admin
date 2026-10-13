@@ -1,5 +1,6 @@
 import type { PatientDisclosure, PatientPage, PatientRecord, Profile } from "@/domain";
 import type { DashboardTotals, SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
+import type { TrainingFrames, TrainingSnapshot, TrainingSnapshotListing } from "@/domain";
 import type {
   AuditActor,
   AuditEntry,
@@ -80,6 +81,17 @@ export interface AuditQuery {
   to?: string;
   /** Hard cap on rows returned. Adapters must apply a sane default. */
   limit?: number;
+}
+
+/** Which frames a training snapshot may take: the database's half of the filter. */
+export interface TrainingFramesQuery {
+  /** Inclusive Manila calendar dates, `YYYY-MM-DD`, bounding `sessions.started_at`. */
+  startedFrom?: string;
+  startedTo?: string;
+  /** Empty means every laboratory. */
+  organizationIds: readonly string[];
+  /** Empty means every model version. */
+  modelVersions: readonly string[];
 }
 
 export interface DatabasePort {
@@ -164,6 +176,31 @@ export interface DatabasePort {
    * filter: within one organization's entries, or all of them for a super admin.
    */
   listAuditActors(scope: ReadScope): Promise<AuditActor[]>;
+
+  /**
+   * Training data (admin/0012). Super admins only: the database refuses anyone else,
+   * so these take no scope. Throws {@link MigrationNotAppliedError} before 0012 is
+   * applied.
+   *
+   * The live frames a filter may take, each with every detection on it, and how many
+   * samples it matched that were deleted as duplicates. Names no patient, medtech or place.
+   */
+  trainingFrames(query: TrainingFramesQuery): Promise<TrainingFrames>;
+
+  /**
+   * Whether the database can store frames kept with unboxed eggs (admin/0013). `false`
+   * before 0013 is applied; the console then does not offer the option.
+   */
+  trainingSupportsUnboxed(): Promise<boolean>;
+
+  /** The model versions live frames were read with, most frames first. */
+  trainingModelVersions(): Promise<{ modelVersion: string; frames: number }[]>;
+
+  /** Every training snapshot, newest first. */
+  listTrainingSnapshots(): Promise<TrainingSnapshotListing[]>;
+
+  /** One snapshot with its frozen frames, storage paths included; `null` when absent. */
+  getTrainingSnapshot(snapshotId: string): Promise<TrainingSnapshot | null>;
 }
 
 /** The most invitations one organization's list shows; the page says when it stops there. */
@@ -175,5 +212,13 @@ export class DatabaseReadError extends Error {
     super(`Database read failed during ${operation}.`);
     this.name = "DatabaseReadError";
     this.cause = cause;
+  }
+}
+
+/** The database lacks a function this read needs: an admin migration not applied yet. */
+export class MigrationNotAppliedError extends Error {
+  constructor(public readonly migration: string) {
+    super(`Apply ${migration} in the SQL editor to use this page.`);
+    this.name = "MigrationNotAppliedError";
   }
 }

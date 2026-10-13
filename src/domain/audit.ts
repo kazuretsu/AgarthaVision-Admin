@@ -42,7 +42,25 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "member.reactivate": "Reactivated a member",
   "assignment.add": "Assigned a patient",
   "assignment.remove": "Removed a patient assignment",
+  "training.snapshot.create": "Created a training snapshot",
+  "training.snapshot.download": "Downloaded a training snapshot",
 };
+
+/**
+ * Actions only a super admin takes, filed under no organization (training data,
+ * admin/0012): an org admin can never read one, so their filter does not offer them.
+ */
+const SUPER_ADMIN_ONLY_ACTIONS: ReadonlySet<string> = new Set([
+  "training.snapshot.create",
+  "training.snapshot.download",
+]);
+
+/** The actions a reader's action filter offers, as `[action, label]`. */
+export function auditActionsFor(isSuperAdmin: boolean): [string, string][] {
+  return Object.entries(AUDIT_ACTIONS).filter(
+    ([action]) => isSuperAdmin || !SUPER_ADMIN_ONLY_ACTIONS.has(action),
+  );
+}
 
 /** The action's label; an action this build does not know is shown as recorded. */
 export function auditActionLabel(action: string): string {
@@ -104,6 +122,17 @@ export function describeAuditEntry(entry: AuditEntry): string {
       return entry.action === "assignment.add"
         ? `Assigned ${patient} to ${member}`
         : `Removed ${patient} from ${member}`;
+    }
+    case "training.snapshot.create":
+    case "training.snapshot.download": {
+      const name = text(d.name) ? `training snapshot “${text(d.name)}”` : "a training snapshot";
+      const frames =
+        typeof d.frames === "number" ? `${d.frames} frame${d.frames === 1 ? "" : "s"}` : null;
+      const boxes =
+        typeof d.boxes === "number" ? `${d.boxes} box${d.boxes === 1 ? "" : "es"}` : null;
+      const size = [frames, boxes].filter(Boolean).join(", ");
+      const verb = entry.action === "training.snapshot.create" ? "Created" : "Downloaded";
+      return `${verb} ${name}${size ? ` (${size})` : ""}`;
     }
     default:
       return auditActionLabel(entry.action);

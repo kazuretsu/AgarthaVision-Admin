@@ -56,7 +56,8 @@ the default. Adapters are imported lazily.
 The Supabase adapters implement the database, storage, auth and onboarding ports, and a
 Resend adapter the mail port. Database reads and storage signing run through the visitor's
 own session so RLS decides visibility. The service-role key is used for two things: making an
-invited person's account when they accept, and banning or unbanning a medtech's login.
+invited person's account when they accept, and banning or unbanning a member's login, a
+medtech's or an org admin's.
 
 ### Authentication and the admin gate
 
@@ -233,11 +234,41 @@ request. A period over 20,000 sessions is refused rather than cut short, and the
 before the click. Every download is recorded in the audit trail
 first; if it cannot be recorded, no file is served.
 
-## Not built yet, in this pass
+### Training data
 
-Tracked here so the gap is visible:
+`/training-data` (super admins only; org admins get a 404) gathers model training data
+(14zcqntm62u, `admin/0012`). Filter by session dates, laboratories, species, model versions,
+and whether to include hard negatives, background frames, frames flagged for re-annotation
+and frames with unboxed eggs, with the validation and test shares of patients. The preview counts, before
+anything is written, the frames, boxes, background frames, hard negatives and patients, by
+split, class, model version and laboratory, and what was left out and why.
 
-- Nothing from this pass's scope remains. Deferred work is listed below.
+A labelled box is every detection the medtech did not reject, under the medtech's species
+where they corrected it; an untouched model box they confirmed counts. A rejected box is a
+hard negative at the model's position. A frame goes in whole or not at all: one with an egg
+counted but never boxed, a box outside the frame or a species the model is not trained on is
+left out, so no egg is taught as background. **Frames with unboxed eggs** (off by default,
+`admin/0013`) keeps those frames anyway, with the boxes they have, marked incomplete with the
+number of eggs they lack in the manifest, the COCO images and the data card, for whoever trains
+to leave out or use where a missing box does no harm. Frames split by patient,
+deterministically, default 70/15/15.
+
+**Create snapshot** freezes the frames and their label values with a name: a medtech changing
+a ruling later changes nothing in it. Each snapshot downloads as a zip: images and YOLO label
+files per split, `data.yaml`, COCO annotations, a manifest saying where each box came from,
+and a data card. Frames are named by sample ID; no patient, medtech, barangay or laboratory
+name or id is in the file, laboratories are opaque codes, and patients are a group code that
+means nothing outside the snapshot. Images are read as the signed-in super admin. Creating and
+downloading are each recorded in the audit trail, the download before anything is served. At
+most 20,000 frames a snapshot.
+
+## Not built yet
+
+This file lists what is built, not what is planned. The console is not finished: open work
+(MFA for console users, the prevalence map, forgot password, guarded super admin grants,
+sharing a patient, the report verification page, among others) is tracked in the sprint
+lists in ClickUp, which is where plans live (`SESSION_INIT.md`). Work decided against is
+listed below.
 
 ## Deferred by decision
 

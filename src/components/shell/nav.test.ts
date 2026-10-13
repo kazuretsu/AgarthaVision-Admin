@@ -26,3 +26,10 @@ describe("people", () => {
     expect(navFor("super_admin").some((item) => item.href === "/people")).toBe(true);
   });
 });
+
+describe("training data", () => {
+  it("is a super admin's entry only", () => {
+    expect(navFor("super_admin").some((item) => item.href === "/training-data")).toBe(true);
+    expect(navFor("org_admin").some((item) => item.href === "/training-data")).toBe(false);
+  });
+});

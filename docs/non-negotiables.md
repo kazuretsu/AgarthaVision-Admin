@@ -8,9 +8,9 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - An unknown provider name throws immediately, with the bad value in the message.
 - No top-level `throw` on a missing env var. Missing env fails at request time, named.
 - The service-role key never crosses into a client component. Its only uses are making an
-  invited person's account, after the link is checked, and banning or unbanning a medtech's
-  login, after the rule is checked.
-- Deactivating a medtech blocks their sign-in and deletes nothing.
+  invited person's account, after the link is checked, and banning or unbanning a member's
+  login (a medtech, or an org admin), after the rule is checked.
+- Deactivating a member blocks their sign-in and deletes nothing.
 - No sign-up. An account is made only by accepting an invitation; its role and organization
   come from the stored invitation, never from `user_metadata` or anything the invitee sends.
 - Every route under `(dashboard)` is gated server-side on console access (super admin or org
@@ -19,6 +19,8 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - Every non-rejected detection on a live (not deleted) sample counts — the app's rule.
 - LPF is a min–max range per field. Never a mean, never EPG, never a WHO tier.
 - Every report and export surface states the validation exclusion in the UI.
+- A training snapshot is frozen: never changed, never deleted. Its file names no patient,
+  medtech, barangay or laboratory, and its download is audited before it starts.
 - Domain field names mirror the upstream Postgres schema. Do not invent columns.
 - `validation_records` is not implemented upstream. Do not build against it.
 - Admin migrations only, in `supabase/migrations/admin/`, additive only. Never alter or drop

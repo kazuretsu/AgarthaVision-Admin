@@ -53,6 +53,7 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   | `badge.tsx`         | `badge`         | none              | hand-ported        |
   | `button.tsx`        | `button`        | `button`          | hand-ported        |
   | `card.tsx`          | `card`          | none              | hand-ported        |
+  | `checkbox.tsx`      | `checkbox`      | `checkbox`        | hand-ported        |
   | `dropdown-menu.tsx` | `dropdown-menu` | `menu`            | hand-ported        |
   | `input.tsx`         | `input`         | `input`           | hand-ported        |
   | `label.tsx`         | `label`         | none              | hand-ported        |
@@ -66,6 +67,11 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
 - **`spinner`** was ported from the registry's `base` source (lucide's `Loader2Icon`) in
   14zcqntk6h5, where the CLI could not reach `ui.shadcn.com`; only its `cn` import changed.
   `LinkPending` and the sidebar use it for a pending navigation.
+- **`checkbox`** was ported from the registry's `base` source with the `base-nova` style's
+  classes inlined and lucide's `CheckIcon`, in 14zcqntm62u, where the CLI could not reach
+  `ui.shadcn.com`. Base UI renders a hidden input, so it submits with a plain GET form; the
+  training data filter uses `uncheckedValue="0"` so an unticked option survives the round
+  trip.
 - **Loading states** compose `Skeleton` and `Card` into page shapes in
   `src/components/loading/PageSkeletons.tsx` — header, filters, table, stat cards, chart
   cards — so every page's skeleton looks like that page and none is hand-drawn.

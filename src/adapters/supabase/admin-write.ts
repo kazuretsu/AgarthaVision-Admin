@@ -6,15 +6,18 @@ import {
   type AdminWritePort,
   type InviteRequest,
   type IssuedInvitation,
+  type TrainingSnapshotRequest,
 } from "@/ports/admin-write";
 import { createRequestClient } from "./client";
+import { toSnapshotItemsPayload } from "./training-rows";
 
 /**
  * Supabase implementation of {@link AdminWritePort}.
  *
- * Each write is one call to a security-definer function (`admin/0001`, `0003`, `0005`–`0009`), run as
- * the signed-in user. The function checks the caller, performs the write and
- * appends the audit row in one transaction, so a write without its audit entry
+ * Each write is one call to a security-definer function (`admin/0001`, `0003`,
+ * `0005`–`0009`, `0012`), run as the signed-in user. The function checks the caller,
+ * performs the write and appends the audit row in one transaction, so a write
+ * without its audit entry
  * cannot happen. No table is written directly: the tables have no write policies.
  */
 
@@ -112,6 +115,24 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
       p_from: fromUserId,
       p_to: toUserId,
     });
+  }
+
+  async createTrainingSnapshot({
+    name,
+    filter,
+    summary,
+    items,
+  }: TrainingSnapshotRequest): Promise<string> {
+    return this.call<string>("console_create_training_snapshot", {
+      p_name: name,
+      p_filter: filter,
+      p_summary: summary,
+      p_items: toSnapshotItemsPayload(items),
+    });
+  }
+
+  async recordTrainingDownload(snapshotId: string): Promise<void> {
+    await this.call("console_record_training_download", { p_id: snapshotId });
   }
 }
 
