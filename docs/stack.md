@@ -13,6 +13,7 @@ As-built. Versions are what `bun.lock` resolved, not what a range permits.
 | Theme switching                  | `next-themes`                                       | 0.4.6                       |
 | Icons                            | `lucide-react`                                      | 1.49.0                      |
 | Database + auth + storage client | `@supabase/supabase-js`                             | 2.112.4                     |
+| Zip (training data download)     | `fflate`                                            | 0.8.2                       |
 | Server-side session cookies      | `@supabase/ssr`                                     | 0.12.5                      |
 | Tests                            | Vitest; SQL tests through Bun's built-in SQL client | 4.1.11; `@types/bun` 1.3.11 |
 | Lint                             | ESLint + `eslint-config-next`                       | 9.x / 16.3.3                |

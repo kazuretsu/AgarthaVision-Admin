@@ -4,6 +4,7 @@ import { getDatabase } from "@/adapters/registry";
 import {
   AUDIT_ACTIONS,
   auditActionLabel,
+  auditActionsFor,
   describeAuditEntry,
   type OrganizationSummary,
   type AuditActor,
@@ -201,7 +202,7 @@ export default async function AuditPage({
           <span className="text-[12px] font-medium text-stone-deep">Action</span>
           <NativeSelect name="action" defaultValue={action ?? ""}>
             <NativeSelectOption value="">Any action</NativeSelectOption>
-            {Object.entries(AUDIT_ACTIONS).map(([value, label]) => (
+            {auditActionsFor(isSuperAdmin).map(([value, label]) => (
               <NativeSelectOption key={value} value={value}>
                 {label}
               </NativeSelectOption>

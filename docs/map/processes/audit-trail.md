@@ -30,23 +30,28 @@ format, period and column version. If that fails, the route answers 403 or 503 a
 nothing: an unrecorded download of patient data must not happen. The function
 (`supabase/migrations/admin/0003_audit_exports.sql:13`) files an org admin's export under
 their own organization whatever the console passes (`:30`), so an entry cannot be misfiled.
+A training snapshot's download is recorded the same way, before the zip starts
+(`training-data.md`). Training entries are filed under no organization, so only super admins
+read them, and an org admin's action filter does not offer them (`auditActionsFor`).
 
-| Action                    | Written by                        |
-| ------------------------- | --------------------------------- |
-| `organization.create`     | `console_create_organization`     |
-| `organization.rename`     | `console_rename_organization`     |
-| `organization.deactivate` | `console_set_organization_status` |
-| `organization.reactivate` | `console_set_organization_status` |
-| `organization.backfill`   | `admin/0001`, once                |
-| `export.research`         | `console_record_export`           |
-| `invitation.create`       | `console_invite`                  |
-| `invitation.resend`       | `console_resend_invitation`       |
-| `invitation.revoke`       | `console_revoke_invitation`       |
-| `invitation.accept`       | `console_accept_invitation`       |
-| `member.deactivate`       | `console_set_member_status`       |
-| `member.reactivate`       | `console_set_member_status`       |
-| `assignment.add`          | `console_assign_patient`          |
-| `assignment.remove`       | `console_unassign_patient`        |
+| Action                       | Written by                         |
+| ---------------------------- | ---------------------------------- |
+| `organization.create`        | `console_create_organization`      |
+| `organization.rename`        | `console_rename_organization`      |
+| `organization.deactivate`    | `console_set_organization_status`  |
+| `organization.reactivate`    | `console_set_organization_status`  |
+| `organization.backfill`      | `admin/0001`, once                 |
+| `export.research`            | `console_record_export`            |
+| `invitation.create`          | `console_invite`                   |
+| `invitation.resend`          | `console_resend_invitation`        |
+| `invitation.revoke`          | `console_revoke_invitation`        |
+| `invitation.accept`          | `console_accept_invitation`        |
+| `member.deactivate`          | `console_set_member_status`        |
+| `member.reactivate`          | `console_set_member_status`        |
+| `assignment.add`             | `console_assign_patient`           |
+| `assignment.remove`          | `console_unassign_patient`         |
+| `training.snapshot.create`   | `console_create_training_snapshot` |
+| `training.snapshot.download` | `console_record_training_download` |
 
 ## Reading
 

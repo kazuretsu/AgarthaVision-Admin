@@ -1,4 +1,5 @@
 import type { OrganizationStatus } from "@/domain/organizations";
+import type { TrainingFilter, TrainingItem, TrainingSummary } from "@/domain/training-data";
 
 /** A link minted for an invitation. The token is returned once, to be emailed, and never stored. */
 export interface IssuedInvitation {
@@ -11,6 +12,13 @@ export interface InviteRequest {
   email: string;
   fullName: string | null;
   organizationId: string;
+}
+
+export interface TrainingSnapshotRequest {
+  name: string;
+  filter: TrainingFilter;
+  summary: TrainingSummary;
+  items: readonly TrainingItem[];
 }
 
 /**
@@ -67,6 +75,17 @@ export interface AdminWritePort {
   unassignPatient(patientId: string, userId: string): Promise<void>;
   /** Hands a patient from one medtech to another in one step. */
   replaceAssignment(patientId: string, fromUserId: string, toUserId: string): Promise<void>;
+
+  /**
+   * Freezes a training snapshot and returns its id. Super admins only. Refused
+   * (`invalid`, hint `stale`) when a frame is no longer live: preview again.
+   */
+  createTrainingSnapshot(request: TrainingSnapshotRequest): Promise<string>;
+  /**
+   * Records a snapshot download about to be served (`not_found` for an unknown one).
+   * Callers must not serve the file if this throws.
+   */
+  recordTrainingDownload(snapshotId: string): Promise<void>;
 }
 
 export type AdminWriteFailure = "forbidden" | "conflict" | "not_found" | "invalid" | "failed";

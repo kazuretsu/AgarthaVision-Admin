@@ -32,6 +32,10 @@ while the legacy database lacked that policy) is gone. The key's uses now are ma
 invited person's account and banning a deactivated member's login
 (`docs/map/processes/invitations.md`, `docs/map/processes/people-access.md`).
 
+The same policy lets the training data download read a super admin's frames as bytes
+(`StoragePort.download`, `src/adapters/supabase/storage.ts`), as the signed-in user, into its
+zip under the sample id; the path never reaches the browser (`training-data.md`).
+
 ## Consumes / produces
 
 Consumes `samples.storage_path` (`docs/map/objects/domain-model.md`). Produces a

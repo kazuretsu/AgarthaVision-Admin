@@ -2,6 +2,22 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Super admins gather model training data as frozen, de-identified snapshots
+
+A **Training data** page (`/training-data`, super admins only; org admins get a 404) filters
+verified frames by period, laboratory, species and model version, previews what a snapshot
+would hold by the label rules, freezes it, and downloads it as a zip a YOLO or COCO training
+run reads: images and label files per split, `data.yaml`, COCO annotations, a manifest with
+each box's origin and the hard negatives, and a data card. Frames split by patient,
+deterministically. A frame with an egg counted but never boxed is left out whole rather than
+taught as background. Labels are stored as values, so a medtech re-opening a sample changes
+nothing in a snapshot; neither table can be changed or deleted. Nothing in the file names a
+patient, medtech, barangay or laboratory. Images are read as the signed-in super admin; no
+service-role key. Creating and downloading are audited, the download before a byte is
+served. `admin/0012_training_snapshots.sql`, **apply it in the SQL editor**; until it is, the
+page says so. The audit trail's action filter no longer offers an org admin actions they can
+never see. Adds `fflate` and the shadcn `checkbox`.
+
 ## [enhancements] Dashboard and export totals are counted in the database, in one request
 
 The dashboard and the export page no longer download every session in the period, 1,000 rows

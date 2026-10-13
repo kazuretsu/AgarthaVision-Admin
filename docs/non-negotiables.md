@@ -19,6 +19,8 @@ Terse form. Reasons and enforcement points live in `docs/constraints.md`.
 - Every non-rejected detection on a live (not deleted) sample counts — the app's rule.
 - LPF is a min–max range per field. Never a mean, never EPG, never a WHO tier.
 - Every report and export surface states the validation exclusion in the UI.
+- A training snapshot is frozen: never changed, never deleted. Its file names no patient,
+  medtech, barangay or laboratory, and its download is audited before it starts.
 - Domain field names mirror the upstream Postgres schema. Do not invent columns.
 - `validation_records` is not implemented upstream. Do not build against it.
 - Admin migrations only, in `supabase/migrations/admin/`, additive only. Never alter or drop

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditActionLabel, describeAuditEntry, type AuditEntry } from "./audit";
+import { auditActionLabel, auditActionsFor, describeAuditEntry, type AuditEntry } from "./audit";
 
 function entry(overrides: Partial<AuditEntry>): AuditEntry {
   return {
@@ -113,5 +113,32 @@ describe("assignment entries", () => {
     expect(describeAuditEntry(entry({ ...base, details: {}, action: "assignment.remove" }))).toBe(
       "Removed patient 70000000 from someone",
     );
+  });
+
+  it("name a training snapshot and its size", () => {
+    const base = { targetType: "training_snapshot", organizationId: null, organizationName: null };
+    expect(
+      describeAuditEntry(
+        entry({
+          ...base,
+          action: "training.snapshot.create",
+          details: { name: "Baseline", frames: 120, boxes: 1 },
+        }),
+      ),
+    ).toBe("Created training snapshot “Baseline” (120 frames, 1 box)");
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "training.snapshot.download", details: { frames: 1 } }),
+      ),
+    ).toBe("Downloaded a training snapshot (1 frame)");
+  });
+});
+
+describe("auditActionsFor", () => {
+  it("offers an org admin no action they can never see", () => {
+    const orgAdmin = auditActionsFor(false).map(([action]) => action);
+    expect(orgAdmin).not.toContain("training.snapshot.create");
+    expect(orgAdmin).toContain("member.deactivate");
+    expect(auditActionsFor(true).map(([action]) => action)).toContain("training.snapshot.download");
   });
 });

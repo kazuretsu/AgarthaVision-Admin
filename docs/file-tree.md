@@ -50,6 +50,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── people-access.md       The People page; deactivate = ban the login, record, undo.
 │       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
+│       │   ├── training-data.md       Filter → label rules → split → frozen snapshot → zip.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
 │       └── effects/CONTEXT.md         Change-impact: touch X, open these cards.
@@ -69,6 +70,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
     │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
+    │       ├── training-data/ Super admin: filter, preview, snapshots; the create action;
+    │                          snapshots/[snapshotId]/download/route.ts streams the zip.
+    │                          No loading.tsx: an org admin's 404 must stay a 404.
     │       ├── organizations/ Super admin: list, detail (invitations too), audited actions.
     │                          No loading.tsx: an org admin's 404 must stay a 404.
     │       ├── people/        (list)/ a laboratory's people and its loading.tsx: invite,
@@ -78,7 +82,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── invitations/   Invite, re-send and revoke server actions (no page).
     │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
-    │                          patient, dashboard and research-export rules, id checks.
+    │                          patient, dashboard, research-export and training-data rules,
+    │                          the training zip's files, id checks.
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
     │                          mail, account-access. No vendor types.
@@ -101,6 +106,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
     │                          with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
+    │   ├── training/          Training data filter, preview, create form, snapshots table.
     │   ├── theme-provider.tsx next-themes, class-based.
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
@@ -113,7 +119,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── invitation-email.ts The invitation email: the link, never a password.
         ├── site-url.ts        The console's public origin, for the link.
         ├── palette.ts         Validated species colours, with the validator's findings.
-        └── period.ts          The dashboard's and export's from/to dates, defensively parsed.
+        ├── period.ts          The dashboard's and export's from/to dates, defensively parsed.
+        ├── training-filter.ts The training data filter in the query string, both ways.
+        └── training-zip.ts    A snapshot as a streamed zip (fflate).
 ```
 
 Every directory listed above holds committed files.

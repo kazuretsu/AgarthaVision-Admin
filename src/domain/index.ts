@@ -14,3 +14,5 @@ export * from "./people";
 export * from "./records";
 export * from "./research-export";
 export * from "./scope";
+export * from "./training-data";
+export * from "./training-export";

@@ -2,7 +2,15 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, FileDown, History, LayoutDashboard, Microscope, Users } from "lucide-react";
+import {
+  BrainCircuit,
+  Building2,
+  FileDown,
+  History,
+  LayoutDashboard,
+  Microscope,
+  Users,
+} from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "./nav";
@@ -11,6 +19,7 @@ const ICONS = {
   dashboard: LayoutDashboard,
   records: Microscope,
   export: FileDown,
+  training: BrainCircuit,
   people: Users,
   organizations: Building2,
   audit: History,
