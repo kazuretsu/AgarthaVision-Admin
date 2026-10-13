@@ -2,6 +2,23 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Prevalence map with Region → Province → City/Municipality drill-down
+
+A **Prevalence map** page (`/map`, super admins and org admins) shades the Philippines by the
+share of examined smears positive for STH, by where the patient lives, and drills from regions
+to a region's provinces to a province's cities and municipalities, with a breadcrumb back up.
+Each area's examined smears, positive smears and rate show when it is pointed at and in a table
+beside the map. Every figure comes from `console_area_prevalence()`, counted on the dashboard's
+rule, so the country's smears plus those not placed equal the dashboard's; an area with fewer
+than 5 smears is "too few to report", hatched, at every level, and different from an area with
+none. Scoped like the dashboard; a period filter. `admin/0014_prevalence_map.sql` adds the 2Q
+2026 area lookup (18 regions, 85 provinces, 1,642 towns, 82 aliases for 2023 codes in the
+Negros Island Region and Sulu) and the function, **apply it in the SQL editor**; until it is,
+the page says so. Boundaries are static files built from the app repo's `tools/geo` by
+`scripts/geo/build-map-data.ts`, attributed to OCHA COD-AB (CC BY-IGO 3.0) under the map.
+Adds `maplibre-gl` (no basemap, nothing fetched from another site) and the shadcn
+`breadcrumb`. The session-refresh proxy skips `/geo/` and `/vendor/`.
+
 ## [feat] A training snapshot can keep frames with unboxed eggs, marked incomplete
 
 "Frames with unboxed eggs" on `/training-data`, off by default, keeps a frame whose only reason

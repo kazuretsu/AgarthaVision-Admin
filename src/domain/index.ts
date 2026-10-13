@@ -11,6 +11,7 @@ export * from "./ids";
 export * from "./invitations";
 export * from "./patients";
 export * from "./people";
+export * from "./prevalence-map";
 export * from "./records";
 export * from "./research-export";
 export * from "./scope";

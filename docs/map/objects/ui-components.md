@@ -47,22 +47,23 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   adaptation is to sit beside `Input` and `Button`: `h-9` (the registry ships `h-8`) on
   `bg-surface` (the registry ships transparent, with its own dark tints).
 
-  | File                | Registry item   | Base UI primitive | Source             |
-  | ------------------- | --------------- | ----------------- | ------------------ |
-  | `alert-dialog.tsx`  | `alert-dialog`  | `alert-dialog`    | hand-ported        |
-  | `badge.tsx`         | `badge`         | none              | hand-ported        |
-  | `button.tsx`        | `button`        | `button`          | hand-ported        |
-  | `card.tsx`          | `card`          | none              | hand-ported        |
-  | `checkbox.tsx`      | `checkbox`      | `checkbox`        | hand-ported        |
-  | `dropdown-menu.tsx` | `dropdown-menu` | `menu`            | hand-ported        |
-  | `input.tsx`         | `input`         | `input`           | hand-ported        |
-  | `label.tsx`         | `label`         | none              | hand-ported        |
-  | `native-select.tsx` | `native-select` | none              | CLI (`shadcn add`) |
-  | `pagination.tsx`    | `pagination`    | none              | hand-ported        |
-  | `separator.tsx`     | `separator`     | `separator`       | hand-ported        |
-  | `skeleton.tsx`      | `skeleton`      | none              | hand-ported        |
-  | `spinner.tsx`       | `spinner`       | none (lucide)     | hand-ported        |
-  | `table.tsx`         | `table`         | none              | hand-ported        |
+  | File                | Registry item   | Base UI primitive  | Source             |
+  | ------------------- | --------------- | ------------------ | ------------------ |
+  | `alert-dialog.tsx`  | `alert-dialog`  | `alert-dialog`     | hand-ported        |
+  | `badge.tsx`         | `badge`         | none               | hand-ported        |
+  | `breadcrumb.tsx`    | `breadcrumb`    | none (`useRender`) | hand-ported        |
+  | `button.tsx`        | `button`        | `button`           | hand-ported        |
+  | `card.tsx`          | `card`          | none               | hand-ported        |
+  | `checkbox.tsx`      | `checkbox`      | `checkbox`         | hand-ported        |
+  | `dropdown-menu.tsx` | `dropdown-menu` | `menu`             | hand-ported        |
+  | `input.tsx`         | `input`         | `input`            | hand-ported        |
+  | `label.tsx`         | `label`         | none               | hand-ported        |
+  | `native-select.tsx` | `native-select` | none               | CLI (`shadcn add`) |
+  | `pagination.tsx`    | `pagination`    | none               | hand-ported        |
+  | `separator.tsx`     | `separator`     | `separator`        | hand-ported        |
+  | `skeleton.tsx`      | `skeleton`      | none               | hand-ported        |
+  | `spinner.tsx`       | `spinner`       | none (lucide)      | hand-ported        |
+  | `table.tsx`         | `table`         | none               | hand-ported        |
 
 - **`spinner`** was ported from the registry's `base` source (lucide's `Loader2Icon`) in
   14zcqntk6h5, where the CLI could not reach `ui.shadcn.com`; only its `cn` import changed.
@@ -72,6 +73,12 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   `ui.shadcn.com`. Base UI renders a hidden input, so it submits with a plain GET form; the
   training data filter uses `uncheckedValue="0"` so an unticked option survives the round
   trip.
+- **`breadcrumb`** was ported from the registry's `base` source with the `base-nova` style's
+  classes inlined and lucide's chevron and ellipsis, in 14zcqntjnt3, where the CLI could not
+  reach `ui.shadcn.com`. `BreadcrumbLink` takes `render={<Link …/>}` for a client navigation.
+- **The map is not a shadcn component.** `src/components/map/PrevalenceMap.tsx` wraps
+  MapLibre, which draws to a canvas; there is no registry item for it. Everything around it,
+  the breadcrumb, the table, the cards, the filters and the spinner, is shadcn.
 - **Loading states** compose `Skeleton` and `Card` into page shapes in
   `src/components/loading/PageSkeletons.tsx` — header, filters, table, stat cards, chart
   cards — so every page's skeleton looks like that page and none is hand-drawn.

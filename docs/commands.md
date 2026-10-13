@@ -27,6 +27,11 @@ Run in this order; it is the order `.husky/pre-commit` runs them in.
 | `bun run test:db`    | Applies every migration to a throwaway local Postgres and runs `supabase/tests/`.   |
 | `bun run clean`      | Remove `.next`, `coverage`, and the bundler cache.                                  |
 
+| Script                              | What it does                                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `bun scripts/geo/build-map-data.ts` | Rebuilds `public/geo/` and the lookup rows in `admin/0014` from the app repo's `tools/geo`. |
+| `bun scripts/vendor-maplibre.ts`    | Copies MapLibre's worker into `public/vendor/` after a `maplibre-gl` version change.        |
+
 `vitest` is configured with `passWithNoTests`, so a docs-only or hooks-only commit does not
 fail the gate for having touched no test file.
 

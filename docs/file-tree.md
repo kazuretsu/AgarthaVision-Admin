@@ -17,7 +17,12 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │   └── pre-push               Full production build before push.
 ├── commitlint.config.js       Conventional config plus this repo's scope-enum.
 ├── scripts/
-│   └── db-test.ts             bun run test:db. Local databases only.
+│   ├── db-test.ts             bun run test:db. Local databases only.
+│   ├── geo/build-map-data.ts  Map boundaries and the area lookup, from the app repo's tools/geo.
+│   └── vendor-maplibre.ts     Copies MapLibre's worker into public/vendor/.
+├── public/
+│   ├── geo/q2_2026/           Boundaries: regions.json, provinces.json, towns/<province>.json.
+│   └── vendor/maplibre-gl/    MapLibre's worker, as the package ships it (vendor.test.ts).
 ├── supabase/
 │   ├── migrations/admin/      This repo's own migrations, additive only (D4).
 │   └── tests/                 SQL tests (and TS parity tests), Supabase stubs, helpers, seed.
@@ -51,6 +56,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
 │       │   ├── training-data.md       Filter → label rules → split → frozen snapshot → zip.
+│       │   ├── prevalence-map.md      Barangay → town → province → region, withheld under 5.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
 │       └── effects/CONTEXT.md         Change-impact: touch X, open these cards.
@@ -67,6 +73,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter;
     │                          loading.tsx. audit/ and export/ have one too.
+    │       ├── map/           The prevalence map: Region → Province → City/Municipality.
+    │                          No loading.tsx: an unknown area's 404 must stay a 404.
     │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
     │                          sessions/, samples/ detail pages (frames under Suspense).
     │       ├── export/        Research export page; download/route.ts (gate repeated).
@@ -82,7 +90,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── invitations/   Invite, re-send and revoke server actions (no page).
     │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
-    │                          patient, dashboard, research-export and training-data rules,
+    │                          patient, dashboard, research-export, training-data and
+    │                          prevalence-map rules,
     │                          the training zip's files, id checks.
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
@@ -90,7 +99,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
-    │   │                      paging.ts), reports (row mapping), admin-write, storage, auth,
+    │   │                      paging.ts), reports and prevalence-rows (row mapping), admin-write, storage, auth,
     │   │                      onboarding (accepting an invitation), account-access (bans),
     │   │                      errors (a migration not applied yet).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
@@ -107,6 +116,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
     │   ├── training/          Training data filter, preview, create form, snapshots table.
+    │   ├── map/               PrevalenceMap (MapLibre), its legend, the areas table.
     │   ├── theme-provider.tsx next-themes, class-based.
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
@@ -120,6 +130,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── site-url.ts        The console's public origin, for the link.
         ├── palette.ts         Validated species colours, with the validator's findings.
         ├── period.ts          The dashboard's and export's from/to dates, defensively parsed.
+        ├── map/               The map's validated colours; vendor.test.ts for the worker copy.
         ├── training-filter.ts The training data filter in the query string, both ways.
         └── training-zip.ts    A snapshot as a streamed zip (fflate).
 ```

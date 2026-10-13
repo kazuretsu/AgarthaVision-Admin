@@ -38,6 +38,8 @@ Pure logic, all of it unit-tested and none of it touching I/O:
   test cases.
 - **Patients** — display names (codenames included) and age in the Manila frame.
 - **Dashboard** — per-smear counting on the prevalence rule, species mix, weekly trend.
+- **Prevalence map** — where the map is (country, region, province), shading bands, and what
+  an area may show: a figure, too few to report, or no data.
 - **Research export** — the version 2 column contract, CSV with formula neutralising, JSON.
 
 ### Port interfaces
@@ -198,6 +200,20 @@ smears carrying each species. No EPG and no WHO intensity tier. The figures are 
 database in one request, whatever the period holds, so there is no session cap; the console's
 own counting is kept as the reference and a test requires the two to agree.
 
+### Prevalence map
+
+`/map` (super admins and org admins) shades the Philippines by the share of examined smears
+positive for STH, by where the patient lives, and drills Region → Province → City/Municipality
+with a breadcrumb back up (14zcqntjnt3, `admin/0014`). Each area shows examined smears,
+positive smears and the rate, on the map when pointed at and in a table beside it. Every
+figure is counted in the database on the dashboard's rule; an area with fewer than 5 smears
+shows "too few to report", hatched, at every level, never a number, and looks different from
+an area with none. An org admin sees their own laboratory; a super admin all or one. A period
+filter, and the boundary attribution under the map. Areas affected by the Negros Island Region
+and Sulu reorganisations appear under their 2Q 2026 region, including patients recorded with
+a 2023 code. Smears whose barangay matches no city or municipality are counted on their own
+line. MapLibre on a plain background: no basemap, nothing fetched from another site.
+
 ### Records browser
 
 Records follow the app's clinical hierarchy: **Patient → Session (one smear) → Sample (one
@@ -265,7 +281,7 @@ most 20,000 frames a snapshot.
 ## Not built yet
 
 This file lists what is built, not what is planned. The console is not finished: open work
-(MFA for console users, the prevalence map, forgot password, guarded super admin grants,
+(MFA for console users, the barangay breakdown of the map, forgot password, guarded super admin grants,
 sharing a patient, the report verification page, among others) is tracked in the sprint
 lists in ClickUp, which is where plans live (`SESSION_INIT.md`). Work decided against is
 listed below.
@@ -281,7 +297,7 @@ listed below.
 
 - Mutating any diagnostic record. The console is read-only over clinical data.
 - PDF export. CSV and JSON only this pass.
-- Geospatial mapping of sample GPS. The columns no longer exist upstream; the map will key
-  on the patient's barangay.
+- Geospatial mapping of sample GPS. The columns no longer exist upstream; the prevalence map
+  keys on the patient's barangay.
 - Anything built on `validation_records` — the table is a Phase 2 ghost with no upstream
   migration behind it.

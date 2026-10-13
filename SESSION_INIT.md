@@ -31,6 +31,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Changing what counts, LPF or session figures     | `docs/map/processes/lpf-session-summary.md`                          |
 | Changing the export columns or file format       | `docs/map/processes/research-export.md`                              |
 | Model training data, snapshots, the training zip | `docs/map/processes/training-data.md`                                |
+| The prevalence map, its boundaries or lookup     | `docs/map/processes/prevalence-map.md`                               |
 | Organizations, memberships or the audit log      | `docs/map/objects/organizations.md`, `docs/constraints.md` (#4, #7)  |
 | Changing which laboratory's records someone sees | `docs/map/processes/lab-scoping.md`                                  |
 | Changing who can reach a route                   | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |

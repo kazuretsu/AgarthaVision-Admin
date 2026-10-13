@@ -26,7 +26,7 @@ import type {
   SpeciesFinding,
   AuditEntry,
 } from "@/domain";
-import { sortMembers } from "@/domain";
+import { sortMembers, type PrevalenceView } from "@/domain";
 import type {
   Invitation,
   MemberPatient,
@@ -46,6 +46,7 @@ import {
   INVITATION_LIST_LIMIT,
   MigrationNotAppliedError,
   type AuditQuery,
+  type AreaPrevalenceQuery,
   type DashboardTotalsQuery,
   type DatabasePort,
   type PatientQuery,
@@ -64,8 +65,10 @@ import {
   type TrainingSnapshotListingRow,
   type TrainingSnapshotRow,
 } from "./training-rows";
+import { toPrevalenceView, type AreaPrevalenceRow } from "./prevalence-rows";
 
 const TRAINING_MIGRATION = "admin/0012_training_snapshots.sql";
+const MAP_MIGRATION = "admin/0014_prevalence_map.sql";
 
 /**
  * Supabase implementation of {@link DatabasePort}.
@@ -783,6 +786,22 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     query: DashboardTotalsQuery,
   ): Promise<DashboardTotals> {
     return totalsOf(await this.listSmears({ ...query, limit: RESEARCH_EXPORT_LIMIT + 1 }));
+  }
+
+  async areaPrevalence(query: AreaPrevalenceQuery): Promise<PrevalenceView | null> {
+    const { scope, location, startedFrom, startedTo } = query;
+    // The function decides the scope again on its side, as console_dashboard_figures does.
+    const { data, error } = await this.client.rpc("console_area_prevalence", {
+      p_level: location.level,
+      p_code: location.code,
+      p_organization: scopedOrganization(scope),
+      p_from: startedFrom ?? null,
+      p_to: startedTo ?? null,
+    });
+    if (error && isFunctionNotFound(error)) throw new MigrationNotAppliedError(MAP_MIGRATION);
+    if (error?.code === "P0002") return null;
+    if (error || !data) throw new DatabaseReadError("areaPrevalence", error);
+    return toPrevalenceView(data as AreaPrevalenceRow);
   }
 
   async listOrganizations(): Promise<OrganizationSummary[]> {

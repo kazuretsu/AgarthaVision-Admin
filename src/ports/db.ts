@@ -1,6 +1,7 @@
 import type { PatientDisclosure, PatientPage, PatientRecord, Profile } from "@/domain";
 import type { DashboardTotals, SampleRecordDetail, SessionRecord, SmearRecord } from "@/domain";
 import type { TrainingFrames, TrainingSnapshot, TrainingSnapshotListing } from "@/domain";
+import type { MapLocation, PrevalenceView } from "@/domain";
 import type {
   AuditActor,
   AuditEntry,
@@ -83,6 +84,16 @@ export interface AuditQuery {
   limit?: number;
 }
 
+/** One place on the prevalence map, in a scope and period. */
+export interface AreaPrevalenceQuery {
+  /** Whose smears. Required: derive it with `readScopeFor`. */
+  scope: ReadScope;
+  location: MapLocation;
+  /** Inclusive Manila calendar dates, `YYYY-MM-DD`, bounding `sessions.started_at`. */
+  startedFrom?: string;
+  startedTo?: string;
+}
+
 /** Which frames a training snapshot may take: the database's half of the filter. */
 export interface TrainingFramesQuery {
   /** Inclusive Manila calendar dates, `YYYY-MM-DD`, bounding `sessions.started_at`. */
@@ -130,6 +141,13 @@ export interface DatabasePort {
    * request, whatever the period holds. The export page reads its count here too.
    */
   dashboardTotals(query: DashboardTotalsQuery): Promise<DashboardTotals>;
+
+  /**
+   * One place on the prevalence map and every area one level down, counted and withheld
+   * by the database. `null` when the region or province does not exist. Throws
+   * {@link MigrationNotAppliedError} before admin/0014.
+   */
+  areaPrevalence(query: AreaPrevalenceQuery): Promise<PrevalenceView | null>;
 
   /** Organizations the caller may read, by name, with member and patient counts. */
   listOrganizations(): Promise<OrganizationSummary[]>;

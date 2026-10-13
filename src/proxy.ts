@@ -62,7 +62,10 @@ export default async function proxy(request: NextRequest) {
 export const config = {
   /**
    * Everything except Next's own assets and static files. Image requests would
-   * otherwise each cost a pointless auth round trip.
+   * otherwise each cost a pointless auth round trip, and so would the map's
+   * boundary files (`/geo/`) and MapLibre's worker (`/vendor/`).
    */
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|geo/|vendor/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

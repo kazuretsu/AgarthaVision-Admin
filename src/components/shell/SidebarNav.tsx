@@ -8,6 +8,7 @@ import {
   FileDown,
   History,
   LayoutDashboard,
+  Map,
   Microscope,
   Users,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import type { NavItem } from "./nav";
 
 const ICONS = {
   dashboard: LayoutDashboard,
+  map: Map,
   records: Microscope,
   export: FileDown,
   training: BrainCircuit,

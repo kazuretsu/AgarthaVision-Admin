@@ -14,6 +14,7 @@ As-built. Versions are what `bun.lock` resolved, not what a range permits.
 | Icons                            | `lucide-react`                                      | 1.49.0                      |
 | Database + auth + storage client | `@supabase/supabase-js`                             | 2.112.4                     |
 | Zip (training data download)     | `fflate`                                            | 0.8.2                       |
+| Map (prevalence map)             | `maplibre-gl`                                       | 6.11.2                      |
 | Server-side session cookies      | `@supabase/ssr`                                     | 0.12.5                      |
 | Tests                            | Vitest; SQL tests through Bun's built-in SQL client | 4.1.11; `@types/bun` 1.3.11 |
 | Lint                             | ESLint + `eslint-config-next`                       | 9.x / 16.3.3                |
@@ -25,6 +26,10 @@ As-built. Versions are what `bun.lock` resolved, not what a range permits.
 - **Node 22** is the runtime under Bun for the Next.js build.
 - **Next 16 renamed `middleware.ts` to `proxy.ts`.** The unauthenticated bounce lives in
   `proxy.ts` at the repo root of `src/`.
+- **MapLibre for the prevalence map, nothing else.** No basemap, no tile provider, no API key:
+  the boundaries are static files in `public/geo/`, and MapLibre's worker is served from
+  `public/vendor/maplibre-gl/<version>/` (`scripts/vendor-maplibre.ts`), because MapLibre 6
+  starts it from a URL beside its own module, which a bundled chunk is not.
 - **No charting library.** The weekly trend and the species bars are
   hand-crafted inline SVG, mirroring the Android client's design rule. One less dependency
   and no runtime bundle cost.
@@ -52,4 +57,4 @@ silently.
 | S3 storage adapter        | Supabase Storage behind `src/ports/storage.ts` | Sample bytes already live in the `samples` bucket.                                                                                        |
 | A second database adapter | Supabase only                                  | The registry's unknown-provider path is tested, so the second adapter is an addition, not a refactor.                                     |
 | PDF export                | CSV and JSON                                   | Column fidelity for the research matrix matters more than layout this pass.                                                               |
-| Geospatial mapping        | None yet; GPS columns are gone upstream        | The map will key on the patient's PSGC barangay code, not on GPS.                                                                         |
+| Geospatial mapping of GPS | The prevalence map, by PSGC area               | GPS columns are gone upstream; the map keys on the patient's PSGC barangay code (`docs/map/processes/prevalence-map.md`).                 |
