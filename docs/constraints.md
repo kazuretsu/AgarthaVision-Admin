@@ -1,6 +1,6 @@
 # Constraints
 
-Thirteen rules this repo is built to hold. Each names where it is enforced. A constraint
+Fifteen rules this repo is built to hold. Each names where it is enforced. A constraint
 without an enforcement point is a wish, not a constraint.
 
 ---
@@ -21,8 +21,8 @@ vendor import statements; the only construction site for a provider is
 The service-role key is read on the server, at request time, and never reaches the browser.
 One function reads it, `createServiceClient()`, and two callers use it: accepting an
 invitation, to make the invited person's account (`auth.admin.createUser`) after the link
-has been checked; and deactivating or reactivating a medtech, to ban or unban their login
-after the rule has been checked. Every read and every other write, image signing included,
+has been checked; and deactivating or reactivating a person — a medtech, or an org admin
+(super admins only) — to ban or unban their login after the rule has been checked. Every read and every other write, image signing included,
 runs as the signed-in user. The Resend key is server-only too, read when an email is sent.
 Only `NEXT_PUBLIC_`-prefixed variables may appear in client components. Env access goes
 through the accessor helpers, which throw a named error when a variable is missing —
@@ -59,7 +59,7 @@ an org admin may read is decided twice: by the `ReadScope` every clinical read r
 The console reads clinical data. It does not create, edit, delete or re-validate
 patients, sessions, samples, detections or verdicts — that is the Android client's
 human-in-the-loop workflow. Its only writes are administrative (organizations, invitations and the
-memberships they create, a medtech's deactivation, and patient assignments; shares later), each through a narrow port
+memberships they create, a member's deactivation (medtech or org admin), and patient assignments; shares later), each through a narrow port
 that records it in the audit trail (D2). An account is made only by accepting an
 invitation, and its role and organization come from the stored invitation. Nothing is deleted: organizations and members are deactivated.
 

@@ -28,7 +28,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 ├── vitest.config.ts           Node environment, src/**/*.test.ts, @ alias.
 ├── tsconfig.json              strict, bundler resolution, @/* → src/*.
 ├── docs/
-│   ├── constraints.md         The 13 constraints in full, each with its enforcement point.
+│   ├── constraints.md         The 15 constraints in full, each with its enforcement point.
 │   ├── non-negotiables.md     Terse absolute rules.
 │   ├── stack.md               Tech stack with resolved versions, and the deferrals.
 │   ├── commands.md            Every runnable command.

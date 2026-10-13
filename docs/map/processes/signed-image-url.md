@@ -29,7 +29,7 @@ all"`, `bucket_id = 'samples' and public.is_admin(auth.uid())`). So a super admi
 session can sign any frame, and the Storage policy — not this console — decides what a user
 may see. Signing never uses the service-role key; the old path that signed with it (needed only
 while the legacy database lacked that policy) is gone. The key's uses now are making an
-invited person's account and banning a deactivated medtech's login
+invited person's account and banning a deactivated member's login
 (`docs/map/processes/invitations.md`, `docs/map/processes/people-access.md`).
 
 ## Consumes / produces

@@ -56,7 +56,8 @@ the default. Adapters are imported lazily.
 The Supabase adapters implement the database, storage, auth and onboarding ports, and a
 Resend adapter the mail port. Database reads and storage signing run through the visitor's
 own session so RLS decides visibility. The service-role key is used for two things: making an
-invited person's account when they accept, and banning or unbanning a medtech's login.
+invited person's account when they accept, and banning or unbanning a member's login, a
+medtech's or an org admin's.
 
 ### Authentication and the admin gate
 
@@ -233,11 +234,13 @@ request. A period over 20,000 sessions is refused rather than cut short, and the
 before the click. Every download is recorded in the audit trail
 first; if it cannot be recorded, no file is served.
 
-## Not built yet, in this pass
+## Not built yet
 
-Tracked here so the gap is visible:
-
-- Nothing from this pass's scope remains. Deferred work is listed below.
+This file lists what is built, not what is planned. The console is not finished: open work
+(MFA for console users, the prevalence map, forgot password, guarded super admin grants,
+sharing a patient, the report verification page, among others) is tracked in the sprint
+lists in ClickUp, which is where plans live (`SESSION_INIT.md`). Work decided against is
+listed below.
 
 ## Deferred by decision
 
