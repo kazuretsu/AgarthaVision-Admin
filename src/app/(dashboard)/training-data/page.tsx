@@ -35,16 +35,17 @@ export default async function TrainingDataPage({
   // A literal list, as every narrow page writes it (src/app/not-found-status.test.ts reads it).
   await requirePageAccess(["super_admin"]);
 
-  const filter = parseTrainingFilter(await searchParams);
-  const query = trainingFilterQuery(filter).toString();
+  const asked = parseTrainingFilter(await searchParams);
 
   let organizations: OrganizationSummary[];
   let modelVersions: { modelVersion: string; frames: number }[];
+  let unboxedAvailable: boolean;
   try {
     const db = await getDatabase();
-    [organizations, modelVersions] = await Promise.all([
+    [organizations, modelVersions, unboxedAvailable] = await Promise.all([
       db.listOrganizations(),
       db.trainingModelVersions(),
+      db.trainingSupportsUnboxed(),
     ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
@@ -60,6 +61,10 @@ export default async function TrainingDataPage({
     }
     throw cause;
   }
+
+  // Before admin/0013 the option is not offered, so the preview and the snapshot match.
+  const filter = { ...asked, includeUnboxed: asked.includeUnboxed && unboxedAvailable };
+  const query = trainingFilterQuery(filter).toString();
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
@@ -85,6 +90,7 @@ export default async function TrainingDataPage({
             filter={filter}
             organizations={organizations}
             modelVersions={modelVersions}
+            unboxedAvailable={unboxedAvailable}
           />
         </CardContent>
       </Card>

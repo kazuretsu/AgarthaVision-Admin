@@ -29,6 +29,7 @@ describe("training filter in the query string", () => {
       hn: "0",
       reannotate: "1",
       background: "0",
+      unboxed: "1",
       val: "20",
       test: "75",
     });
@@ -36,6 +37,7 @@ describe("training filter in the query string", () => {
       includeHardNegatives: false,
       includeReannotation: true,
       includeBackground: false,
+      includeUnboxed: true,
       valPercent: 20,
       testPercent: 15,
     });

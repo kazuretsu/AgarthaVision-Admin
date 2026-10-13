@@ -171,6 +171,43 @@ describe("labelFrame — the label rules", () => {
     expect(outcome.excluded).toBe("counted_without_box");
   });
 
+  it("keeps a frame with an unboxed egg when asked, with its boxes and the count it lacks", () => {
+    const outcome = labelFrame(
+      frame("s", [
+        detection(DetectionVerdict.Confirmed, "Ascaris"),
+        detection(DetectionVerdict.Confirmed, "Ascaris", { box: null, linked: false }),
+        detection(DetectionVerdict.BoxIncorrect, "Hookworm", { box: null }),
+      ]),
+      filter({ includeUnboxed: true }),
+    );
+    expect(outcome.excluded).toBeNull();
+    expect(outcome.labels).toHaveLength(1);
+    expect(outcome.unboxed).toBe(2);
+  });
+
+  it("does not call a frame whose only eggs are unboxed background", () => {
+    const onlyUnboxed = frame("s", [
+      detection(DetectionVerdict.Confirmed, "Ascaris", { box: null }),
+    ]);
+    const kept = labelFrame(
+      onlyUnboxed,
+      filter({ includeUnboxed: true, includeBackground: false }),
+    );
+    expect(kept.excluded).toBeNull();
+    expect(kept.unboxed).toBe(1);
+  });
+
+  it("still leaves out a frame with an unboxed egg and another reason", () => {
+    const outcome = labelFrame(
+      frame("s", [
+        detection(DetectionVerdict.Confirmed, "Ascaris", { box: null }),
+        detection(DetectionVerdict.Confirmed, "mystery"),
+      ]),
+      filter({ includeUnboxed: true }),
+    );
+    expect(outcome.excluded).toBe("unrecognised_class");
+  });
+
   it("leaves out a frame with a species the model is not trained on, and names it", () => {
     const outcome = labelFrame(
       frame("s", [
@@ -363,6 +400,18 @@ describe("buildTrainingSet", () => {
       { labCode: "LAB-AAAAAA", organizationId: "org-1", frames: 3, boxes: 4 },
       { labCode: "LAB-BBBBBB", organizationId: "org-2", frames: 1, boxes: 0 },
     ]);
+  });
+
+  it("counts frames kept with unboxed eggs as incomplete, not background", () => {
+    const { items, summary } = buildTrainingSet(
+      { frames, deleted: 0 },
+      filter({ includeUnboxed: true }),
+    );
+    const c1 = items.find((item) => item.sampleId === "c1");
+    expect(c1).toMatchObject({ split: "train", unboxedEggs: 1, labels: [] });
+    expect(summary).toMatchObject({ frames: 5, background: 1, incomplete: 1, unboxedEggs: 1 });
+    expect(summary.splits.train).toMatchObject({ frames: 2, background: 0, incomplete: 1 });
+    expect(summary.excludedFrames.map((row) => row.reason)).not.toContain("counted_without_box");
   });
 
   it("no patient key lands in two splits", () => {

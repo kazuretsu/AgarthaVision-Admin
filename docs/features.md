@@ -238,8 +238,8 @@ first; if it cannot be recorded, no file is served.
 
 `/training-data` (super admins only; org admins get a 404) gathers model training data
 (14zcqntm62u, `admin/0012`). Filter by session dates, laboratories, species, model versions,
-and whether to include hard negatives, background frames and frames flagged for
-re-annotation, with the validation and test shares of patients. The preview counts, before
+and whether to include hard negatives, background frames, frames flagged for re-annotation
+and frames with unboxed eggs, with the validation and test shares of patients. The preview counts, before
 anything is written, the frames, boxes, background frames, hard negatives and patients, by
 split, class, model version and laboratory, and what was left out and why.
 
@@ -247,8 +247,11 @@ A labelled box is every detection the medtech did not reject, under the medtech'
 where they corrected it; an untouched model box they confirmed counts. A rejected box is a
 hard negative at the model's position. A frame goes in whole or not at all: one with an egg
 counted but never boxed, a box outside the frame or a species the model is not trained on is
-left out, so no egg is taught as background. Frames split by patient, deterministically,
-default 70/15/15.
+left out, so no egg is taught as background. **Frames with unboxed eggs** (off by default,
+`admin/0013`) keeps those frames anyway, with the boxes they have, marked incomplete with the
+number of eggs they lack in the manifest, the COCO images and the data card, for whoever trains
+to leave out or use where a missing box does no harm. Frames split by patient,
+deterministically, default 70/15/15.
 
 **Create snapshot** freezes the frames and their label values with a name: a medtech changing
 a ruling later changes nothing in it. Each snapshot downloads as a zip: images and YOLO label

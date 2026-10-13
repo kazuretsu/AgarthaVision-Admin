@@ -47,6 +47,7 @@ const item: TrainingSnapshotItem = {
     },
   ],
   hardNegatives: [{ modelClass: "Ascaris", x: 100, y: 100, w: 10, h: 10 }],
+  unboxedEggs: 0,
 };
 
 const summary: TrainingSummary = {
@@ -127,6 +128,7 @@ describe("training export files", () => {
         width: 640,
         height: 640,
         split: "val",
+        incomplete: false,
       },
     ]);
     expect(coco.annotations[0]).toMatchObject({
@@ -173,11 +175,35 @@ describe("training export files", () => {
   it("states the counts, the split rule, what was left out and what is missing", () => {
     const card = toDataCard(snapshot, [item], ["5a1e0000-0000-4000-8000-00000000dead"]);
     expect(card).toContain("# Baseline October");
-    expect(card).toContain("| val | 1 | 0 | 2 | 1 |");
+    expect(card).toContain("| val | 1 | 0 | 0 | 2 | 1 |");
     expect(card).toContain("Validation 15%, test 15%");
     expect(card).toContain("| Frame: An egg was counted but never boxed | 3 |");
     expect(card).toContain("not trained on: draft.");
     expect(card).toContain("- Laboratories: 1 selected.");
     expect(card).toContain("`5a1e0000-0000-4000-8000-00000000dead`");
+  });
+
+  it("marks a frame kept with unboxed eggs as incomplete, everywhere it is named", () => {
+    const partial = { ...item, unboxedEggs: 2 };
+    const manifest = JSON.parse(toManifestLine(partial, CLASSES)) as Record<string, unknown>;
+    expect(manifest).toMatchObject({ incomplete: true, unboxed_eggs: 2 });
+    expect(JSON.parse(toManifestLine(item, CLASSES))).toMatchObject({
+      incomplete: false,
+      unboxed_eggs: 0,
+    });
+    const coco = JSON.parse(toCocoJson(snapshot, [partial], CLASSES)) as {
+      images: { incomplete: boolean }[];
+    };
+    expect(coco.images[0]?.incomplete).toBe(true);
+    const card = toDataCard(
+      { ...snapshot, filter: { ...snapshot.filter, includeUnboxed: true } },
+      [partial],
+      [],
+    );
+    expect(card).toContain("| val | 1 | 0 | 1 | 2 | 1 |");
+    expect(card).toContain("## Incomplete frames");
+    expect(card).toContain("1 frame holds 2 eggs a medtech");
+    expect(card).toContain("never boxed: included, marked incomplete.");
+    expect(toDataCard(snapshot, [item], [])).not.toContain("## Incomplete frames");
   });
 });

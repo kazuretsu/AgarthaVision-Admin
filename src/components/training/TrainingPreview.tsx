@@ -81,6 +81,15 @@ export async function TrainingPreview({
         <StatCard label="Patients" value={count(summary.patients)} note="Each in one split" />
       </div>
 
+      {(summary.incomplete ?? 0) > 0 ? (
+        <p role="status" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
+          {count(summary.incomplete ?? 0)} frame{summary.incomplete === 1 ? "" : "s"} with{" "}
+          {count(summary.unboxedEggs ?? 0)} egg{summary.unboxedEggs === 1 ? "" : "s"} counted but
+          never boxed {summary.incomplete === 1 ? "is" : "are"} in, marked incomplete. Their label
+          files hold only the boxed eggs, so a training run reads the others as background.
+        </p>
+      ) : null}
+
       {tooLarge ? (
         <p role="status" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
           A snapshot holds at most {count(TRAINING_SNAPSHOT_LIMIT)} frames. Narrow the filters to
@@ -96,6 +105,9 @@ export async function TrainingPreview({
               <TableHead>Split</TableHead>
               <TableHead className="text-right">Frames</TableHead>
               <TableHead className="text-right">Background</TableHead>
+              {filter.includeUnboxed ? (
+                <TableHead className="text-right">Incomplete</TableHead>
+              ) : null}
               <TableHead className="text-right">Boxes</TableHead>
               <TableHead className="text-right">Patients</TableHead>
             </TableRow>
@@ -108,6 +120,9 @@ export async function TrainingPreview({
                   <TableCell>{SPLIT_LABELS[split]}</TableCell>
                   <TableCell className="tnum text-right">{count(row.frames)}</TableCell>
                   <TableCell className="tnum text-right">{count(row.background)}</TableCell>
+                  {filter.includeUnboxed ? (
+                    <TableCell className="tnum text-right">{count(row.incomplete ?? 0)}</TableCell>
+                  ) : null}
                   <TableCell className="tnum text-right">{count(row.boxes)}</TableCell>
                   <TableCell className="tnum text-right">{count(row.patients)}</TableCell>
                 </TableRow>

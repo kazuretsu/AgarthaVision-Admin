@@ -12,16 +12,19 @@ import { Input } from "@/components/ui/input";
 /**
  * The training data filter, a GET form: the preview is a link, and the snapshot is
  * built from the same query. Each list submits what is ticked; none ticked means all.
- * The three options submit `0` when unticked, so "off" survives the round trip.
+ * The options submit `0` when unticked, so "off" survives the round trip.
  */
 export function TrainingFilterForm({
   filter,
   organizations,
   modelVersions,
+  unboxedAvailable,
 }: {
   filter: TrainingFilter;
   organizations: OrganizationSummary[];
   modelVersions: { modelVersion: string; frames: number }[];
+  /** admin/0013 is applied, so a frame kept with unboxed eggs can be stored as incomplete. */
+  unboxedAvailable: boolean;
 }) {
   return (
     <form className="flex flex-col gap-5">
@@ -115,6 +118,17 @@ export function TrainingFilterForm({
             label="Frames flagged for re-annotation"
             note="The medtech said the model missed eggs"
           />
+          <Option
+            name="unboxed"
+            checked={filter.includeUnboxed}
+            disabled={!unboxedAvailable}
+            label="Frames with unboxed eggs"
+            note={
+              unboxedAvailable
+                ? "Eggs counted but never boxed stay unlabelled; marked incomplete"
+                : "Needs admin/0013 applied in the SQL editor"
+            }
+          />
         </fieldset>
       </div>
 
@@ -199,11 +213,13 @@ function Option({
   checked,
   label,
   note,
+  disabled = false,
 }: {
   name: string;
   checked: boolean;
   label: string;
   note: string;
+  disabled?: boolean;
 }) {
   return (
     <label className="flex items-start gap-2 text-[13px] text-stone-ink">
@@ -212,6 +228,7 @@ function Option({
         value="1"
         uncheckedValue="0"
         defaultChecked={checked}
+        disabled={disabled}
         className="mt-0.5"
       />
       <span>

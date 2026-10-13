@@ -1038,6 +1038,13 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
     return toTrainingFrames(parsed<TrainingFramesRow>(data));
   }
 
+  async trainingSupportsUnboxed(): Promise<boolean> {
+    const { data, error } = await this.client.rpc("console_training_schema_version");
+    if (error && isFunctionNotFound(error)) return false;
+    if (error) throw new DatabaseReadError("trainingSupportsUnboxed", error);
+    return Number(data) >= 13;
+  }
+
   async trainingModelVersions(): Promise<{ modelVersion: string; frames: number }[]> {
     type Row = { model_version: string; frames: number };
     const rows = await this.trainingCall<Row[] | null>(

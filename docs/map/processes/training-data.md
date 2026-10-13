@@ -23,8 +23,8 @@ answers "what should a model learn from".
    for, each with every detection on it, its box, and the linked prediction's box. A deleted
    duplicate is only counted. One jsonb value, not rows, so PostgREST's row cap never cuts it
    short. Security definer: a super admin's table reads return nothing since app `0013`.
-3. **Label rules.** `buildTrainingSet()` (`src/domain/training-data.ts:372`) applies
-   `labelFrame()` (`:286`) to each frame:
+3. **Label rules.** `buildTrainingSet()` (`src/domain/training-data.ts:397`) applies
+   `labelFrame()` (`:304`) to each frame:
    - a detection the medtech did not reject, with a box, of a selected species, is a label,
      classed by the medtech's correction or else the model's, by canonical name. An untouched
      model box the medtech confirmed is a label like any other;
@@ -35,23 +35,30 @@ answers "what should a model learn from".
      kept, that egg would be taught as background. So does a frame flagged for
      re-annotation, unless asked for. The ticket said to drop only the box-less detection;
      dropping the frame is the stricter reading of the same rule, for that reason;
+   - **unless asked for (`includeUnboxed`, off by default).** "Frames with unboxed eggs" keeps a
+     frame whose only problem is eggs counted but never boxed: it goes in with the boxes it
+     has and `unboxedEggs`, the number it lacks, frozen with it (`admin/0013`). It is
+     **incomplete**, never background, even with no box at all: there is an egg on it. A frame
+     with another reason to leave is still left out;
    - a frame with no label is a background image, unless switched off. Boxes of a species not
      selected are dropped and the frame stays: a detector for the selected species should
      learn those eggs are not it.
 
-   Boxes are clipped to the 640×640 frame (`clipToFrame`, `:232`).
+   Boxes are clipped to the 640×640 frame (`clipToFrame`, `:248`).
 
-4. **Split by patient.** `splitFor()` (`:213`) buckets a patient by the first eight hex digits
+4. **Split by patient.** `splitFor()` (`:229`) buckets a patient by the first eight hex digits
    of an md5 of their id: test takes the lowest buckets, validation the next, training the
    rest (default 15/15/70). Fixed, not random: a patient stays in the same split in every
    snapshot with the same percentages, so a test patient never leaks into a later training
    set, and raising validation never moves a test patient.
 5. **Preview.** The page renders the summary (frames, boxes, background, hard negatives,
    patients; by split, class, model version and laboratory; what was left out and why) before
-   anything is written.
+   anything is written. With unboxed frames included, a warning gives how many frames and eggs
+   are incomplete, and the split table an Incomplete column.
 6. **Freeze.** The create action reads the frames again from the same query, never from the
-   browser, and calls `console_create_training_snapshot()` (`admin/0012:247`). It stores the
-   filter, the summary and each frame's labels and hard negatives as values, copies the storage
+   browser, and calls `console_create_training_snapshot()` (`admin/0012`, replaced by
+   `admin/0013`). It stores the filter, the summary and each frame's labels, hard negatives and
+   unboxed-egg count as values, copies the storage
    path and model version from the sample row, and refuses the whole snapshot (22023, hint
    `stale`) if a frame was deleted since. The patient key becomes a group code hashed with a
    salt made for that snapshot and never stored. Audited as `training.snapshot.create` in the
@@ -66,11 +73,14 @@ answers "what should a model learn from".
   super admin** (`StoragePort.download`), whom the bucket's `"samples: admin read all"` policy
   lets read every frame. No service-role key; constraint #2 is unchanged.
 - `labels/{train,val,test}/<sample_id>.txt`: YOLO, `class cx cy w h`, pixels ÷ 640, six
-  decimals; empty for a background frame.
+  decimals; empty for a background frame. An incomplete frame's file holds only its boxed eggs
+  (maybe none), so a training run that reads it learns its unboxed eggs as background.
 - `data.yaml`, `annotations.coco.json` (top-left boxes in pixels, categories from 1, each
-  image with its split), `manifest.jsonl` (per frame: split, model version, laboratory code,
-  patient group, labels with origin `kept` / `redrawn` / `added` / `unknown`, verdict and the
-  model's class, hard negatives), and `README.md`, the data card.
+  image with its split and `incomplete`), `manifest.jsonl` (per frame: split, model version,
+  laboratory code, patient group, `incomplete` and `unboxed_eggs`, labels with origin `kept` /
+  `redrawn` / `added` / `unknown`, verdict and the model's class, hard negatives), and
+  `README.md`, the data card, which counts incomplete frames per split and, when there are any,
+  says to leave them out of training or use them only where a missing box does no harm.
 
 Images are written as they are, text deflated. The stream reads six images ahead and only as
 the client takes bytes, so memory stays flat. An image that cannot be read is left out with its
@@ -110,6 +120,12 @@ short-lived signed URLs.
   which runs the rules on rows the database returns, checks the split, the freeze, the audit
   entries and who is refused.
 - The split rule: changing `splitFor` moves patients between splits across snapshots.
+
+- **Before `admin/0013`** the option is not offered: `trainingSupportsUnboxed()` asks
+  `console_training_schema_version()`, the checkbox is disabled with a note, the page treats
+  the option as off, and the create action refuses it. Without that guard a frame would be
+  stored without its incomplete mark. `supabase/tests/admin_0013_training_unboxed_frames.test.ts`
+  covers the stored count.
 
 **Does not hit**
 

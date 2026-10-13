@@ -49,9 +49,14 @@ export async function createTrainingSnapshot(
   const filter = trainingFilterFromQuery(String(formData.get("query") ?? ""));
 
   try {
-    const frames = await (
-      await getDatabase()
-    ).trainingFrames({
+    const db = await getDatabase();
+    // Without admin/0013 an incomplete frame would be stored without its mark: refuse instead.
+    if (filter.includeUnboxed && !(await db.trainingSupportsUnboxed())) {
+      return refuse(
+        "Apply admin/0013_training_unboxed_frames.sql in the SQL editor to include frames with unboxed eggs.",
+      );
+    }
+    const frames = await db.trainingFrames({
       startedFrom: filter.from,
       startedTo: filter.to,
       organizationIds: filter.organizationIds,

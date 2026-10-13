@@ -39,6 +39,7 @@ const snapshot: TrainingSnapshot = {
           ]
         : [],
     hardNegatives: [],
+    unboxedEggs: 0,
   })),
 };
 

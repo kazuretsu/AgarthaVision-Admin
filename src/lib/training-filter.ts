@@ -13,8 +13,8 @@ import { parsePeriod } from "./period";
  * snapshot is built from exactly the filter the preview showed. Anything malformed is
  * dropped to its default rather than guessed at.
  *
- * `lab`, `class` and `model` repeat; none means all. `hn`, `reannotate` and
- * `background` are `1` or `0` (the checkboxes submit `0` unchecked); `val` and `test`
+ * `lab`, `class` and `model` repeat; none means all. `hn`, `reannotate`,
+ * `background` and `unboxed` are `1` or `0` (the checkboxes submit `0` unchecked); `val` and `test`
  * are whole percentages of patients, each at most {@link MAX_HELD_OUT_PERCENT}.
  */
 
@@ -56,6 +56,7 @@ export function parseTrainingFilter(params: Params): TrainingFilter {
     includeHardNegatives: flag(params.hn, DEFAULT_TRAINING_FILTER.includeHardNegatives),
     includeReannotation: flag(params.reannotate, DEFAULT_TRAINING_FILTER.includeReannotation),
     includeBackground: flag(params.background, DEFAULT_TRAINING_FILTER.includeBackground),
+    includeUnboxed: flag(params.unboxed, DEFAULT_TRAINING_FILTER.includeUnboxed),
     valPercent: percent(params.val, DEFAULT_TRAINING_FILTER.valPercent),
     testPercent: percent(params.test, DEFAULT_TRAINING_FILTER.testPercent),
   };
@@ -74,6 +75,7 @@ export function trainingFilterQuery(filter: TrainingFilter): URLSearchParams {
   query.set("hn", filter.includeHardNegatives ? "1" : "0");
   query.set("reannotate", filter.includeReannotation ? "1" : "0");
   query.set("background", filter.includeBackground ? "1" : "0");
+  query.set("unboxed", filter.includeUnboxed ? "1" : "0");
   query.set("val", String(filter.valPercent));
   query.set("test", String(filter.testPercent));
   return query;

@@ -2,6 +2,17 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] A training snapshot can keep frames with unboxed eggs, marked incomplete
+
+"Frames with unboxed eggs" on `/training-data`, off by default, keeps a frame whose only reason
+to be left out is an egg counted but never boxed. It goes in with the boxes it has, and the
+number of eggs it lacks is frozen with it: `incomplete` and `unboxed_eggs` in the manifest,
+`incomplete` on the COCO image, and an Incomplete frames column and section in the data card.
+Such a frame is never counted as background. The preview warns how many frames and eggs are
+incomplete. `admin/0013_training_unboxed_frames.sql` adds the column and replaces two functions,
+**apply it in the SQL editor**; until it is, the option is disabled with a note and the create
+action refuses it, so no frame is stored without its mark.
+
 ## [feat] Super admins gather model training data as frozen, de-identified snapshots
 
 A **Training data** page (`/training-data`, super admins only; org admins get a 404) filters

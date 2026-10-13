@@ -187,6 +187,12 @@ export interface DatabasePort {
    */
   trainingFrames(query: TrainingFramesQuery): Promise<TrainingFrames>;
 
+  /**
+   * Whether the database can store frames kept with unboxed eggs (admin/0013). `false`
+   * before 0013 is applied; the console then does not offer the option.
+   */
+  trainingSupportsUnboxed(): Promise<boolean>;
+
   /** The model versions live frames were read with, most frames first. */
   trainingModelVersions(): Promise<{ modelVersion: string; frames: number }[]>;
 

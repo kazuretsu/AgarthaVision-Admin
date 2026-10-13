@@ -22,6 +22,9 @@ import { DetectionVerdict } from "./enums";
  *   where a box falls outside the frame, is left out: kept, that egg would teach the model it
  *   is background. So is a frame with a species the console does not train on, which may be
  *   anything, and a frame the medtech flagged as needing re-annotation, unless asked for.
+ * - Asked for (`includeUnboxed`), a frame with eggs counted but never boxed goes in with the
+ *   boxes it has, marked incomplete and with the number of unboxed eggs, so whoever trains on
+ *   it can leave it out, keep it, or evaluate on it. Off by default.
  * - A frame with no label is a background image, included unless switched off. Boxes of a
  *   species not selected are dropped, and their frame stays: a detector for the selected
  *   species should learn that those eggs are not it.
@@ -92,6 +95,8 @@ export interface TrainingFilter {
   includeHardNegatives: boolean;
   includeReannotation: boolean;
   includeBackground: boolean;
+  /** Keep frames with eggs counted but never boxed, marked incomplete. */
+  includeUnboxed: boolean;
   /** Whole percentages of patients; the rest is training. */
   valPercent: number;
   testPercent: number;
@@ -109,6 +114,7 @@ export const DEFAULT_TRAINING_FILTER: TrainingFilter = {
   includeHardNegatives: true,
   includeReannotation: false,
   includeBackground: true,
+  includeUnboxed: false,
   valPercent: DEFAULT_VAL_PERCENT,
   testPercent: DEFAULT_TEST_PERCENT,
 };
@@ -146,6 +152,11 @@ export interface TrainingItem {
   needsReannotation: boolean;
   labels: TrainingLabel[];
   hardNegatives: TrainingHardNegative[];
+  /**
+   * Eggs of a selected species counted on this frame but never boxed. Above zero only when
+   * `includeUnboxed` kept the frame: its labels are then incomplete.
+   */
+  unboxedEggs: number;
 }
 
 /** Why a whole frame was left out, in the order a frame's first reason is chosen. */
@@ -180,6 +191,8 @@ export const TRAINING_BOX_DROP_LABELS: Record<TrainingBoxDrop, string> = {
 export interface TrainingSplitCounts {
   frames: number;
   background: number;
+  /** Frames kept with eggs never boxed (`includeUnboxed`). Absent on snapshots before it. */
+  incomplete?: number;
   boxes: number;
   patients: number;
 }
@@ -188,6 +201,9 @@ export interface TrainingSummary {
   frames: number;
   boxes: number;
   background: number;
+  /** Frames kept with eggs never boxed, and those eggs. Absent on snapshots before them. */
+  incomplete?: number;
+  unboxedEggs?: number;
   hardNegatives: number;
   patients: number;
   splits: Record<TrainingSplit, TrainingSplitCounts>;
@@ -278,6 +294,8 @@ export interface FrameOutcome {
   hardNegatives: TrainingHardNegative[];
   /** Set when the whole frame is left out. */
   excluded: TrainingFrameExclusion | null;
+  /** Eggs of a selected species counted but never boxed. */
+  unboxed: number;
   dropped: Record<TrainingBoxDrop, number>;
   unrecognised: string[];
 }
@@ -287,7 +305,11 @@ export function labelFrame(
   frame: TrainingFrameSource,
   filter: Pick<
     TrainingFilter,
-    "classes" | "includeHardNegatives" | "includeReannotation" | "includeBackground"
+    | "classes"
+    | "includeHardNegatives"
+    | "includeReannotation"
+    | "includeBackground"
+    | "includeUnboxed"
   >,
 ): FrameOutcome {
   const labels: TrainingLabel[] = [];
@@ -298,6 +320,7 @@ export function labelFrame(
     rejection_without_box: 0,
   };
   const unrecognised: string[] = [];
+  let unboxed = 0;
 
   if (frame.needsReannotation && !filter.includeReannotation) reasons.add("needs_reannotation");
 
@@ -324,7 +347,8 @@ export function labelFrame(
       continue;
     }
     if (!detection.box) {
-      reasons.add("counted_without_box");
+      unboxed += 1;
+      if (!filter.includeUnboxed) reasons.add("counted_without_box");
       continue;
     }
     const box = clipToFrame(detection.box);
@@ -345,18 +369,19 @@ export function labelFrame(
     });
   }
 
-  if (reasons.size === 0 && labels.length === 0 && !filter.includeBackground) {
+  // A frame with an unboxed egg is not background: there is an egg on it.
+  if (reasons.size === 0 && labels.length === 0 && unboxed === 0 && !filter.includeBackground) {
     reasons.add("background_not_included");
   }
   const excluded = TRAINING_FRAME_EXCLUSIONS.find((reason) => reasons.has(reason)) ?? null;
-  return { labels, hardNegatives, excluded, dropped, unrecognised };
+  return { labels, hardNegatives, excluded, unboxed, dropped, unrecognised };
 }
 
 function emptySplits(): Record<TrainingSplit, TrainingSplitCounts> {
   return {
-    train: { frames: 0, background: 0, boxes: 0, patients: 0 },
-    val: { frames: 0, background: 0, boxes: 0, patients: 0 },
-    test: { frames: 0, background: 0, boxes: 0, patients: 0 },
+    train: { frames: 0, background: 0, incomplete: 0, boxes: 0, patients: 0 },
+    val: { frames: 0, background: 0, incomplete: 0, boxes: 0, patients: 0 },
+    test: { frames: 0, background: 0, incomplete: 0, boxes: 0, patients: 0 },
   };
 }
 
@@ -400,6 +425,7 @@ export function buildTrainingSet(
       needsReannotation: frame.needsReannotation,
       labels: outcome.labels,
       hardNegatives: outcome.hardNegatives,
+      unboxedEggs: outcome.unboxed,
     });
   }
 
@@ -430,13 +456,19 @@ function summariseTrainingSet(
   const labOrganization = new Map<string, string | null>();
   let boxes = 0;
   let background = 0;
+  let incomplete = 0;
+  let unboxedEggs = 0;
   let hardNegatives = 0;
 
   for (const item of items) {
     const split = splits[item.split];
     split.frames += 1;
     split.boxes += item.labels.length;
-    if (item.labels.length === 0) {
+    if (item.unboxedEggs > 0) {
+      split.incomplete = (split.incomplete ?? 0) + 1;
+      incomplete += 1;
+      unboxedEggs += item.unboxedEggs;
+    } else if (item.labels.length === 0) {
       split.background += 1;
       background += 1;
     }
@@ -461,6 +493,8 @@ function summariseTrainingSet(
     frames: items.length,
     boxes,
     background,
+    incomplete,
+    unboxedEggs,
     hardNegatives,
     patients: TRAINING_SPLITS.reduce((total, name) => total + splits[name].patients, 0),
     splits,

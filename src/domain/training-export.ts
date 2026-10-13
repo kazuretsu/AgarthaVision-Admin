@@ -46,6 +46,8 @@ export interface TrainingSnapshotItem {
   needsReannotation: boolean;
   labels: TrainingLabel[];
   hardNegatives: TrainingHardNegative[];
+  /** Eggs counted on the frame but never boxed: above zero, its labels are incomplete. */
+  unboxedEggs: number;
 }
 
 export interface TrainingSnapshot extends TrainingSnapshotListing {
@@ -101,7 +103,10 @@ export function toDataYaml(classes: readonly TrainingClass[]): string {
 
 const pixel = (value: number) => Math.round(value * 100) / 100;
 
-/** The same labels in COCO form. Each image also carries its split, which COCO tools ignore. */
+/**
+ * The same labels in COCO form. Each image also carries its split and whether its labels are
+ * incomplete, which COCO tools ignore.
+ */
 export function toCocoJson(
   snapshot: Pick<TrainingSnapshot, "id" | "name" | "createdAt">,
   items: readonly TrainingSnapshotItem[],
@@ -114,6 +119,7 @@ export function toCocoJson(
     width: TRAINING_FRAME_SIZE,
     height: TRAINING_FRAME_SIZE,
     split: item.split,
+    incomplete: item.unboxedEggs > 0,
   }));
   const annotations = items.flatMap((item, index) =>
     item.labels
@@ -182,6 +188,8 @@ export function toManifestLine(
     lab: item.labCode,
     patient_group: item.patientGroup,
     needs_reannotation: item.needsReannotation,
+    incomplete: item.unboxedEggs > 0,
+    unboxed_eggs: item.unboxedEggs,
     labels,
     hard_negatives: item.hardNegatives.map((negative) => ({
       model_class: negative.modelClass,
@@ -235,6 +243,8 @@ export function toDataCard(
     "  the medtech confirmed or reclassified; `redrawn`; `added` by the medtech; `unknown`: from",
     "  before the app recorded it), and hard negatives: boxes the model drew and the medtech",
     "  rejected, at the model's position. Hard negatives are not in the YOLO or COCO files.",
+    "  `incomplete` and `unboxed_eggs` say whether eggs on the frame were counted but never",
+    "  boxed (see below).",
     "",
     "## Classes",
     "",
@@ -260,13 +270,14 @@ export function toDataCard(
     "so they stay in the same split in every snapshot made with the same percentages.",
     "",
     ...table(
-      ["Split", "Frames", "Background frames", "Boxes", "Patient groups"],
+      ["Split", "Frames", "Background frames", "Incomplete frames", "Boxes", "Patient groups"],
       TRAINING_SPLITS.map((split) => {
         const items = counts(split);
         return [
           split,
           items.length,
-          items.filter((item) => item.labels.length === 0).length,
+          items.filter((item) => item.labels.length === 0 && item.unboxedEggs === 0).length,
+          items.filter((item) => item.unboxedEggs > 0).length,
           items.reduce((total, item) => total + item.labels.length, 0),
           new Set(items.map((item) => item.patientGroup)).size,
         ];
@@ -280,6 +291,7 @@ export function toDataCard(
     `- Model versions: ${filter.modelVersions.length === 0 ? "all" : filter.modelVersions.join(", ")}.`,
     `- Frames flagged for re-annotation: ${filter.includeReannotation ? "included" : "left out"}.`,
     `- Background frames (no egg): ${filter.includeBackground ? "included" : "left out"}.`,
+    `- Frames with eggs counted but never boxed: ${filter.includeUnboxed ? "included, marked incomplete" : "left out"}.`,
     `- Hard negatives in the manifest: ${filter.includeHardNegatives ? "included" : "left out"}.`,
     "",
     "Only verified frames exist on the server; a frame the medtech deleted as a duplicate is never",
@@ -337,6 +349,21 @@ export function toDataCard(
         "",
       );
     }
+  }
+
+  const incomplete = written.filter((item) => item.unboxedEggs > 0);
+  if (incomplete.length > 0) {
+    const eggs = incomplete.reduce((total, item) => total + item.unboxedEggs, 0);
+    lines.push(
+      "## Incomplete frames",
+      "",
+      `${incomplete.length} frame${incomplete.length === 1 ? "" : "s"} hold${incomplete.length === 1 ? "s" : ""} ${eggs} egg${eggs === 1 ? "" : "s"} a medtech`,
+      "counted but never boxed. Their label files hold only the boxed eggs, so a training run",
+      "reads the unboxed ones as background. They are marked `incomplete` in the manifest and",
+      "the COCO images: leave them out of training, or use them only where a missing box does no",
+      "harm, such as evaluating counts.",
+      "",
+    );
   }
 
   if (missing.length > 0) {

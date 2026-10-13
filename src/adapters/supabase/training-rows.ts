@@ -62,6 +62,8 @@ export interface TrainingSnapshotItemRow {
   needs_reannotation: boolean;
   labels: TrainingSnapshotItem["labels"] | null;
   hard_negatives: TrainingSnapshotItem["hardNegatives"] | null;
+  /** From admin/0013; absent before it. */
+  unboxed_eggs?: number | null;
 }
 
 export interface TrainingSnapshotRow extends TrainingSnapshotListingRow {
@@ -115,6 +117,7 @@ export function toSnapshotItemsPayload(items: readonly TrainingItem[]) {
     patient_key: item.patientKey,
     labels: item.labels,
     hard_negatives: item.hardNegatives,
+    unboxed_eggs: item.unboxedEggs,
   }));
 }
 
@@ -148,6 +151,7 @@ export function toTrainingSnapshot(row: TrainingSnapshotRow): TrainingSnapshot {
       needsReannotation: item.needs_reannotation,
       labels: item.labels ?? [],
       hardNegatives: item.hard_negatives ?? [],
+      unboxedEggs: Number(item.unboxed_eggs ?? 0),
     })),
   };
 }
