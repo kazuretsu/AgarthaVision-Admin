@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [ux] A URL no route matches gets the console's 404 page
+
+`/recordsx`, `/records/nothing/here` or any other path no route matches used to show the
+framework's bare 404, outside the shell. `(dashboard)/[...missing]/page.tsx` catches them inside
+the console: the gate runs first (signed out goes to sign in), then the console's not-found page
+answers 404 with a way back to the visitor's section. Real routes, `public/` files (boundaries,
+the map worker) and the sign-in pages are unaffected.
+
 ## [fix] Every page says so when `org` names no organization
 
 A super admin's `?org=` with a well-formed ID that names no organization used to show an empty

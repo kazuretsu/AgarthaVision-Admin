@@ -198,7 +198,9 @@ button back to the section the visitor was in (Records for a record, Organizatio
 organization, the Prevalence map for an unknown area), or the dashboard when that section is
 not theirs, as for an org admin opening `/organizations` (14zcqntk6h4). A malformed ID, an
 unknown ID and another laboratory's record show the same page, word for word, so it says
-nothing about which records exist. The status stays 404.
+nothing about which records exist. The status stays 404. A URL no route matches, such as
+`/recordsx` or `/records/nothing/here`, gets the same page inside the shell; signed out, it
+goes to sign in like any console page.
 
 ### Dashboard
 

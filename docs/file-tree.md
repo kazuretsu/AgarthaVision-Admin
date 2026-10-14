@@ -72,6 +72,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
     │       ├── not-found.tsx  The 404 page: the same words for every reason, a way back.
+    │       ├── [...missing]/  Any URL no route matches: the gate, then the same 404 page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter;
     │                          loading.tsx. audit/ and export/ have one too.
     │       ├── map/           The prevalence map: Region → Province → City/Municipality.

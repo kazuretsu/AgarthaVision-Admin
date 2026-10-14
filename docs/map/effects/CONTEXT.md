@@ -61,7 +61,10 @@ a skeleton (14zcqntk6h5). The same holds for
 or a meta refresh) rather than as a 307, which is fine for the list's page-past-the-end
 redirect but not for anything a non-browser client must follow. What a 404 shows is
 `(dashboard)/not-found.tsx`, inside the shell, worded the same for every reason (14zcqntk6h4).
-It renders after the page has decided, so it cannot change the status.
+It renders after the page has decided, so it cannot change the status. A URL no route matches
+reaches `(dashboard)/[...missing]/page.tsx`, which only calls `notFound()`: the gate runs, then
+the same page. Every more specific route wins over it, and `public/` files are served before
+any route.
 
 **A `loading.tsx` does not show when only the query string changes.** A new search or page
 on the same route keeps the previous page on screen until the next one is ready. The records
