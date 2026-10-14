@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveConsoleAccess, type OrgAdminMembership } from "@/domain/access";
 import {
+  AuthUnavailableError,
   AuthenticationFailedError,
   NotAuthenticatedError,
   NotAuthorizedError,
@@ -32,6 +33,11 @@ import { isFunctionNotFound } from "./errors";
  *    super-admin grant and the membership in **one** call. If that function is not
  *    installed yet, the three reads it replaces run instead, so a deployment that
  *    ships before its migration is applied keeps working.
+ *
+ * A read that fails is neither a refusal nor a grant: it throws
+ * {@link AuthUnavailableError} (14zcqntk6h2), so an outage reads as an outage and not
+ * as "no access". Only a read that succeeds and finds no grant and no membership is a
+ * refusal. Either way, nobody gets in.
  *
  * A medtech is a refusal, not a downgrade. There is no partial console:
  * `requireConsoleActor()` throws rather than returning a reduced view, so a
@@ -107,8 +113,10 @@ export class SupabaseAuthAdapter implements AuthPort {
     );
     // Before `admin/0010` is applied.
     if (error && isFunctionNotFound(error)) return this.factsWithoutActor(userId);
-    // Anything unreadable is no access at all — the lesser privilege.
-    const row = error ? null : ((data as ConsoleActorRow[] | null)?.[0] ?? null);
+    // A failed read is not an answer. It grants nothing, and it is not "no access" either.
+    if (error) throw new AuthUnavailableError(error);
+    // A read that found no row is no access at all.
+    const row = (data as ConsoleActorRow[] | null)?.[0] ?? null;
     if (!row) return { fullName: null, isSuperAdmin: false, membership: null };
     return {
       fullName: row.full_name,
@@ -127,14 +135,17 @@ export class SupabaseAuthAdapter implements AuthPort {
    * The three reads `console_actor()` replaces, for a database without `admin/0010`.
    * `is_admin()` is the check every policy makes; anything but an explicit `true` is
    * no grant. RLS lets every user read their own profile, membership and organization.
+   * A failed `is_admin()` call or membership read throws, as a failed `console_actor()`
+   * does; a failed profile read only loses the name.
    */
   private async factsWithoutActor(userId: string): Promise<ActorFacts> {
     const [profile, superAdmin] = await Promise.all([
       this.client.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
       this.client.rpc("is_admin", { user_id: userId }),
     ]);
+    if (superAdmin.error) throw new AuthUnavailableError(superAdmin.error);
     const name = profile.error ? null : (profile.data as ProfileNameRow | null);
-    const isSuperAdmin = !superAdmin.error && superAdmin.data === true;
+    const isSuperAdmin = superAdmin.data === true;
     if (isSuperAdmin) return { fullName: name?.full_name ?? null, isSuperAdmin, membership: null };
 
     const { data, error } = await this.client
@@ -142,7 +153,8 @@ export class SupabaseAuthAdapter implements AuthPort {
       .select("organization_id, role, status, organizations ( name, status )")
       .eq("user_id", userId)
       .maybeSingle();
-    const row = error || !data ? null : (data as unknown as MembershipRow);
+    if (error) throw new AuthUnavailableError(error);
+    const row = data ? (data as unknown as MembershipRow) : null;
     return {
       fullName: name?.full_name ?? null,
       isSuperAdmin,

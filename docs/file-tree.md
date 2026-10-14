@@ -68,11 +68,14 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── layout.tsx         Root shell and metadata.
     │   ├── globals.css        Design tokens. The only file holding raw hex.
     │   ├── page.tsx           Redirects to /dashboard; the gate decides from there.
+    │   ├── error.tsx          The boundary above the gate: an outage (the gate could not read
+    │   │                      access) answers 500 with the outage message and no shell.
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
     │   ├── (auth)/invite/     [token]/ accept page and action (outside the gate); joined/.
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
-    │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
+    │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page;
+    │       │                  an outage on a click shows the outage message.
     │       ├── not-found.tsx  The 404 page: the same words for every reason, a way back.
     │       ├── [...missing]/  Any URL no route matches: the gate, then the same 404 page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter;
@@ -116,8 +119,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── loading/           Page-shaped skeletons (PageSkeletons) and LinkPending, the
     │                          spinner on a clicked link while its page decides 404.
     │   ├── assignments/       Who is assigned to a patient, with assign/remove/hand over.
-    │   ├── shell/             Sidebar nav (with who sees each entry), the user menu, and the
-    │   │                      not-found page's way back to the visitor's section.
+    │   ├── shell/             Sidebar nav (with who sees each entry), the user menu, the
+    │   │                      not-found page's way back to the visitor's section, and
+    │   │                      ConsoleUnavailable, the outage message.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
     │                          with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
@@ -127,6 +131,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
+        ├── unavailable.ts     The outage message, and the digest that tells the boundaries.
         ├── read-scope.ts      The actor and the ReadScope their reads run in.
         ├── utils.ts           cn(): clsx + tailwind-merge.
         ├── format.ts          Dates in Asia/Manila, person names.

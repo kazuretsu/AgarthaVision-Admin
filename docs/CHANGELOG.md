@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] When the database can't be reached, the console says so instead of "no access"
+
+A failed access read used to count as "no access", so during an outage every admin saw "This
+console is for super admins and organization admins" with a 200, as if they had been revoked.
+The gate now tells a failed read from one that finds nothing (`AuthUnavailableError`): a failed
+`console_actor()`, `is_admin()` or membership read still grants nothing, but every console page
+then says "The console can't reach its data right now", with a reference and Try again, and
+answers 500 (Next.js lets a page set no other failure status); the export and snapshot
+downloads answer 503; sign-in with the right password signs back out and says the same. No
+database detail reaches the browser. A medtech, a deactivated organization admin and a revoked
+super admin still see the "no access" screen.
+
 ## [feat] The prevalence map opens a city to its barangays, and isolates one area
 
 A city or municipality on the map now opens (`?town=`): the town drawn alone with its own

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
-import { NotAuthenticatedError, NotAuthorizedError } from "@/ports/auth";
+import { AuthUnavailableError, NotAuthenticatedError, NotAuthorizedError } from "@/ports/auth";
 import { SupabaseAuthAdapter } from "./auth";
 
 vi.spyOn(console, "info").mockImplementation(() => {});
@@ -16,6 +16,8 @@ interface Answers {
   isAdmin?: { data: unknown; error: unknown };
   profile?: Record<string, unknown> | null;
   membership?: Record<string, unknown> | null;
+  /** The membership read's error, when it fails. */
+  membershipError?: unknown;
 }
 
 /** A client that answers the gate and records every auth call, RPC and table read. */
@@ -51,7 +53,7 @@ function gateClient(answers: Answers) {
         maybeSingle: () =>
           Promise.resolve({
             data: table === "profiles" ? (answers.profile ?? null) : (answers.membership ?? null),
-            error: null,
+            error: table === "profiles" ? null : (answers.membershipError ?? null),
           }),
       };
       return builder;
@@ -129,12 +131,46 @@ describe("SupabaseAuthAdapter — who gets in (D22)", () => {
       NotAuthorizedError,
     );
   });
+});
 
-  it("treats a failed console_actor() call as no access", async () => {
+describe("SupabaseAuthAdapter — a failed read is not a refusal (14zcqntk6h2)", () => {
+  it.each([
+    ["a timeout", { code: "57014", message: "canceling statement due to statement timeout" }],
+    ["PostgREST unreachable", { code: "", message: "TypeError: fetch failed" }],
+    ["a gateway error", { code: "PGRST000", message: "Database connection error" }],
+  ])("a console_actor() call that fails with %s is unavailable, not no access", async (_c, e) => {
+    const { client } = gateClient({ actor: { data: null, error: e } });
+    const refusal = new SupabaseAuthAdapter(client).requireConsoleActor();
+    await expect(refusal).rejects.toBeInstanceOf(AuthUnavailableError);
+    await expect(refusal).rejects.toMatchObject({ cause: e });
+  });
+
+  it("the caller of an unavailable read gets no actor and no access", async () => {
     const { client } = gateClient({ actor: { data: null, error: { code: "57014" } } });
+    const result = await new SupabaseAuthAdapter(client).requireConsoleActor().catch((e) => e);
+    expect(result).not.toBeInstanceOf(NotAuthorizedError);
+    expect(result).not.toHaveProperty("access");
+  });
+
+  it("a console_actor() call that answers with no row is still no access", async () => {
+    const { client } = gateClient({ actor: { data: [], error: null } });
     await expect(new SupabaseAuthAdapter(client).requireConsoleActor()).rejects.toBeInstanceOf(
       NotAuthorizedError,
     );
+  });
+
+  it("sign-in with the right password but unreadable access is unavailable", async () => {
+    const { client } = gateClient({ actor: { data: null, error: { code: "57014" } } });
+    Object.assign(client.auth, {
+      signInWithPassword: () =>
+        Promise.resolve({ data: { user: { id: USER_ID, email: "a@example.test" } }, error: null }),
+    });
+    await expect(
+      new SupabaseAuthAdapter(client).signInWithPassword({
+        email: "a@example.test",
+        password: "x",
+      }),
+    ).rejects.toBeInstanceOf(AuthUnavailableError);
   });
 });
 
@@ -153,7 +189,7 @@ describe("SupabaseAuthAdapter — before admin/0010 is applied", () => {
     expect(selects.profiles).not.toMatch(/\brole\b/);
   });
 
-  it("still lets an org admin in through their membership, and refuses a failed is_admin()", async () => {
+  it("still lets an org admin in through their membership", async () => {
     const membership = {
       organization_id: "org-1",
       role: "org_admin",
@@ -171,14 +207,51 @@ describe("SupabaseAuthAdapter — before admin/0010 is applied", () => {
       organizationId: "org-1",
       organizationName: "Lab One",
     });
+  });
 
-    const failed = gateClient({
+  it("a failed is_admin() call is unavailable, never a grant (14zcqntk6h2)", async () => {
+    const { client, calls } = gateClient({
       actor: missing,
       isAdmin: { data: null, error: { message: "boom" } },
       profile: { full_name: "Ben", role: "admin" },
     });
-    await expect(
-      new SupabaseAuthAdapter(failed.client).requireConsoleActor(),
-    ).rejects.toBeInstanceOf(NotAuthorizedError);
+    await expect(new SupabaseAuthAdapter(client).requireConsoleActor()).rejects.toBeInstanceOf(
+      AuthUnavailableError,
+    );
+    // Nothing is read on the strength of a grant that could not be checked.
+    expect(calls).not.toContain("from.organization_members");
+  });
+
+  it("a failed membership read is unavailable, not no membership (14zcqntk6h2)", async () => {
+    const { client } = gateClient({
+      actor: missing,
+      isAdmin: { data: false, error: null },
+      membershipError: { message: "fetch failed" },
+    });
+    await expect(new SupabaseAuthAdapter(client).requireConsoleActor()).rejects.toBeInstanceOf(
+      AuthUnavailableError,
+    );
+  });
+
+  it.each([
+    ["no grant and no membership", { data: false, error: null }, null],
+    ["no grant and a medtech membership", { data: false, error: null }, "medtech"],
+    ["a null is_admin() answer", { data: null, error: null }, null],
+  ])("%s is still no access", async (_case, isAdmin, role) => {
+    const { client } = gateClient({
+      actor: missing,
+      isAdmin,
+      membership: role
+        ? {
+            organization_id: "org-1",
+            role,
+            status: "active",
+            organizations: { name: "Lab One", status: "active" },
+          }
+        : null,
+    });
+    await expect(new SupabaseAuthAdapter(client).requireConsoleActor()).rejects.toBeInstanceOf(
+      NotAuthorizedError,
+    );
   });
 });

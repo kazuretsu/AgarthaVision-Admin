@@ -74,8 +74,10 @@ browser's 30-second router cache. The `(dashboard)` segment layout resolves the 
 once, so every page under it is guarded on creation; narrower pages add
 `requirePageAccess()`, and route handlers repeat the check with `requireRouteAccess()`. A
 medtech who signs in is signed back out and told to use the mobile app; a medtech with a
-live session sees that notice and no data. `src/proxy.ts` refreshes tokens and is
-deliberately not the authorisation point.
+live session sees that notice and no data. When access cannot be read at all (the database
+is down or unreachable), nobody gets in and nobody is told they lack access: pages say the
+console can't reach its data, with a retry, and fail with a 500; downloads answer 503.
+`src/proxy.ts` refreshes tokens and is deliberately not the authorisation point.
 
 ### Organizations
 

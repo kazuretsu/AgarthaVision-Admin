@@ -3,8 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/adapters/registry";
-import { AuthenticationFailedError, NotAuthorizedError, type AuthPort } from "@/ports/auth";
+import {
+  AuthUnavailableError,
+  AuthenticationFailedError,
+  NotAuthorizedError,
+  type AuthPort,
+} from "@/ports/auth";
 import { MissingEnvironmentError } from "@/lib/env";
+import { CONSOLE_UNAVAILABLE } from "@/lib/unavailable";
 import type { LoginState } from "./state";
 
 /** Shown for bad credentials, and for any provider failure. */
@@ -46,6 +52,13 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
       return { error: MEDTECH_NOTICE };
     }
     if (cause instanceof AuthenticationFailedError) return { error: INVALID_CREDENTIALS };
+    if (cause instanceof AuthUnavailableError) {
+      // The password was right but access could not be read (14zcqntk6h2): no session is
+      // kept for a console nobody has checked them into, and nobody is told they are a medtech.
+      console.error("console access could not be read at sign-in", cause.cause);
+      await auth?.signOut();
+      return { error: CONSOLE_UNAVAILABLE };
+    }
     throw cause;
   }
 
