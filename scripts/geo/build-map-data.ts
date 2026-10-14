@@ -35,11 +35,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
+import { csv, townOf } from "./psgc-csv";
 
 const VINTAGE = "q2_2026";
 const MAPSHAPER = "mapshaper@0.6.121";
-const MANILA_PREFIX = "13806";
-const MANILA_TOWN = "1380600000";
 
 const appDir = resolve(process.env.AGARTHAVISION_APP_DIR ?? "../AgarthaVision");
 const root = resolve(import.meta.dir, "../..");
@@ -59,26 +58,6 @@ const code = (value: unknown) => String(value).padStart(10, "0");
 
 function readGz(path: string): string {
   return gunzipSync(readFileSync(join(appDir, path))).toString("utf8");
-}
-
-function csv(text: string): Record<string, string>[] {
-  const [head, ...lines] = text.trim().split(/\r?\n/);
-  const columns = head.split(",");
-  return lines.map((line) => {
-    // The PSGC files quote a field only when it holds a comma.
-    const cells: string[] = [];
-    let cell = "";
-    let quoted = false;
-    for (const char of line) {
-      if (char === '"') quoted = !quoted;
-      else if (char === "," && !quoted) {
-        cells.push(cell);
-        cell = "";
-      } else cell += char;
-    }
-    cells.push(cell);
-    return Object.fromEntries(columns.map((column, i) => [column, cells[i] ?? ""]));
-  });
 }
 
 function round(coordinates: unknown, scale: number): unknown {
@@ -132,8 +111,6 @@ for (const t of towns) provinces.set(t.province, { name: t.provinceName, region:
 
 // The database finds a barangay's town by this rule, not a 42,000-row table. Hold it to every
 // barangay in the release.
-const townOf = (barangay: string) =>
-  barangay.startsWith(MANILA_PREFIX) ? MANILA_TOWN : `${barangay.slice(0, 7)}000`;
 for (const b of barangays) {
   if (townOf(b.code) !== b.city_muni_code) {
     fail(`barangay ${b.code} is in town ${b.city_muni_code}, not ${townOf(b.code)}`);

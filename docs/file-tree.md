@@ -19,6 +19,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 ├── scripts/
 │   ├── db-test.ts             bun run test:db. Local databases only.
 │   ├── geo/build-map-data.ts  Map boundaries and the area lookup, from the app repo's tools/geo.
+│   ├── geo/build-barangay-names.ts Barangay names for a town's table, from the app's tools/psgc.
+│   ├── geo/psgc-csv.ts        The PSGC CSV reader and barangay → town rule both scripts share.
 │   └── vendor-maplibre.ts     Copies MapLibre's worker into public/vendor/.
 ├── public/
 │   ├── geo/q2_2026/           Boundaries: regions.json, provinces.json, towns/<province>.json.
@@ -75,7 +77,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── [...missing]/  Any URL no route matches: the gate, then the same 404 page.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter;
     │                          loading.tsx. audit/ and export/ have one too.
-    │       ├── map/           The prevalence map: Region → Province → City/Municipality.
+    │       ├── map/           The prevalence map: Region → Province → City/Municipality → barangays.
     │                          No loading.tsx: an unknown area's 404 must stay a 404.
     │       ├── records/       (list)/ patients list and its loading.tsx; patients/,
     │                          sessions/, samples/ detail pages (frames under Suspense).
@@ -134,7 +136,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── site-url.ts        The console's public origin, for the link.
         ├── palette.ts         Validated species colours, with the validator's findings.
         ├── period.ts          The dashboard's and export's from/to dates, defensively parsed.
-        ├── map/               The map's validated colours; vendor.test.ts for the worker copy.
+        ├── map/               The map's validated colours; vendor.test.ts for the worker copy;
+        │                      barangay-names.ts and barangays/q2_2026/ (generated, server only).
         ├── training-filter.ts The training data filter in the query string, both ways.
         └── training-zip.ts    A snapshot as a streamed zip (fflate).
 ```

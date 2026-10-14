@@ -1,16 +1,36 @@
 import { describe, expect, it } from "vitest";
 import {
   bandOf,
+  barangayBreakdown,
   boundariesFor,
   crumbsOf,
   describeFigure,
   drillTarget,
   mapHref,
+  parseIsolate,
   parseMapLocation,
   shadeOf,
   toAreaFigure,
+  unlistedBarangay,
+  type AreaFigure,
+  type AreaRow,
   type PrevalenceView,
 } from "./prevalence-map";
+
+const COUNTRY = { level: "country", code: null, name: "Philippines" } as const;
+const VII = { level: "region", code: "0700000000", name: "Region VII" } as const;
+const CEBU = { level: "province", code: "0702200000", name: "Cebu" } as const;
+
+const viewOf = (over: Partial<PrevalenceView>): PrevalenceView => ({
+  level: "country",
+  code: null,
+  name: "Philippines",
+  trail: [],
+  figure: { kind: "none" },
+  unplaced: null,
+  areas: [],
+  ...over,
+});
 
 describe("toAreaFigure", () => {
   it("withholds a suppressed area, whatever else the row says", () => {
@@ -76,6 +96,13 @@ describe("parseMapLocation", () => {
     });
   });
 
+  it("prefers the town over the province", () => {
+    expect(parseMapLocation({ province: "0702200000", town: "0702250000" })).toEqual({
+      level: "town",
+      code: "0702250000",
+    });
+  });
+
   it("drops anything but a 10-digit code", () => {
     expect(parseMapLocation({ region: "07" })).toEqual({ level: "country", code: null });
     expect(parseMapLocation({ province: "x' or 1=1", region: "0700000000" })).toEqual({
@@ -93,27 +120,129 @@ describe("mapHref and drillTarget", () => {
     expect(mapHref({ level: "country", code: null }, {})).toBe("/map");
   });
 
+  it("opens a town, and keeps an isolated area", () => {
+    expect(mapHref({ level: "town", code: "0702250000" }, { to: "2026-09-30" })).toBe(
+      "/map?town=0702250000&to=2026-09-30",
+    );
+    expect(mapHref({ level: "region", code: "0700000000" }, { isolate: "0702200000" })).toBe(
+      "/map?region=0700000000&isolate=0702200000",
+    );
+  });
+
   it("opens one level down, and nothing below a town", () => {
     expect(drillTarget("country", "0700000000")).toEqual({ level: "region", code: "0700000000" });
     expect(drillTarget("region", "0702200000")).toEqual({ level: "province", code: "0702200000" });
-    expect(drillTarget("province", "0702250000")).toBeNull();
+    expect(drillTarget("province", "0702250000")).toEqual({ level: "town", code: "0702250000" });
+    expect(drillTarget("town", "0702250001")).toBeNull();
+  });
+});
+
+describe("parseIsolate", () => {
+  const areas = [{ code: "0702200000" }, { code: "0701200000" }];
+
+  it("isolates one of the areas shown", () => {
+    expect(parseIsolate({ isolate: "0702200000" }, areas)).toBe("0702200000");
+  });
+
+  it("ignores a code the map does not show, or none", () => {
+    expect(parseIsolate({ isolate: "1300000000" }, areas)).toBeNull();
+    expect(parseIsolate({ isolate: ["0702200000' or 1=1"] }, areas)).toBeNull();
+    expect(parseIsolate({}, areas)).toBeNull();
   });
 });
 
 describe("boundariesFor", () => {
   it("draws regions, a region's provinces, or a province's towns", () => {
-    expect(boundariesFor({ level: "country", code: null })).toEqual({
+    expect(boundariesFor(viewOf({}))).toEqual({
       url: "/geo/q2_2026/regions.json",
       filter: null,
     });
-    expect(boundariesFor({ level: "region", code: "0700000000" })).toEqual({
+    expect(boundariesFor(viewOf({ level: "region", code: VII.code, trail: [COUNTRY] }))).toEqual({
       url: "/geo/q2_2026/provinces.json",
       filter: { key: "region", value: "0700000000" },
     });
-    expect(boundariesFor({ level: "province", code: "0702200000" })).toEqual({
+    expect(
+      boundariesFor(viewOf({ level: "province", code: CEBU.code, trail: [COUNTRY, VII] })),
+    ).toEqual({
       url: "/geo/q2_2026/towns/0702200000.json",
       filter: null,
     });
+  });
+
+  it("draws a town alone, from its province's file", () => {
+    expect(
+      boundariesFor(viewOf({ level: "town", code: "0702250000", trail: [COUNTRY, VII, CEBU] })),
+    ).toEqual({
+      url: "/geo/q2_2026/towns/0702200000.json",
+      filter: { key: "code", value: "0702250000" },
+    });
+  });
+
+  it("draws an isolated area alone, at every level", () => {
+    const only = (code: string) => ({ key: "code", value: code });
+    expect(boundariesFor(viewOf({}), "0700000000").filter).toEqual(only("0700000000"));
+    expect(
+      boundariesFor(viewOf({ level: "region", code: VII.code, trail: [COUNTRY] }), CEBU.code)
+        .filter,
+    ).toEqual(only(CEBU.code));
+    expect(
+      boundariesFor(
+        viewOf({ level: "province", code: CEBU.code, trail: [COUNTRY, VII] }),
+        "0702250000",
+      ).filter,
+    ).toEqual(only("0702250000"));
+  });
+});
+
+describe("barangayBreakdown", () => {
+  const reported = (examined: number, positive: number): AreaFigure => ({
+    kind: "reported",
+    examined,
+    positive,
+    rate: positive / examined,
+  });
+  const row = (code: string, figure: AreaFigure): AreaRow => ({ code, name: code, figure });
+  const names = new Map([
+    ["0702250001", "Bulacao"],
+    ["0702250002", "Cansojong"],
+    ["0702250003", "Dumlog"],
+    ["0702250004", "Lagtang"],
+    ["0702250005", "Poblacion"],
+  ]);
+
+  it("ranks the highest rate first, then more smears, and withheld barangays last", () => {
+    const { rows } = barangayBreakdown(
+      [
+        row("0702250001", { kind: "too_few" }),
+        row("0702250002", reported(10, 2)),
+        row("0702250003", reported(5, 1)),
+        row("0702250004", reported(6, 3)),
+        row("0702250005", { kind: "too_few" }),
+      ],
+      names,
+    );
+    expect(rows.map((r) => r.name)).toEqual([
+      "Lagtang",
+      "Cansojong",
+      "Dumlog",
+      "Bulacao",
+      "Poblacion",
+    ]);
+  });
+
+  it("never puts a figure on a withheld barangay", () => {
+    const { rows } = barangayBreakdown([row("0702250001", { kind: "too_few" })], names);
+    expect(rows[0].figure).toEqual({ kind: "too_few" });
+  });
+
+  it("counts the town's barangays with no smear", () => {
+    expect(barangayBreakdown([row("0702250002", reported(5, 0))], names).withoutSmears).toBe(4);
+  });
+
+  it("lists a code not in the release by its code, and counts it apart", () => {
+    const { rows, withoutSmears } = barangayBreakdown([row("0702250999", reported(5, 1))], names);
+    expect(rows[0].name).toBe(unlistedBarangay("0702250999"));
+    expect(withoutSmears).toBe(5);
   });
 });
 

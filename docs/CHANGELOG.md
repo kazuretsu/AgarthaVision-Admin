@@ -2,6 +2,24 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] The prevalence map opens a city to its barangays, and isolates one area
+
+A city or municipality on the map now opens (`?town=`): the town drawn alone with its own
+figure, and a table of its barangays with a smear examined, highest prevalence first, named
+from the 2Q 2026 PSGC (`scripts/geo/build-barangay-names.ts` →
+`src/lib/map/barangays/q2_2026/`). A barangay under 5 smears is "too few to report" and sorts
+last, and when it is the only one withheld, the shown barangay with the fewest smears is
+withheld with it, so its count cannot be had by subtracting the others from the town. A line
+counts the town's barangays with none. The figures come from
+`console_area_prevalence('town', …)`, replaced in place by `admin/0015` with one more level,
+so the barangays, the town and the province's map are one count; same period, same laboratory
+scoping, the same threshold. A 2023 Negros Island Region or Sulu barangay code is listed under
+its current code. At the country, a region or a province, any row of the table can isolate its
+area (`?isolate=`): drawn alone, the map fitted to it, until "Show all". Before `admin/0015` is
+applied, a town says which file to apply; the rest of the map is unchanged. Below 1400px wide
+the table sits under the map rather than beside it: at the console's narrowest, its columns had
+squeezed the map to a sliver.
+
 ## [ux] A URL no route matches gets the console's 404 page
 
 `/recordsx`, `/records/nothing/here` or any other path no route matches used to show the

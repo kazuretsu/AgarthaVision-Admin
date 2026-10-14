@@ -3,13 +3,16 @@ import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { getDatabase } from "@/adapters/registry";
 import {
+  barangayBreakdown,
   boundariesFor,
   CHILD_KIND,
   crumbsOf,
   describeFigure,
   drillTarget,
   mapHref,
+  MIN_REPORTABLE_SMEARS,
   namesUnknownOrganization,
+  parseIsolate,
   parseMapLocation,
   shadeOf,
   type OrganizationSummary,
@@ -18,6 +21,7 @@ import {
 import { MigrationNotAppliedError } from "@/ports";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
+import { barangayNamesOf } from "@/lib/map/barangay-names";
 import { describePeriod, parsePeriod } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
@@ -40,16 +44,18 @@ import { Input } from "@/components/ui/input";
 
 /**
  * The STH prevalence map (14zcqntjnt3): the share of examined smears that were positive, per
- * region, then a region's provinces, then a province's cities and municipalities.
+ * region, then a region's provinces, then a province's cities and municipalities, then one
+ * city's barangays as a ranked table, since there are no barangay outlines (14zcqntjnt6).
  *
- * Every figure is the database's (`console_area_prevalence()`, admin/0014), counted on the
- * dashboard's rule and withheld below 5 smears at every level; the page only places them.
- * Where the map is lives in the query string (`region`, `province`), with the period and
- * laboratory, so the back button and a shared link both work.
+ * Every figure is the database's (`console_area_prevalence()`, admin/0014 and 0015), counted on
+ * the dashboard's rule and withheld below 5 smears at every level, barangays included; the page
+ * only places them and names the barangays from the same PSGC release. Where the map is lives
+ * in the query string (`region`, `province`, `town`), with the period, laboratory and any area
+ * isolated on the map (`isolate`), so the back button and a shared link both work.
  *
- * It reads the area before rendering anything, so an unknown region or province is a real 404
- * (`src/app/not-found-status.test.ts`); with no route-level loading state, a click on the map
- * shows its own spinner while the next level is read.
+ * It reads the area before rendering anything, so an unknown region, province or town is a real
+ * 404 (`src/app/not-found-status.test.ts`); with no route-level loading state, a click on the
+ * map shows its own spinner while the next level is read.
  */
 export const dynamic = "force-dynamic";
 
@@ -57,6 +63,7 @@ const PLACE = {
   region: { one: "Region", many: "Regions" },
   province: { one: "Province", many: "Provinces" },
   town: { one: "City or municipality", many: "Cities and municipalities" },
+  barangay: { one: "Barangay", many: "Barangays" },
 } as const;
 
 export default async function MapPage({
@@ -78,9 +85,10 @@ export default async function MapPage({
 
   let view: PrevalenceView | null;
   let organizations: OrganizationSummary[] = [];
+  let barangayNames: ReadonlyMap<string, string> | null = null;
   try {
     const db = await getDatabase();
-    [view, organizations] = await Promise.all([
+    [view, organizations, barangayNames] = await Promise.all([
       db.areaPrevalence({
         scope,
         location,
@@ -88,6 +96,9 @@ export default async function MapPage({
         startedTo: period.to,
       }),
       actor.access.kind === "super_admin" ? db.listOrganizations() : Promise.resolve([]),
+      location.level === "town" && location.code
+        ? barangayNamesOf(location.code)
+        : Promise.resolve(null),
     ]);
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
@@ -107,17 +118,40 @@ export default async function MapPage({
   const unknownOrganization = namesUnknownOrganization(actor.access, scope, organizations);
 
   const kind = CHILD_KIND[view.level];
+  /** What opening one of the listed areas shows; a barangay opens nothing. */
+  const below = kind === "barangay" ? null : PLACE[CHILD_KIND[kind]];
   const hrefOf = (code: string) => {
     const target = drillTarget(view.level, code);
     return target ? mapHref(target, keep) : null;
   };
-  const areas: MapArea[] = view.areas.map((area) => ({
-    code: area.code,
-    name: area.name,
-    shade: shadeOf(area.figure),
-    summary: describeFigure(area.figure),
-    href: hrefOf(area.code),
-  }));
+  // A town is drawn alone with its own figure; its barangays are a table, never map areas.
+  const breakdown = barangayNames ? barangayBreakdown(view.areas, barangayNames) : null;
+  if (barangayNames?.size === 0) {
+    // Every town in admin/0014 has barangays in the release (build-barangay-names.ts checks
+    // it), so no names here means the generated files did not deploy. The figures are still
+    // right; the barangays show by code. Logged so it is seen, not just tolerated.
+    console.error(`prevalence map: no barangay names for town ${location.code}`);
+  }
+  const isolated = breakdown ? null : parseIsolate(params, view.areas);
+  const isolatedName = view.areas.find((area) => area.code === isolated)?.name;
+  const clearHref = mapHref(location, keep);
+  const areas: MapArea[] = breakdown
+    ? [
+        {
+          code: location.code ?? "",
+          name: view.name,
+          shade: shadeOf(view.figure),
+          summary: describeFigure(view.figure),
+          href: null,
+        },
+      ]
+    : view.areas.map((area) => ({
+        code: area.code,
+        name: area.name,
+        shade: shadeOf(area.figure),
+        summary: describeFigure(area.figure),
+        href: hrefOf(area.code),
+      }));
   const crumbs = crumbsOf(view);
 
   return (
@@ -135,6 +169,7 @@ export default async function MapPage({
           {location.code ? (
             <input type="hidden" name={location.level} value={location.code} />
           ) : null}
+          {isolated ? <input type="hidden" name="isolate" value={isolated} /> : null}
           <label className="flex flex-col gap-1">
             <span className="text-[12px] font-medium text-stone-deep">From</span>
             <Input type="date" name="from" defaultValue={period.from} className="w-40" />
@@ -151,7 +186,7 @@ export default async function MapPage({
           </Button>
           {period.from || period.to || params.org ? (
             <Link
-              href={mapHref(location, {})}
+              href={mapHref(location, { isolate: isolated })}
               className="px-2 text-[13px] text-stone-mid hover:text-maroon"
             >
               Reset
@@ -184,7 +219,8 @@ export default async function MapPage({
       {unknownOrganization ? (
         <UnknownOrganizationNotice />
       ) : (
-        <div className="grid grid-cols-[3fr_2fr] items-start gap-6">
+        // Side by side only where both fit: below 1400px the table's columns crush the map.
+        <div className="grid grid-cols-1 items-start gap-6 min-[1400px]:grid-cols-[3fr_2fr]">
           <Card>
             <CardHeader>
               <CardTitle>{view.name}</CardTitle>
@@ -193,10 +229,22 @@ export default async function MapPage({
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {isolatedName ? (
+                <p className="text-[13px] text-stone-deep" data-testid="isolated">
+                  Showing only <span className="font-medium text-stone-ink">{isolatedName}</span>.{" "}
+                  <Link href={clearHref} className="text-maroon hover:underline">
+                    Show all {PLACE[kind].many.toLowerCase()}
+                  </Link>
+                </p>
+              ) : null}
               <PrevalenceMap
-                boundaries={boundariesFor(location)}
+                boundaries={boundariesFor(view, isolated)}
                 areas={areas}
-                label={`${view.name}: positive smears by ${PLACE[kind].one.toLowerCase()}. The table lists every figure.`}
+                label={
+                  breakdown
+                    ? `${view.name}: positive smears in the ${PLACE.town.one.toLowerCase()}. The table lists its barangays.`
+                    : `${view.name}: positive smears by ${PLACE[kind].one.toLowerCase()}. The table lists every figure.`
+                }
               />
               <MapLegend />
               {view.unplaced ? (
@@ -212,14 +260,41 @@ export default async function MapPage({
             <CardHeader>
               <CardTitle>{PLACE[kind].many}</CardTitle>
               <CardDescription>
-                {kind === "town"
-                  ? "Every city and municipality in the province."
-                  : `Open one to see its ${PLACE[CHILD_KIND[kind]].many.toLowerCase()}.`}
+                {breakdown
+                  ? "Barangays with a smear examined, highest prevalence first."
+                  : `Open one to see its ${below?.many.toLowerCase()}, or isolate it on the map.`}
               </CardDescription>
             </CardHeader>
             {/* A province can have 60 towns: the list scrolls beside the map, not past it. */}
-            <CardContent className="max-h-[640px] overflow-y-auto">
-              <AreaTable kind={PLACE[kind].one} areas={view.areas} hrefOf={hrefOf} />
+            <CardContent className="flex max-h-[640px] flex-col gap-3 overflow-y-auto">
+              {breakdown ? (
+                <>
+                  {breakdown.rows.length ? (
+                    <AreaTable
+                      kind={PLACE.barangay.one}
+                      areas={breakdown.rows}
+                      hrefOf={() => null}
+                      caption={`A barangay with fewer than ${MIN_REPORTABLE_SMEARS} smears examined shows no figures.`}
+                    />
+                  ) : null}
+                  <p className="text-[12px] text-stone-deep" data-testid="without-smears">
+                    {breakdown.rows.length === 0
+                      ? `None of its ${breakdown.withoutSmears.toLocaleString()} barangays had a smear examined.`
+                      : `${breakdown.withoutSmears.toLocaleString()} other ${breakdown.withoutSmears === 1 ? "barangay" : "barangays"} had no smear examined.`}
+                  </p>
+                </>
+              ) : (
+                <AreaTable
+                  kind={PLACE[kind].one}
+                  areas={view.areas}
+                  hrefOf={hrefOf}
+                  isolate={{
+                    hrefOf: (code) => mapHref(location, { ...keep, isolate: code }),
+                    current: isolated,
+                    clearHref,
+                  }}
+                />
+              )}
             </CardContent>
           </Card>
         </div>

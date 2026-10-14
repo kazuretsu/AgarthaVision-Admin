@@ -254,9 +254,9 @@ export default async function test(sql: ReservedSQL) {
   );
   await refused(
     users.super_admin,
-    "select public.console_area_prevalence('town', '0702250000')",
+    "select public.console_area_prevalence('barangay', '0702250001')",
     "22023",
-    "towns have nothing below them",
+    "barangays have nothing below them (a town has, since admin/0015)",
   );
   await refused(
     users.super_admin,

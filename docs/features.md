@@ -226,6 +226,14 @@ and Sulu reorganisations appear under their 2Q 2026 region, including patients r
 a 2023 code. Smears whose barangay matches no city or municipality are counted on their own
 line. MapLibre on a plain background: no basemap, nothing fetched from another site.
 
+A city or municipality opens to its barangays (14zcqntjnt6, `admin/0015`): the town drawn
+alone with its figure, and a table of its barangays with a smear examined, highest prevalence
+first, named from the same 2Q 2026 PSGC release, with the same figures, period and laboratory
+scoping as the map. A barangay under 5 smears shows "too few to report" and sorts last; a lone
+withheld barangay takes the smallest shown one with it, so neither can be worked out from the
+town's total. A line counts the barangays with none. At the country, a region or a province, any area in the table
+can be isolated: drawn alone, the map fitted to it, until "Show all".
+
 ### Records browser
 
 Records follow the app's clinical hierarchy: **Patient → Session (one smear) → Sample (one
@@ -293,7 +301,7 @@ most 20,000 frames a snapshot.
 ## Not built yet
 
 This file lists what is built, not what is planned. The console is not finished: open work
-(MFA for console users, the barangay breakdown of the map, forgot password, guarded super admin grants,
+(MFA for console users, forgot password, guarded super admin grants,
 sharing a patient, the report verification page, among others) is tracked in the sprint
 lists in ClickUp, which is where plans live (`SESSION_INIT.md`). Work decided against is
 listed below.
