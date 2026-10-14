@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: ff526ba
+verified: 2026-10-14
+commit: a060ba1
 ---
 
 # Research export
@@ -11,32 +11,39 @@ Output: a CSV or JSON download, one row per examined smear.
 ## Steps
 
 1. **Gate.** `requireRouteAccess` runs first
-   (`src/app/(dashboard)/export/download/route.ts:35`). A route handler does not render
+   (`src/app/(dashboard)/export/download/route.ts:36`). A route handler does not render
    inside the `(dashboard)` layout and inherits nothing from it.
-2. **Read.** The period is parsed the way the page parses it (`src/lib/period.ts`), and
+2. **Which laboratory.** `readScopeFor` holds an org admin to their own whatever `?org=`
+   says (`lab-scoping.md`). A super admin's `?org=` that is well formed but names no
+   organization is refused with 404 and `UNKNOWN_ORGANIZATION` (`src/domain/scope.ts`) before
+   anything is read or recorded (`:50` of the route); the export page shows the same sentence
+   in place of the count and the download links. Without the check it reached the audit write
+   and failed there as a 503, which read as an outage (14zcqntjw7c). A malformed `?org=` is
+   all organizations, as everywhere.
+3. **Read.** The period is parsed the way the page parses it (`src/lib/period.ts`), and
    `listSmears` reads each session with its summary and the patient's barangay code, in
    pages (`readPages`), because one PostgREST response stops at the server's row cap (1000
    by default) whatever `.limit()` asks. It asks for one more than
    `RESEARCH_EXPORT_LIMIT` (20,000, `src/domain/research-export.ts:27`) and a period over it
-   is refused with 413 (`:73` of the route) rather than cut short, because a partial file
+   is refused with 413 (`:84` of the route) rather than cut short, because a partial file
    would be silently wrong. The export page does not read rows: it asks
    `console_dashboard_figures()` (`dashboard-figures.md`) once for the examined count and the
    period's session count, and warns before the click when the sessions exceed the limit. The
    file's rows are the examined smears, so the count matches it. A failed read is a 502 with
    no database detail.
-3. **Build.** `buildResearchExport` (`src/domain/research-export.ts:100`) keeps examined
+4. **Build.** `buildResearchExport` (`src/domain/research-export.ts:100`) keeps examined
    smears only — a session never read has nothing to report — oldest first, and
    `toResearchExportRow` (`:60`) fills the columns from the same `SessionSummary` the records
    browser shows, so a file and the screen cannot disagree about one smear.
-4. **Serialise.** `toResearchExportCsv` (`:119`) or `toResearchExportJson` (`:128`), both
+5. **Serialise.** `toResearchExportCsv` (`:119`) or `toResearchExportJson` (`:128`), both
    keyed off `RESEARCH_EXPORT_COLUMNS`. CSV fields are RFC 4180-escaped and a cell starting
    with `=`, `+`, `-`, `@`, tab or CR is prefixed with `'` (`escapeCsvField`, `:112`), because
    free-text species names reach the file and a spreadsheet would run them. The route
-   prefixes a CSV with a UTF-8 byte-order mark (`:106`), without which Excel on Windows
+   prefixes a CSV with a UTF-8 byte-order mark (`:121`), without which Excel on Windows
    mangles the en dash in `0–2 LPF`.
-5. **Respond** with `Content-Disposition: attachment`, a file name carrying the column
+6. **Respond** with `Content-Disposition: attachment`, a file name carrying the column
    version and the period (an open end is today in Manila), and `Cache-Control: no-store`
-   (`:115` of the route).
+   (`:130` of the route).
 
 ## The column set is a contract — version 2
 
@@ -56,7 +63,9 @@ can be linked without identifying anyone, and the barangay code is the finest pl
 ## Audited before it leaves
 
 The route records the export — row count, format, period, column version — through
-`recordExport` before building the response, and refuses to serve the file if that fails.
+`recordExport` before building the response, and refuses to serve the file if that fails:
+403 when refused, 503 otherwise. Should the write still meet an organization that does not
+exist, its foreign-key refusal (23503) reads as `not_found` and gets the same 404.
 See `audit-trail.md`.
 
 ## If you change this
@@ -64,6 +73,7 @@ See `audit-trail.md`.
 **Hits**
 
 - Every downstream analysis joining these files.
+- `src/adapters/supabase/admin-write.test.ts`, which pins how each refusal reads.
 - `src/domain/research-export.test.ts`, which pins the columns, the privacy rule and the
   escaping.
 

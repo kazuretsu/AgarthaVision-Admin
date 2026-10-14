@@ -29,6 +29,8 @@ function reasonFor(code: string | undefined): AdminWriteFailure {
     case "23505":
       return "conflict";
     case "P0002":
+    // A reference to a row that does not exist, e.g. an export filed under an unknown organization.
+    case "23503":
       return "not_found";
     case "23514":
     case "22023":

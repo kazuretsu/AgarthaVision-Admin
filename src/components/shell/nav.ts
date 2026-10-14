@@ -49,3 +49,20 @@ export const NAV_ITEMS: readonly NavItem[] = [
 export function navFor(kind: ConsoleAccessKind): NavItem[] {
   return NAV_ITEMS.filter((item) => item.visibleTo.includes(kind));
 }
+
+/** Whether a path is a section's own page or one below it. */
+export function inSection(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * The section a path belongs to, among the visitor's own entries; the dashboard when it is
+ * none of them (a page they cannot open, like an org admin's `/organizations`).
+ */
+export function sectionFor(pathname: string, items: readonly NavItem[]): NavItem {
+  return (
+    items.find((item) => inSection(pathname, item.href)) ??
+    items.find((item) => item.href === "/dashboard") ??
+    NAV_ITEMS[0]
+  );
+}

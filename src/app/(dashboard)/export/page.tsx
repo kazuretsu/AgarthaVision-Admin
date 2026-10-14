@@ -5,6 +5,7 @@ import { getDatabase } from "@/adapters/registry";
 import {
   RESEARCH_EXPORT_COLUMNS,
   RESEARCH_EXPORT_LIMIT,
+  namesUnknownOrganization,
   patientDisclosureFor,
   type ConsoleAccess,
   type OrganizationSummary,
@@ -15,6 +16,7 @@ import { MissingEnvironmentError } from "@/lib/env";
 import { describePeriod, parsePeriod, type Period } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
+import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { ExportBodySkeleton } from "@/components/loading/PageSkeletons";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -123,6 +125,10 @@ export default async function ExportPage({
     throw cause;
   }
 
+  // A well-formed `org` that names no organization: say so, rather than count nothing and offer
+  // a download that would be refused.
+  const unknownOrganization = namesUnknownOrganization(actor.access, scope, organizations);
+
   const query = new URLSearchParams();
   if (period.from) query.set("from", period.from);
   if (period.to) query.set("to", period.to);
@@ -169,14 +175,18 @@ export default async function ExportPage({
             ) : null}
           </form>
 
-          <Suspense key={query.toString()} fallback={<ExportBodySkeleton />}>
-            <ExportCount
-              access={actor.access}
-              scope={scope}
-              period={period}
-              query={query.toString()}
-            />
-          </Suspense>
+          {unknownOrganization ? (
+            <UnknownOrganizationNotice />
+          ) : (
+            <Suspense key={query.toString()} fallback={<ExportBodySkeleton />}>
+              <ExportCount
+                access={actor.access}
+                scope={scope}
+                period={period}
+                query={query.toString()}
+              />
+            </Suspense>
+          )}
         </CardContent>
       </Card>
 

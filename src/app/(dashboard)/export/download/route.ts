@@ -8,6 +8,7 @@ import {
   clinicalDate,
   patientDisclosureFor,
   readScopeFor,
+  UNKNOWN_ORGANIZATION,
   toResearchExportCsv,
   toResearchExportJson,
 } from "@/domain";
@@ -43,10 +44,18 @@ export async function GET(request: NextRequest) {
 
   let smears;
   try {
+    const db = await getDatabase();
+    // An ID that names no organization would otherwise reach the audit write and fail there,
+    // reading as an outage. Org admins are always scoped to their own, which exists.
+    if (
+      access.actor.access.kind === "super_admin" &&
+      scope.kind === "organization" &&
+      !(await db.getOrganization(scope.organizationId))
+    ) {
+      return NextResponse.json({ error: UNKNOWN_ORGANIZATION }, { status: 404 });
+    }
     // One past the limit, so a period over it is detected rather than cut short.
-    smears = await (
-      await getDatabase()
-    ).listSmears({
+    smears = await db.listSmears({
       scope,
       disclosure: patientDisclosureFor(access.actor.access),
       startedFrom: period.from,
@@ -92,6 +101,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (cause) {
     if (cause instanceof AdminWriteError) {
+      // The write still met an organization that does not exist (23503): the same answer.
+      if (cause.reason === "not_found") {
+        return NextResponse.json({ error: UNKNOWN_ORGANIZATION }, { status: 404 });
+      }
       return NextResponse.json(
         { error: "The export could not be recorded, so it was not produced." },
         { status: cause.reason === "forbidden" ? 403 : 503 },

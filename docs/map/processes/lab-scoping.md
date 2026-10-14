@@ -39,7 +39,14 @@ the insert to fail and checks the patient is still saved.
    (`admin/0004_patient_reports.sql:36`).
 
 Pages call `scopeForRequest` (`src/lib/read-scope.ts:10`); the export route derives its
-scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:35`).
+scope from the actor it already checked (`src/app/(dashboard)/export/download/route.ts:36`).
+
+**An `org` that names no organization** is well formed, so it narrows the scope, and every read
+would come back empty as if the laboratory had done nothing. The dashboard, records, audit
+trail, map, export and People pages check it against the organizations their filter already
+lists (`namesUnknownOrganization`, `src/domain/scope.ts`) and show `UnknownOrganizationNotice`
+in place of their figures or list (14zcqntjw7c); the export download answers 404. Org admins
+never see it: their scope is their own laboratory.
 
 **Scope is which laboratory; disclosure is whether you see who the patient is.** They are
 separate inputs to every patient read. An org admin reads their own laboratory identified.

@@ -6,6 +6,7 @@ import {
   auditActionLabel,
   auditActionsFor,
   describeAuditEntry,
+  namesUnknownOrganization,
   type OrganizationSummary,
   type AuditActor,
   type ReadScope,
@@ -16,6 +17,7 @@ import { formatDateTime } from "@/lib/format";
 import { parsePeriod, type Period } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
+import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +104,8 @@ async function AuditEntries({
           {filtered ? "No entries match these filters." : "Nothing has been recorded yet."}
         </p>
       ) : (
+        // The shell leaves 734px at its narrowest: long names, emails and snapshot names wrap
+        // inside their cell, and so does the action, rather than widening the table.
         <Table className="min-w-[720px]">
           <TableCaption>Audit entries, newest first</TableCaption>
           <TableHeader>
@@ -117,7 +121,7 @@ async function AuditEntries({
             {entries.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell className="tnum whitespace-nowrap">{formatDateTime(entry.at)}</TableCell>
-                <TableCell>
+                <TableCell className="min-w-28 wrap-anywhere">
                   {entry.actorLabel ?? (
                     <span className="text-stone-mid">
                       {entry.actorId ? "Unnamed user" : "System"}
@@ -125,11 +129,15 @@ async function AuditEntries({
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="neutral">{auditActionLabel(entry.action)}</Badge>
+                  <Badge variant="neutral" className="rounded-[10px] whitespace-normal">
+                    {auditActionLabel(entry.action)}
+                  </Badge>
                 </TableCell>
-                <TableCell className="text-stone-ink">{describeAuditEntry(entry)}</TableCell>
+                <TableCell className="wrap-anywhere text-stone-ink">
+                  {describeAuditEntry(entry)}
+                </TableCell>
                 {isSuperAdmin ? (
-                  <TableCell>
+                  <TableCell className="wrap-anywhere">
                     {entry.organizationName ?? <span className="text-stone-mid">—</span>}
                   </TableCell>
                 ) : null}
@@ -228,23 +236,27 @@ export default async function AuditPage({
         ) : null}
       </form>
 
-      <Suspense
-        key={JSON.stringify({ actorId, action, period, scope })}
-        fallback={
-          <Busy label="Loading audit entries…">
-            <TableSkeleton rows={10} columns={isSuperAdmin ? 5 : 4} />
-          </Busy>
-        }
-      >
-        <AuditEntries
-          scope={scope}
-          actorId={actorId}
-          action={action}
-          period={period}
-          filtered={filtered}
-          isSuperAdmin={isSuperAdmin}
-        />
-      </Suspense>
+      {namesUnknownOrganization(actor.access, scope, organizations) ? (
+        <UnknownOrganizationNotice />
+      ) : (
+        <Suspense
+          key={JSON.stringify({ actorId, action, period, scope })}
+          fallback={
+            <Busy label="Loading audit entries…">
+              <TableSkeleton rows={10} columns={isSuperAdmin ? 5 : 4} />
+            </Busy>
+          }
+        >
+          <AuditEntries
+            scope={scope}
+            actorId={actorId}
+            action={action}
+            period={period}
+            filtered={filtered}
+            isSuperAdmin={isSuperAdmin}
+          />
+        </Suspense>
+      )}
     </main>
   );
 }

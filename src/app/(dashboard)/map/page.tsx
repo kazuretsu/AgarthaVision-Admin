@@ -9,6 +9,7 @@ import {
   describeFigure,
   drillTarget,
   mapHref,
+  namesUnknownOrganization,
   parseMapLocation,
   shadeOf,
   type OrganizationSummary,
@@ -20,6 +21,7 @@ import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { describePeriod, parsePeriod } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
+import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { AreaTable } from "@/components/map/AreaTable";
 import { MapLegend } from "@/components/map/MapLegend";
@@ -102,6 +104,7 @@ export default async function MapPage({
     throw cause;
   }
   if (!view) notFound();
+  const unknownOrganization = namesUnknownOrganization(actor.access, scope, organizations);
 
   const kind = CHILD_KIND[view.level];
   const hrefOf = (code: string) => {
@@ -178,45 +181,49 @@ export default async function MapPage({
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="grid grid-cols-[3fr_2fr] items-start gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{view.name}</CardTitle>
-            <CardDescription data-testid="area-figure">
-              {describeFigure(view.figure)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <PrevalenceMap
-              boundaries={boundariesFor(location)}
-              areas={areas}
-              label={`${view.name}: positive smears by ${PLACE[kind].one.toLowerCase()}. The table lists every figure.`}
-            />
-            <MapLegend />
-            {view.unplaced ? (
-              <p className="text-[12px] text-stone-deep" data-testid="unplaced">
-                {view.unplaced.toLocaleString()} examined{" "}
-                {view.unplaced === 1 ? "smear is" : "smears are"} not on the map: the patient&apos;s
-                barangay code matches no city or municipality in the 2Q 2026 PSGC.
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{PLACE[kind].many}</CardTitle>
-            <CardDescription>
-              {kind === "town"
-                ? "Every city and municipality in the province."
-                : `Open one to see its ${PLACE[CHILD_KIND[kind]].many.toLowerCase()}.`}
-            </CardDescription>
-          </CardHeader>
-          {/* A province can have 60 towns: the list scrolls beside the map, not past it. */}
-          <CardContent className="max-h-[640px] overflow-y-auto">
-            <AreaTable kind={PLACE[kind].one} areas={view.areas} hrefOf={hrefOf} />
-          </CardContent>
-        </Card>
-      </div>
+      {unknownOrganization ? (
+        <UnknownOrganizationNotice />
+      ) : (
+        <div className="grid grid-cols-[3fr_2fr] items-start gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{view.name}</CardTitle>
+              <CardDescription data-testid="area-figure">
+                {describeFigure(view.figure)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <PrevalenceMap
+                boundaries={boundariesFor(location)}
+                areas={areas}
+                label={`${view.name}: positive smears by ${PLACE[kind].one.toLowerCase()}. The table lists every figure.`}
+              />
+              <MapLegend />
+              {view.unplaced ? (
+                <p className="text-[12px] text-stone-deep" data-testid="unplaced">
+                  {view.unplaced.toLocaleString()} examined{" "}
+                  {view.unplaced === 1 ? "smear is" : "smears are"} not on the map: the
+                  patient&apos;s barangay code matches no city or municipality in the 2Q 2026 PSGC.
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>{PLACE[kind].many}</CardTitle>
+              <CardDescription>
+                {kind === "town"
+                  ? "Every city and municipality in the province."
+                  : `Open one to see its ${PLACE[CHILD_KIND[kind]].many.toLowerCase()}.`}
+              </CardDescription>
+            </CardHeader>
+            {/* A province can have 60 towns: the list scrolls beside the map, not past it. */}
+            <CardContent className="max-h-[640px] overflow-y-auto">
+              <AreaTable kind={PLACE[kind].one} areas={view.areas} hrefOf={hrefOf} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </main>
   );
 }

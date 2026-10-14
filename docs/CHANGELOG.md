@@ -2,6 +2,54 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [ux] A URL no route matches gets the console's 404 page
+
+`/recordsx`, `/records/nothing/here` or any other path no route matches used to show the
+framework's bare 404, outside the shell. `(dashboard)/[...missing]/page.tsx` catches them inside
+the console: the gate runs first (signed out goes to sign in), then the console's not-found page
+answers 404 with a way back to the visitor's section. Real routes, `public/` files (boundaries,
+the map worker) and the sign-in pages are unaffected.
+
+## [fix] Every page says so when `org` names no organization
+
+A super admin's `?org=` with a well-formed ID that names no organization used to show an empty
+dashboard, records list, audit trail, map or People page, as if that laboratory had done
+nothing; the organization filter even showed "All organizations". Each of those pages, and the
+export page, now shows "No organization has the ID in this link. Choose one from the list, or
+all organizations." in place of its figures or list (`namesUnknownOrganization`,
+`UnknownOrganizationNotice`). A malformed `org` is still all organizations, and org admins are
+still held to their own laboratory.
+
+## [ux] A console-styled "not found" page with a way back
+
+A page that answers 404 now shows `(dashboard)/not-found.tsx` inside the shell instead of the
+framework's "404 | This page could not be found.": "This page isn't available", one line saying
+it may not exist or may belong to another laboratory, and a button back to the visitor's
+section (`sectionFor`, `src/components/shell/nav.ts`): Records for a record, Organizations for
+an organization, the Prevalence map or People for theirs, the dashboard when the section is not
+the visitor's, as for an org admin's `/organizations` or `/training-data`. A malformed ID, an
+unknown ID and another laboratory's record render identically. The status stays 404. The
+sidebar's active-section check moved into the same helper (`inSection`).
+
+## [fix] Exporting an organization that does not exist says so
+
+A super admin's `/export/download?org=` with a well-formed ID that names no organization used to
+reach the audit write, fail on its foreign key, and answer 503 "The export could not be
+recorded", which read as an outage. It is now refused with 404 and "No organization has the ID
+in this link. Choose one from the list, or all organizations." before anything is read or
+recorded, and `/export?org=` shows the same sentence in place of the count and the download
+links. A foreign-key refusal (23503) from any console write now reads as `not_found` rather than
+a failure. Known organizations, all organizations, a malformed `org` and org admins export as
+before, each audited.
+
+## [fix] The super admin's audit trail fits the console at its narrowest width
+
+At 1024px a super admin's `/audit` table was wider than the page: the action badge never wrapped,
+and an email or a training snapshot name is one unbreakable word. The action now wraps inside
+its badge, and the Who, What happened and Organization cells break a long value where they must;
+Who keeps at least 112px so a name stays readable. The table fits at 1024px for both roles, with
+filters on and off, and nothing changes where everything already fit.
+
 ## [feat] Prevalence map with Region → Province → City/Municipality drill-down
 
 A **Prevalence map** page (`/map`, super admins and org admins) shades the Philippines by the

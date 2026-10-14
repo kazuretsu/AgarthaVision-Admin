@@ -23,6 +23,7 @@ import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { pageCount, pageOffset, parsePage } from "@/lib/pagination";
 import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
+import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
 import { InviteForm } from "@/components/invitations/InvitationForms";
 import { InvitationTable } from "@/components/invitations/InvitationTable";
 import { PeopleTable, type PeopleQuery } from "@/components/people/PeopleTable";
@@ -147,6 +148,8 @@ export default async function PeoplePage({
   let organizations: OrganizationSummary[] = [];
   let organizationId = "";
   let organizationName = "";
+  // A well-formed `org` that names no organization, told apart from no choice yet.
+  let unknownOrganization = false;
   if (actor.access.kind === "org_admin") {
     organizationId = actor.access.organizationId;
     organizationName = actor.access.organizationName;
@@ -167,6 +170,7 @@ export default async function PeoplePage({
       organizationId = match.id;
       organizationName = match.name;
     }
+    unknownOrganization = isUuid(chosen) && !match;
   }
 
   const query: PeopleQuery = {
@@ -245,6 +249,8 @@ export default async function PeoplePage({
             query={query}
           />
         </Suspense>
+      ) : unknownOrganization ? (
+        <UnknownOrganizationNotice />
       ) : (
         <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
           Choose an organization to see its people.
