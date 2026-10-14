@@ -1,6 +1,6 @@
 ---
 verified: 2026-10-14
-commit: ff526ba
+commit: a060ba1
 ---
 
 # Research export
