@@ -60,7 +60,9 @@ cases; there are no points to plot, so it is a choropleth, not a heatmap.
    (`src/lib/map/barangay-names.ts:13`) from `src/lib/map/barangays/q2_2026/`, one file per
    code's first five digits, the same 2Q 2026 release as the lookup, then ranked by
    `barangayBreakdown` (`:207`): highest rate first, then more smears, then by name; withheld
-   barangays last, with no figure. A code not in the release is listed by its code, never guessed. A line
+   barangays last, with no figure. When exactly one barangay is withheld, the database withholds
+   the shown one with the fewest smears too, so no barangay's count is the town's less the shown
+   ones (`admin/0015`). A code not in the release is listed by its code, never guessed. A line
    counts the town's barangays with no smear in scope (Manila has 897; listing them all would
    bury the ones that matter). A barangay recorded with a 2023 Negros Island Region or Sulu
    code is counted under its current code: the town's current first seven digits and its own
@@ -103,7 +105,9 @@ cases; there are no points to plot, so it is a choropleth, not a heatmap.
 ## Accepted
 
 A withheld area's count can sometimes be had by subtracting its shown siblings from its
-parent. Accepted for this map, whose readers are the console's admins (14zcqntjnt3).
+parent. Accepted for regions, provinces and towns, whose readers are the console's admins
+(14zcqntjnt3). Not for barangays, the smallest cells (14zcqntjnt6): a lone withheld barangay
+takes the smallest shown one with it.
 
 ## Before admin/0014, and before 0015
 

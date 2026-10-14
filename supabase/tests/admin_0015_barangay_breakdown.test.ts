@@ -21,6 +21,8 @@ const CEBU = "0702200000";
 const TALISAY = "0702250000";
 const BAGO = "1804502000";
 const MANILA = "1380600000";
+const MINGLANILLA = "0702232000";
+const TOLEDO = "0702251000";
 
 export default async function test(sql: ReservedSQL) {
   const one = async <T>(query: Promise<unknown>) => ((await query) as T[])[0] as T;
@@ -115,6 +117,34 @@ export default async function test(sql: ReservedSQL) {
     "negative",
     "positive",
   ]); // the City of Manila, under a district
+  // One barangay withheld among shown ones: the smallest shown one is withheld with it.
+  await many(await patient("0702232001", a), a, [
+    "positive",
+    "positive",
+    "positive",
+    "negative",
+    "negative",
+    "negative",
+    "negative",
+  ]); // Minglanilla: 7 examined, 3 positive
+  await many(await patient("0702232002", a), a, [
+    "positive",
+    "negative",
+    "negative",
+    "negative",
+    "negative",
+  ]); // 5 examined, 1 positive: shown alone, withheld beside one small barangay
+  await many(await patient("0702232003", a), a, ["positive", "negative"]); // 2: withheld
+  // One shown and one withheld: both withheld, the town still shows its total.
+  await many(await patient("0702251001", a), a, [
+    "negative",
+    "negative",
+    "negative",
+    "negative",
+    "negative",
+    "positive",
+  ]); // Toledo: 6
+  await many(await patient("0702251002", a), a, ["negative", "negative", "negative"]); // 3
 
   const read = async (
     caller: string,
@@ -170,6 +200,27 @@ export default async function test(sql: ReservedSQL) {
   check(
     talisay.children.every((c) => c.suppressed || (c.examined ?? 0) >= 5),
     "no barangay under 5 smears carries a count",
+  );
+
+  // ── A lone withheld barangay never stands alone ──
+  const minglanilla = await read(users.super_admin, "town", MINGLANILLA);
+  check(same(minglanilla.figure, 14, 5), "Minglanilla: 14 examined, 5 positive");
+  check(same(child(minglanilla, "0702232001"), 7, 3), "the larger shown barangay stays shown");
+  check(
+    same(child(minglanilla, "0702232002"), null, null),
+    "the smallest shown barangay is withheld beside the one small barangay",
+  );
+  check(same(child(minglanilla, "0702232003"), null, null), "the small barangay is withheld");
+  const toledo = await read(users.super_admin, "town", TOLEDO);
+  check(
+    same(toledo.figure, 9, 1) &&
+      toledo.children.length === 2 &&
+      toledo.children.every((c) => c.suppressed),
+    `one shown and one withheld: both withheld (${JSON.stringify(toledo.children)})`,
+  );
+  check(
+    same(talisay.figure, 16, 6) && talisay.children.filter((c) => c.suppressed).length === 2,
+    "two withheld already: nothing more is withheld",
   );
 
   // ── Renumbered and district codes ──

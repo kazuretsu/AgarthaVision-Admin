@@ -8,7 +8,9 @@ A city or municipality on the map now opens (`?town=`): the town drawn alone wit
 figure, and a table of its barangays with a smear examined, highest prevalence first, named
 from the 2Q 2026 PSGC (`scripts/geo/build-barangay-names.ts` →
 `src/lib/map/barangays/q2_2026/`). A barangay under 5 smears is "too few to report" and sorts
-last; a line counts the town's barangays with none. The figures come from
+last, and when it is the only one withheld, the shown barangay with the fewest smears is
+withheld with it, so its count cannot be had by subtracting the others from the town. A line
+counts the town's barangays with none. The figures come from
 `console_area_prevalence('town', …)`, replaced in place by `admin/0015` with one more level,
 so the barangays, the town and the province's map are one count; same period, same laboratory
 scoping, the same threshold. A 2023 Negros Island Region or Sulu barangay code is listed under

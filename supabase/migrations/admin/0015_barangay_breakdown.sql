@@ -21,6 +21,11 @@
 --     2Q 2026 PSGC release (scripts/geo/build-barangay-names.ts).
 --   * Only barangays with a smear in scope are listed: a city can have 897 barangays (Manila),
 --     and the console counts the ones with none from the same release.
+--   * A barangay is withheld below 5 smears, as every area is. And because a town's barangays
+--     add up to the town's own figure, one withheld barangay alone could be had by subtracting
+--     the shown ones from the town: so when exactly one is withheld, the shown barangay with the
+--     fewest smears (then the lowest code) is withheld too, and the two are only known together.
+--     Applied to barangays only; areas above them keep 0014's rule.
 --   * A barangay recorded with a 2023 Negros Island Region or Sulu code is listed under its
 --     current code: the town's current first seven digits and the barangay's last three. PSA
 --     kept the lower digits when it renumbered (the app's tools/psgc/README.md).
@@ -175,6 +180,25 @@ begin
         union all
         -- No barangay table: the barangays with a smear, by code; the console names them.
         select n.child, null::text from counted n where p_level = 'town'
+    ),
+    figured as (
+        select c.code, c.name, public.console_area_figure(n.examined, n.positive) as figure,
+               coalesce(n.examined, 0) as examined
+        from child c
+        left join counted n on n.child = c.code
+    ),
+    -- A town's barangays add up to the town's own figure, so one withheld barangay is the
+    -- town's count less the shown ones. When exactly one is withheld, the shown barangay with
+    -- the fewest smears is withheld too: the two are then only known together.
+    second as (
+        select f.code
+        from figured f
+        where p_level = 'town'
+          and not (f.figure ->> 'suppressed')::boolean
+          and f.examined > 0
+          and (select count(*) from figured w where (w.figure ->> 'suppressed')::boolean) = 1
+        order by f.examined, f.code
+        limit 1
     )
     select jsonb_build_object(
         'level',     p_level,
@@ -188,11 +212,14 @@ begin
                           then (select count(*) from smear where town is null)::integer end,
         'children',  coalesce((
             select jsonb_agg(
-                       jsonb_build_object('code', c.code, 'name', c.name)
-                       || public.console_area_figure(n.examined, n.positive)
-                       order by c.name, c.code)
-            from child c
-            left join counted n on n.child = c.code), '[]'::jsonb)
+                       jsonb_build_object('code', f.code, 'name', f.name)
+                       || case when f.code in (select code from second)
+                               then jsonb_build_object('examined', null, 'positive', null,
+                                                       'suppressed', true)
+                               else f.figure
+                          end
+                       order by f.name, f.code)
+            from figured f), '[]'::jsonb)
     )
     into v_result;
 

@@ -126,6 +126,12 @@ export default async function MapPage({
   };
   // A town is drawn alone with its own figure; its barangays are a table, never map areas.
   const breakdown = barangayNames ? barangayBreakdown(view.areas, barangayNames) : null;
+  if (barangayNames?.size === 0) {
+    // Every town in admin/0014 has barangays in the release (build-barangay-names.ts checks
+    // it), so no names here means the generated files did not deploy. The figures are still
+    // right; the barangays show by code. Logged so it is seen, not just tolerated.
+    console.error(`prevalence map: no barangay names for town ${location.code}`);
+  }
   const isolated = breakdown ? null : parseIsolate(params, view.areas);
   const isolatedName = view.areas.find((area) => area.code === isolated)?.name;
   const clearHref = mapHref(location, keep);
