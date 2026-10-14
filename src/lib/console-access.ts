@@ -2,8 +2,14 @@ import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getAuth } from "@/adapters/registry";
 import { isAllowed, type ConsoleAccessKind } from "@/domain/access";
-import { NotAuthenticatedError, NotAuthorizedError, type ConsoleActor } from "@/ports/auth";
+import {
+  AuthUnavailableError,
+  NotAuthenticatedError,
+  NotAuthorizedError,
+  type ConsoleActor,
+} from "@/ports/auth";
 import { MissingEnvironmentError } from "@/lib/env";
+import { CONSOLE_UNAVAILABLE, markUnavailable } from "@/lib/unavailable";
 
 /**
  * Server-side access checks for pages and route handlers.
@@ -15,9 +21,18 @@ import { MissingEnvironmentError } from "@/lib/env";
  *
  * `cache()` scopes the lookup to one request, so the layout and the page share a
  * single access lookup rather than paying for it twice.
+ *
+ * Access that could not be read (14zcqntk6h2) is thrown on, marked so the error
+ * boundaries can tell an outage from any other failure (`src/lib/unavailable.ts`).
+ * Thrown from the layout, it fails the page with a 500 and no data.
  */
 export const getConsoleActor = cache(async (): Promise<ConsoleActor> => {
-  return (await getAuth()).requireConsoleActor();
+  try {
+    return await (await getAuth()).requireConsoleActor();
+  } catch (cause) {
+    if (cause instanceof AuthUnavailableError) throw markUnavailable(cause);
+    throw cause;
+  }
 });
 
 /**
@@ -72,6 +87,11 @@ export async function requireRouteAccess(
           { status: 503 },
         ),
       };
+    }
+    if (cause instanceof AuthUnavailableError) {
+      // The cause stays in the server log; the response names no host or error.
+      console.error("console access could not be read", cause.cause);
+      return { response: Response.json({ error: CONSOLE_UNAVAILABLE }, { status: 503 }) };
     }
     throw cause;
   }

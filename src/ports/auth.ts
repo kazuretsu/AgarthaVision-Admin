@@ -31,20 +31,25 @@ export interface Credentials {
 }
 
 export interface AuthPort {
-  /** The signed-in user, or `null` when there is no valid session. */
+  /**
+   * The signed-in user, or `null` when there is no valid session. Throws
+   * {@link AuthUnavailableError} when their access could not be read.
+   */
   getCurrentUser(): Promise<AuthenticatedUser | null>;
 
   /**
    * The signed-in user and their console access, read server-side on every call.
-   * Throws {@link NotAuthenticatedError} with no session, and
-   * {@link NotAuthorizedError} when the user has no console access (a medtech).
+   * Throws {@link NotAuthenticatedError} with no session,
+   * {@link NotAuthorizedError} when the user has no console access (a medtech), and
+   * {@link AuthUnavailableError} when access could not be read at all.
    */
   requireConsoleActor(): Promise<ConsoleActor>;
 
   /**
    * Signs in and returns the actor. Throws {@link AuthenticationFailedError} on
    * bad credentials and {@link NotAuthorizedError} when the credentials are
-   * valid but carry no console access — the caller must then sign out.
+   * valid but carry no console access — the caller must then sign out. Throws
+   * {@link AuthUnavailableError} when access could not be read.
    */
   signInWithPassword(credentials: Credentials): Promise<ConsoleActor>;
 
@@ -64,6 +69,19 @@ export class NotAuthorizedError extends Error {
   constructor(public readonly user: AuthenticatedUser) {
     super(`User ${user.id} has no console access.`);
     this.name = "NotAuthorizedError";
+  }
+}
+
+/**
+ * Access could not be read: the database did not answer, or answered with an error
+ * (14zcqntk6h2). Not a refusal and not a grant. The caller shows no data and says the
+ * console cannot reach its data, rather than telling an admin they have no access.
+ */
+export class AuthUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super("Console access could not be read.");
+    this.name = "AuthUnavailableError";
+    this.cause = cause;
   }
 }
 
