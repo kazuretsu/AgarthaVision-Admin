@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getDatabase } from "@/adapters/registry";
 import {
   figuresFromTotals,
+  namesUnknownOrganization,
   patientDisclosureFor,
   type ConsoleAccess,
   type OrganizationSummary,
@@ -13,6 +14,7 @@ import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { describePeriod, parsePeriod, type Period } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
+import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { DashboardBodySkeleton } from "@/components/loading/PageSkeletons";
 import { SpeciesMix } from "@/components/dashboard/SpeciesMix";
@@ -181,9 +183,13 @@ export default async function DashboardPage({
         </form>
       </header>
 
-      <Suspense key={JSON.stringify({ period, scope })} fallback={<DashboardBodySkeleton />}>
-        <DashboardFigures access={actor.access} scope={scope} period={period} />
-      </Suspense>
+      {namesUnknownOrganization(actor.access, scope, organizations) ? (
+        <UnknownOrganizationNotice />
+      ) : (
+        <Suspense key={JSON.stringify({ period, scope })} fallback={<DashboardBodySkeleton />}>
+          <DashboardFigures access={actor.access} scope={scope} period={period} />
+        </Suspense>
+      )}
     </main>
   );
 }

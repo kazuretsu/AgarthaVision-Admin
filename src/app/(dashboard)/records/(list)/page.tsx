@@ -2,12 +2,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Search } from "lucide-react";
 import { getDatabase } from "@/adapters/registry";
-import { patientDisclosureFor, type OrganizationSummary } from "@/domain";
+import { namesUnknownOrganization, patientDisclosureFor, type OrganizationSummary } from "@/domain";
 import type { DatabasePort } from "@/ports/db";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
+import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
 import { parsePage } from "@/lib/pagination";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import {
@@ -121,10 +122,14 @@ export default async function RecordsPage({
         ) : null}
       </form>
 
-      {/* Keyed by the query, so a new search or page shows the skeleton, not the old list. */}
-      <Suspense key={JSON.stringify(query)} fallback={<PatientListFallback />}>
-        <PatientList db={db} query={query} />
-      </Suspense>
+      {namesUnknownOrganization(actor.access, scope, organizations) ? (
+        <UnknownOrganizationNotice />
+      ) : (
+        // Keyed by the query, so a new search or page shows the skeleton, not the old list.
+        <Suspense key={JSON.stringify(query)} fallback={<PatientListFallback />}>
+          <PatientList db={db} query={query} />
+        </Suspense>
+      )}
     </main>
   );
 }

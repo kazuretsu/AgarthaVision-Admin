@@ -2,6 +2,16 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Every page says so when `org` names no organization
+
+A super admin's `?org=` with a well-formed ID that names no organization used to show an empty
+dashboard, records list, audit trail, map or People page, as if that laboratory had done
+nothing; the organization filter even showed "All organizations". Each of those pages, and the
+export page, now shows "No organization has the ID in this link. Choose one from the list, or
+all organizations." in place of its figures or list (`namesUnknownOrganization`,
+`UnknownOrganizationNotice`). A malformed `org` is still all organizations, and org admins are
+still held to their own laboratory.
+
 ## [ux] A console-styled "not found" page with a way back
 
 A page that answers 404 now shows `(dashboard)/not-found.tsx` inside the shell instead of the

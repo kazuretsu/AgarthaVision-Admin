@@ -6,6 +6,7 @@ import {
   auditActionLabel,
   auditActionsFor,
   describeAuditEntry,
+  namesUnknownOrganization,
   type OrganizationSummary,
   type AuditActor,
   type ReadScope,
@@ -16,6 +17,7 @@ import { formatDateTime } from "@/lib/format";
 import { parsePeriod, type Period } from "@/lib/period";
 import { scopeForRequest } from "@/lib/read-scope";
 import { OrganizationFilter } from "@/components/organizations/OrganizationFilter";
+import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
 import { Badge } from "@/components/ui/badge";
@@ -234,23 +236,27 @@ export default async function AuditPage({
         ) : null}
       </form>
 
-      <Suspense
-        key={JSON.stringify({ actorId, action, period, scope })}
-        fallback={
-          <Busy label="Loading audit entries…">
-            <TableSkeleton rows={10} columns={isSuperAdmin ? 5 : 4} />
-          </Busy>
-        }
-      >
-        <AuditEntries
-          scope={scope}
-          actorId={actorId}
-          action={action}
-          period={period}
-          filtered={filtered}
-          isSuperAdmin={isSuperAdmin}
-        />
-      </Suspense>
+      {namesUnknownOrganization(actor.access, scope, organizations) ? (
+        <UnknownOrganizationNotice />
+      ) : (
+        <Suspense
+          key={JSON.stringify({ actorId, action, period, scope })}
+          fallback={
+            <Busy label="Loading audit entries…">
+              <TableSkeleton rows={10} columns={isSuperAdmin ? 5 : 4} />
+            </Busy>
+          }
+        >
+          <AuditEntries
+            scope={scope}
+            actorId={actorId}
+            action={action}
+            period={period}
+            filtered={filtered}
+            isSuperAdmin={isSuperAdmin}
+          />
+        </Suspense>
+      )}
     </main>
   );
 }

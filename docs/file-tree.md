@@ -106,7 +106,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
-    │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter.
+    │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter,
+    │   │                      and the notice for an `org` that names no organization.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.
     │   ├── people/            The people table (sortable, paged) and the deactivate form.
     │   ├── loading/           Page-shaped skeletons (PageSkeletons) and LinkPending, the

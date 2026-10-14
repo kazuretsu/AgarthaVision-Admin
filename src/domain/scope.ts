@@ -27,8 +27,27 @@ export function readScopeFor(
 }
 
 /**
- * What a super admin is told when `org` is a well-formed ID that names no organization: the
- * export refuses it before anything is read or recorded (14zcqntjw7c).
+ * What a super admin is told when `org` is a well-formed ID that names no organization. Every
+ * page that takes `org` shows it in place of its figures or list, rather than an empty result
+ * that reads as "nothing happened there"; the export download refuses it with 404 before
+ * anything is read or recorded (14zcqntjw7c).
  */
 export const UNKNOWN_ORGANIZATION =
   "No organization has the ID in this link. Choose one from the list, or all organizations.";
+
+/**
+ * Whether a super admin's scope is narrowed to an organization that is not among
+ * `organizations` (the list their filter offers, which holds every organization). An org
+ * admin's scope is always their own, which exists.
+ */
+export function namesUnknownOrganization(
+  access: ConsoleAccess,
+  scope: ReadScope,
+  organizations: readonly { id: string }[],
+): boolean {
+  return (
+    access.kind === "super_admin" &&
+    scope.kind === "organization" &&
+    !organizations.some((organization) => organization.id === scope.organizationId)
+  );
+}
