@@ -102,6 +102,8 @@ async function AuditEntries({
           {filtered ? "No entries match these filters." : "Nothing has been recorded yet."}
         </p>
       ) : (
+        // The shell leaves 734px at its narrowest: long names, emails and snapshot names wrap
+        // inside their cell, and so does the action, rather than widening the table.
         <Table className="min-w-[720px]">
           <TableCaption>Audit entries, newest first</TableCaption>
           <TableHeader>
@@ -117,7 +119,7 @@ async function AuditEntries({
             {entries.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell className="tnum whitespace-nowrap">{formatDateTime(entry.at)}</TableCell>
-                <TableCell>
+                <TableCell className="min-w-28 wrap-anywhere">
                   {entry.actorLabel ?? (
                     <span className="text-stone-mid">
                       {entry.actorId ? "Unnamed user" : "System"}
@@ -125,11 +127,15 @@ async function AuditEntries({
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="neutral">{auditActionLabel(entry.action)}</Badge>
+                  <Badge variant="neutral" className="rounded-[10px] whitespace-normal">
+                    {auditActionLabel(entry.action)}
+                  </Badge>
                 </TableCell>
-                <TableCell className="text-stone-ink">{describeAuditEntry(entry)}</TableCell>
+                <TableCell className="wrap-anywhere text-stone-ink">
+                  {describeAuditEntry(entry)}
+                </TableCell>
                 {isSuperAdmin ? (
-                  <TableCell>
+                  <TableCell className="wrap-anywhere">
                     {entry.organizationName ?? <span className="text-stone-mid">—</span>}
                   </TableCell>
                 ) : null}

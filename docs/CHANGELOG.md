@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] The super admin's audit trail fits the console at its narrowest width
+
+At 1024px a super admin's `/audit` table was wider than the page: the action badge never wrapped,
+and an email or a training snapshot name is one unbreakable word. The action now wraps inside
+its badge, and the Who, What happened and Organization cells break a long value where they must;
+Who keeps at least 112px so a name stays readable. The table fits at 1024px for both roles, with
+filters on and off, and nothing changes where everything already fit.
+
 ## [feat] Prevalence map with Region → Province → City/Municipality drill-down
 
 A **Prevalence map** page (`/map`, super admins and org admins) shades the Philippines by the
