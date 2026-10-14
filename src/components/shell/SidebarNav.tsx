@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import type { NavItem } from "./nav";
+import { inSection, type NavItem } from "./nav";
 
 const ICONS = {
   dashboard: LayoutDashboard,
@@ -48,7 +48,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   return (
     <nav aria-label="Console" className="flex flex-col gap-1">
       {items.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = inSection(pathname, item.href);
         return (
           <Link
             key={item.href}

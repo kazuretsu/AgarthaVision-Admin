@@ -190,6 +190,16 @@ Every console page shows that a click registered, in the shape of what is coming
   spinner. A person's page then shows its header at once and the patients table's skeleton.
 - Skeletons are marked busy for screen readers, with what is loading, and follow the theme.
 
+### Not found
+
+A page that answers 404 shows the console's own page inside the shell: "This page isn't
+available", one line saying it may not exist or may belong to another laboratory, and a
+button back to the section the visitor was in (Records for a record, Organizations for an
+organization, the Prevalence map for an unknown area), or the dashboard when that section is
+not theirs, as for an org admin opening `/organizations` (14zcqntk6h4). A malformed ID, an
+unknown ID and another laboratory's record show the same page, word for word, so it says
+nothing about which records exist. The status stays 404.
+
 ### Dashboard
 
 Counted per smear on the app's rule, for a chosen period (Manila calendar days, held in the

@@ -71,6 +71,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page.
+    │       ├── not-found.tsx  The 404 page: the same words for every reason, a way back.
     │       ├── dashboard/     Per-smear cards, weekly trend, species mix, period filter;
     │                          loading.tsx. audit/ and export/ have one too.
     │       ├── map/           The prevalence map: Region → Province → City/Municipality.
@@ -111,7 +112,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── loading/           Page-shaped skeletons (PageSkeletons) and LinkPending, the
     │                          spinner on a clicked link while its page decides 404.
     │   ├── assignments/       Who is assigned to a patient, with assign/remove/hand over.
-    │   ├── shell/             Sidebar nav (with who sees each entry) and the user menu.
+    │   ├── shell/             Sidebar nav (with who sees each entry), the user menu, and the
+    │   │                      not-found page's way back to the visitor's section.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
     │                          with box overlay, breadcrumbs.
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.

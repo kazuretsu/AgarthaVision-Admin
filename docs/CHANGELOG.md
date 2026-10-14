@@ -2,6 +2,17 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [ux] A console-styled "not found" page with a way back
+
+A page that answers 404 now shows `(dashboard)/not-found.tsx` inside the shell instead of the
+framework's "404 | This page could not be found.": "This page isn't available", one line saying
+it may not exist or may belong to another laboratory, and a button back to the visitor's
+section (`sectionFor`, `src/components/shell/nav.ts`): Records for a record, Organizations for
+an organization, the Prevalence map or People for theirs, the dashboard when the section is not
+the visitor's, as for an org admin's `/organizations` or `/training-data`. A malformed ID, an
+unknown ID and another laboratory's record render identically. The status stays 404. The
+sidebar's active-section check moved into the same helper (`inSection`).
+
 ## [fix] Exporting an organization that does not exist says so
 
 A super admin's `/export/download?org=` with a well-formed ID that names no organization used to

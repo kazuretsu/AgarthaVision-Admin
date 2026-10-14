@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NAV_ITEMS, navFor } from "./nav";
+import { NAV_ITEMS, navFor, sectionFor } from "./nav";
 
 describe("navFor", () => {
   it("shows a super admin every entry listing them", () => {
@@ -38,5 +38,34 @@ describe("prevalence map", () => {
   it("is everyone's entry: an org admin's own laboratory, a super admin's choice", () => {
     expect(navFor("org_admin").some((item) => item.href === "/map")).toBe(true);
     expect(navFor("super_admin").some((item) => item.href === "/map")).toBe(true);
+  });
+});
+
+describe("sectionFor — where the not-found page's button goes (14zcqntk6h4)", () => {
+  const superAdmin = navFor("super_admin");
+  const orgAdmin = navFor("org_admin");
+  const href = (pathname: string, items = superAdmin) => sectionFor(pathname, items).href;
+
+  it("sends a record back to Records, whatever kind of record", () => {
+    expect(href("/records/patients/not-a-uuid")).toBe("/records");
+    expect(href("/records/sessions/00000000-0000-4000-8000-000000000001")).toBe("/records");
+    expect(href("/records/samples/00000000-0000-4000-8000-000000000001", orgAdmin)).toBe(
+      "/records",
+    );
+  });
+
+  it("sends a super admin's unknown organization back to Organizations", () => {
+    expect(href("/organizations/00000000-0000-4000-8000-000000000001")).toBe("/organizations");
+  });
+
+  it("sends an org admin to the dashboard from a section they cannot open", () => {
+    expect(href("/organizations", orgAdmin)).toBe("/dashboard");
+    expect(href("/training-data", orgAdmin)).toBe("/dashboard");
+  });
+
+  it("matches whole path segments only", () => {
+    expect(href("/recordsx")).toBe("/dashboard");
+    expect(href("/map")).toBe("/map");
+    expect(href("/people/00000000-0000-4000-8000-000000000001")).toBe("/people");
   });
 });
