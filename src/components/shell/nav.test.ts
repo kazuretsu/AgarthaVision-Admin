@@ -33,3 +33,10 @@ describe("training data", () => {
     expect(navFor("org_admin").some((item) => item.href === "/training-data")).toBe(false);
   });
 });
+
+describe("prevalence map", () => {
+  it("is everyone's entry: an org admin's own laboratory, a super admin's choice", () => {
+    expect(navFor("org_admin").some((item) => item.href === "/map")).toBe(true);
+    expect(navFor("super_admin").some((item) => item.href === "/map")).toBe(true);
+  });
+});
