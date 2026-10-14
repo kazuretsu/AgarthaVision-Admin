@@ -42,4 +42,28 @@ describe("toPrevalenceView", () => {
     );
     expect(province.trail.map((crumb) => crumb.code)).toEqual([null, "0700000000"]);
   });
+
+  it("puts a town under its province, and lists its barangays by code", () => {
+    const town = toPrevalenceView(
+      row({
+        level: "town",
+        code: "0702250000",
+        name: "City of Talisay",
+        parents: [
+          { level: "region", code: "0700000000", name: "Region VII" },
+          { level: "province", code: "0702200000", name: "Cebu" },
+        ],
+        unplaced: null,
+        children: [
+          { code: "0702250001", name: null, examined: 6, positive: 3, suppressed: false },
+          { code: "0702250002", name: null, examined: null, positive: null, suppressed: true },
+        ],
+      }),
+    );
+    expect(town.trail.map((crumb) => crumb.level)).toEqual(["country", "region", "province"]);
+    expect(town.areas.map((area) => [area.code, area.name, area.figure.kind])).toEqual([
+      ["0702250001", "0702250001", "reported"],
+      ["0702250002", "0702250002", "too_few"],
+    ]);
+  });
 });

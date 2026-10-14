@@ -69,6 +69,7 @@ import { toPrevalenceView, type AreaPrevalenceRow } from "./prevalence-rows";
 
 const TRAINING_MIGRATION = "admin/0012_training_snapshots.sql";
 const MAP_MIGRATION = "admin/0014_prevalence_map.sql";
+const BARANGAY_MIGRATION = "admin/0015_barangay_breakdown.sql";
 
 /**
  * Supabase implementation of {@link DatabasePort}.
@@ -799,6 +800,10 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       p_to: startedTo ?? null,
     });
     if (error && isFunctionNotFound(error)) throw new MigrationNotAppliedError(MAP_MIGRATION);
+    // Before admin/0015 the function knows no town level, and says so as a bad argument.
+    if (error?.code === "22023" && location.level === "town") {
+      throw new MigrationNotAppliedError(BARANGAY_MIGRATION);
+    }
     if (error?.code === "P0002") return null;
     if (error || !data) throw new DatabaseReadError("areaPrevalence", error);
     return toPrevalenceView(data as AreaPrevalenceRow);

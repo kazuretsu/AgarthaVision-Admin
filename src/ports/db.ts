@@ -144,8 +144,9 @@ export interface DatabasePort {
 
   /**
    * One place on the prevalence map and every area one level down, counted and withheld
-   * by the database. `null` when the region or province does not exist. Throws
-   * {@link MigrationNotAppliedError} before admin/0014.
+   * by the database; at a town, its barangays with a smear, by code. `null` when the region,
+   * province or town does not exist. Throws {@link MigrationNotAppliedError} before
+   * admin/0014, and for a town before admin/0015.
    */
   areaPrevalence(query: AreaPrevalenceQuery): Promise<PrevalenceView | null>;
 

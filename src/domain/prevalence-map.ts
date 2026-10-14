@@ -1,18 +1,23 @@
 /**
- * The STH prevalence map (14zcqntjnt3): where an admin is in the drill-down, what each area may
- * show, and which shading band a figure falls in. Pure; the figures themselves are counted by
- * the database (`console_area_prevalence()`, admin/0014), never here.
+ * The STH prevalence map (14zcqntjnt3) and its barangay breakdown (14zcqntjnt6): where an admin
+ * is in the drill-down, what each area may show, and which shading band a figure falls in.
+ * Pure; the figures themselves are counted by the database (`console_area_prevalence()`,
+ * admin/0014 and 0015), never here.
  */
 
-/** Where the map is: the whole country, one region's provinces, or one province's towns. */
-export type MapLevel = "country" | "region" | "province";
-/** What the map shades at a level: one level down. */
-export type AreaKind = "region" | "province" | "town";
+/**
+ * Where the map is: the whole country, one region's provinces, one province's towns, or one
+ * town and its barangays.
+ */
+export type MapLevel = "country" | "region" | "province" | "town";
+/** What a level lists: one level down. Barangays are listed, never drawn. */
+export type AreaKind = "region" | "province" | "town" | "barangay";
 
 export const CHILD_KIND: Readonly<Record<MapLevel, AreaKind>> = {
   country: "region",
   region: "province",
   province: "town",
+  town: "barangay",
 };
 
 /** The minimum examined smears before an area's figure is shown. The database applies it. */
@@ -49,7 +54,10 @@ export interface PrevalenceView {
   figure: AreaFigure;
   /** Examined smears whose barangay matched no town; the country view only. */
   unplaced: number | null;
-  /** Every area one level down, by name. */
+  /**
+   * Every area one level down, by name. A town's barangays are only those with a smear, by
+   * code, named by `barangayBreakdown`.
+   */
   areas: AreaRow[];
 }
 
@@ -120,36 +128,47 @@ export interface MapLocation {
 }
 
 const PSGC_CODE = /^\d{10}$/;
+const LOCATION_PARAMS = ["town", "province", "region"] as const;
 
 function first(value: string | string[] | undefined): string | undefined {
   return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
 }
 
 /**
- * `?province=` wins over `?region=`; anything but a 10-digit code is dropped, so a mistyped
- * URL shows the country rather than an error. Whether the code exists is the database's call.
+ * `?town=` wins over `?province=`, which wins over `?region=`; anything but a 10-digit code is
+ * dropped, so a mistyped URL shows the country rather than an error. Whether the code exists is
+ * the database's call.
  */
 export function parseMapLocation(
   params: Record<string, string | string[] | undefined>,
 ): MapLocation {
-  const province = first(params.province);
-  if (province && PSGC_CODE.test(province)) return { level: "province", code: province };
-  const region = first(params.region);
-  if (region && PSGC_CODE.test(region)) return { level: "region", code: region };
+  for (const level of LOCATION_PARAMS) {
+    const code = first(params[level]);
+    if (code && PSGC_CODE.test(code)) return { level, code };
+  }
   return { level: "country", code: null };
 }
 
 /**
- * The URL of a place on the map, keeping the period and laboratory. A level the map cannot
- * open (a town) has no URL.
+ * `?isolate=`: the one area, among those the map shows, drawn alone. A code that is not one of
+ * them is ignored, so a stale link shows every area rather than an empty map.
  */
+export function parseIsolate(
+  params: Record<string, string | string[] | undefined>,
+  areas: readonly { code: string }[],
+): string | null {
+  const code = first(params.isolate);
+  return code && areas.some((area) => area.code === code) ? code : null;
+}
+
+/** The URL of a place on the map, keeping the period, laboratory and any isolated area. */
 export function mapHref(
   location: MapLocation,
-  keep: { from?: string; to?: string; org?: string | null },
+  keep: { from?: string; to?: string; org?: string | null; isolate?: string | null },
 ): string {
   const params = new URLSearchParams();
-  if (location.level === "region" && location.code) params.set("region", location.code);
-  if (location.level === "province" && location.code) params.set("province", location.code);
+  if (location.level !== "country" && location.code) params.set(location.level, location.code);
+  if (keep.isolate) params.set("isolate", keep.isolate);
   if (keep.from) params.set("from", keep.from);
   if (keep.to) params.set("to", keep.to);
   if (keep.org) params.set("org", keep.org);
@@ -157,11 +176,53 @@ export function mapHref(
   return query ? `/map?${query}` : "/map";
 }
 
-/** Where clicking an area leads: its own map, or nowhere for a town. */
+/** Where clicking an area leads: its own map, or nowhere for a barangay. */
 export function drillTarget(level: MapLevel, code: string): MapLocation | null {
   if (level === "country") return { level: "region", code };
   if (level === "region") return { level: "province", code };
+  if (level === "province") return { level: "town", code };
   return null;
+}
+
+/** A town's barangays as its table lists them. */
+export interface BarangayBreakdown {
+  /** Highest prevalence first; withheld barangays last, by name. */
+  rows: AreaRow[];
+  /** Barangays of the town, in the same PSGC release, with no smear in scope. */
+  withoutSmears: number;
+}
+
+/** The name a barangay code that is not in the release is listed under. */
+export const unlistedBarangay = (code: string) => `Barangay code ${code} (not in the 2Q 2026 PSGC)`;
+
+function rankOf(figure: AreaFigure): number {
+  return figure.kind === "reported" ? 0 : figure.kind === "too_few" ? 1 : 2;
+}
+
+/**
+ * Names a town's barangays from the PSGC release (`names`: code → name, every barangay of the
+ * town) and ranks them: the highest rate first, then more smears examined, then by name.
+ * A withheld barangay carries no rate, so it never outranks one that is shown.
+ */
+export function barangayBreakdown(
+  areas: readonly AreaRow[],
+  names: ReadonlyMap<string, string>,
+): BarangayBreakdown {
+  const rows = areas.map((area) => ({
+    ...area,
+    name: names.get(area.code) ?? unlistedBarangay(area.code),
+  }));
+  rows.sort((a, b) => {
+    const kind = rankOf(a.figure) - rankOf(b.figure);
+    if (kind !== 0) return kind;
+    if (a.figure.kind === "reported" && b.figure.kind === "reported") {
+      if (a.figure.rate !== b.figure.rate) return b.figure.rate - a.figure.rate;
+      if (a.figure.examined !== b.figure.examined) return b.figure.examined - a.figure.examined;
+    }
+    return a.name.localeCompare(b.name) || a.code.localeCompare(b.code);
+  });
+  const listed = areas.filter((area) => names.has(area.code)).length;
+  return { rows, withoutSmears: names.size - listed };
 }
 
 /** The breadcrumb: the country, then each parent, then this area. */
@@ -178,15 +239,28 @@ export interface BoundarySource {
   filter: { key: string; value: string } | null;
 }
 
-export function boundariesFor(location: MapLocation): BoundarySource {
+/**
+ * The outlines for a view: the country's regions, a region's provinces, a province's towns, or
+ * a town alone among its province's (there are no barangay outlines). `isolate`, one of the
+ * areas shown, draws that area alone; the map fits whatever it draws.
+ */
+export function boundariesFor(view: PrevalenceView, isolate: string | null = null): BoundarySource {
   const base = `/geo/${BOUNDARY_VINTAGE}`;
-  if (location.level === "region" && location.code) {
-    return { url: `${base}/provinces.json`, filter: { key: "region", value: location.code } };
+  const only = (code: string) => ({ key: "code", value: code });
+  if (view.level === "town" && view.code) {
+    const province = view.trail.find((crumb) => crumb.level === "province")?.code;
+    return { url: `${base}/towns/${province}.json`, filter: only(view.code) };
   }
-  if (location.level === "province" && location.code) {
-    return { url: `${base}/towns/${location.code}.json`, filter: null };
+  if (view.level === "province" && view.code) {
+    return { url: `${base}/towns/${view.code}.json`, filter: isolate ? only(isolate) : null };
   }
-  return { url: `${base}/regions.json`, filter: null };
+  if (view.level === "region" && view.code) {
+    return {
+      url: `${base}/provinces.json`,
+      filter: isolate ? only(isolate) : { key: "region", value: view.code },
+    };
+  }
+  return { url: `${base}/regions.json`, filter: isolate ? only(isolate) : null };
 }
 
 /** Required wherever the boundaries are shown (CC BY-IGO 3.0). */

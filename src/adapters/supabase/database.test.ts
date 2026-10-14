@@ -299,3 +299,68 @@ describe("SupabaseDatabaseAdapter — audit person filter (14zcqntkg7p)", () => 
     expect(requests.map((request) => request.source)).toEqual(["profiles"]);
   });
 });
+
+describe("SupabaseDatabaseAdapter — the map's town level (14zcqntjnt6)", () => {
+  const town = { level: "town" as const, code: "0702250000" };
+
+  it("asks for a town as one more level of the same function", async () => {
+    const { client, rpcs } = rpcClient({
+      data: {
+        level: "town",
+        code: town.code,
+        name: "City of Talisay",
+        parents: [],
+        figure: { examined: 6, positive: 3, suppressed: false },
+        unplaced: null,
+        children: [],
+      },
+      error: null,
+    });
+    await new SupabaseDatabaseAdapter(client).areaPrevalence({
+      scope: { kind: "all" },
+      location: town,
+    });
+    expect(rpcs).toEqual([
+      {
+        name: "console_area_prevalence",
+        args: {
+          p_level: "town",
+          p_code: town.code,
+          p_organization: null,
+          p_from: null,
+          p_to: null,
+        },
+      },
+    ]);
+  });
+
+  it("before admin/0015, says which migration opens a town", async () => {
+    const { client } = rpcClient({ data: null, error: { code: "22023" } });
+    await expect(
+      new SupabaseDatabaseAdapter(client).areaPrevalence({
+        scope: { kind: "all" },
+        location: town,
+      }),
+    ).rejects.toThrow(/admin\/0015_barangay_breakdown\.sql/);
+  });
+
+  it("a bad argument at any other level is still a failed read", async () => {
+    const { client } = rpcClient({ data: null, error: { code: "22023" } });
+    await expect(
+      new SupabaseDatabaseAdapter(client).areaPrevalence({
+        scope: { kind: "all" },
+        location: { level: "country", code: null },
+      }),
+    ).rejects.toThrow(/areaPrevalence/);
+  });
+
+  it("an unknown town is no view, which the page turns into a 404", async () => {
+    const { client } = rpcClient({ data: null, error: { code: "P0002" } });
+    expect(
+      await new SupabaseDatabaseAdapter(client).areaPrevalence({
+        scope: { kind: "all" },
+        location: town,
+      }),
+    ).toBeNull();
+  });
+});
