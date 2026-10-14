@@ -25,3 +25,10 @@ export function readScopeFor(
   const requested = requestedOrganizationId?.trim();
   return isUuid(requested) ? { kind: "organization", organizationId: requested } : { kind: "all" };
 }
+
+/**
+ * What a super admin is told when `org` is a well-formed ID that names no organization: the
+ * export refuses it before anything is read or recorded (14zcqntjw7c).
+ */
+export const UNKNOWN_ORGANIZATION =
+  "No organization has the ID in this link. Choose one from the list, or all organizations.";

@@ -5,6 +5,7 @@ import { getDatabase } from "@/adapters/registry";
 import {
   RESEARCH_EXPORT_COLUMNS,
   RESEARCH_EXPORT_LIMIT,
+  UNKNOWN_ORGANIZATION,
   patientDisclosureFor,
   type ConsoleAccess,
   type OrganizationSummary,
@@ -123,6 +124,13 @@ export default async function ExportPage({
     throw cause;
   }
 
+  // A well-formed `org` that names no organization: say so, rather than count nothing and offer
+  // a download that would be refused.
+  const unknownOrganization =
+    actor.access.kind === "super_admin" &&
+    scope.kind === "organization" &&
+    !organizations.some((organization) => organization.id === scope.organizationId);
+
   const query = new URLSearchParams();
   if (period.from) query.set("from", period.from);
   if (period.to) query.set("to", period.to);
@@ -169,14 +177,20 @@ export default async function ExportPage({
             ) : null}
           </form>
 
-          <Suspense key={query.toString()} fallback={<ExportBodySkeleton />}>
-            <ExportCount
-              access={actor.access}
-              scope={scope}
-              period={period}
-              query={query.toString()}
-            />
-          </Suspense>
+          {unknownOrganization ? (
+            <p role="alert" className="rounded-[10px] bg-warn-tint px-4 py-2 text-[13px] text-warn">
+              {UNKNOWN_ORGANIZATION}
+            </p>
+          ) : (
+            <Suspense key={query.toString()} fallback={<ExportBodySkeleton />}>
+              <ExportCount
+                access={actor.access}
+                scope={scope}
+                period={period}
+                query={query.toString()}
+              />
+            </Suspense>
+          )}
         </CardContent>
       </Card>
 

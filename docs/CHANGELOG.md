@@ -2,6 +2,17 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Exporting an organization that does not exist says so
+
+A super admin's `/export/download?org=` with a well-formed ID that names no organization used to
+reach the audit write, fail on its foreign key, and answer 503 "The export could not be
+recorded", which read as an outage. It is now refused with 404 and "No organization has the ID
+in this link. Choose one from the list, or all organizations." before anything is read or
+recorded, and `/export?org=` shows the same sentence in place of the count and the download
+links. A foreign-key refusal (23503) from any console write now reads as `not_found` rather than
+a failure. Known organizations, all organizations, a malformed `org` and org admins export as
+before, each audited.
+
 ## [fix] The super admin's audit trail fits the console at its narrowest width
 
 At 1024px a super admin's `/audit` table was wider than the page: the action badge never wrapped,
