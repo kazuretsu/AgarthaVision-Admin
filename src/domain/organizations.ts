@@ -60,18 +60,42 @@ export const ORGANIZATION_NAME_MIN = 2;
 export const ORGANIZATION_NAME_MAX = 120;
 
 /**
- * A name as it will be stored: trimmed, inner runs of whitespace collapsed — the
- * same normalisation `console_create_organization` applies, so what the form
- * checks is what the database keeps.
+ * Unicode's default-ignorable code points (zero-width spaces and joiners, the byte-order
+ * mark, bidirectional marks and isolates, soft hyphen, variation selectors, Hangul
+ * fillers, tag characters) and control characters, except the tab, line breaks and NEL,
+ * which become spaces. The same list as `console_clean_name` (admin/0016).
+ */
+const INVISIBLE =
+  /[\u0000-\u0008\u000E-\u001F\u007F-\u0084\u0086-\u009F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\u{1BCA0}-\u{1BCA3}\u{1D173}-\u{1D17A}\u{E0000}-\u{E0FFF}]/gu;
+
+/** Line breaks, tabs and every Unicode space, in runs. */
+const SPACES = /[ \t\n\v\f\r\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+/g;
+
+/**
+ * A name as the database stores it (14zcqntjw7v): Unicode NFKC, invisible and control
+ * characters removed, spaces collapsed, ends trimmed. "Cebu Lab" with a zero-width space,
+ * a no-break space or a full-width "Ｃ" is "Cebu Lab". Mirrors `console_clean_name`
+ * (admin/0016) step for step; `supabase/tests/admin_0016_organization_name_cleanup.test.ts`
+ * checks the two agree.
+ */
+export function cleanName(input: string): string {
+  return input.normalize("NFKC").replace(INVISIBLE, "").replace(SPACES, " ").trim();
+}
+
+/**
+ * A name as it will be stored ({@link cleanName}) — the same cleaning
+ * `console_create_organization` applies, so what the form checks is what the database
+ * keeps. Its length counts characters, as the database does, not UTF-16 units.
  */
 export function normaliseOrganizationName(
   input: string,
 ): { ok: true; name: string } | { ok: false; error: string } {
-  const name = input.trim().replace(/\s+/g, " ");
-  if (name.length < ORGANIZATION_NAME_MIN) {
+  const name = cleanName(input);
+  const length = [...name].length;
+  if (length < ORGANIZATION_NAME_MIN) {
     return { ok: false, error: `A name needs at least ${ORGANIZATION_NAME_MIN} characters.` };
   }
-  if (name.length > ORGANIZATION_NAME_MAX) {
+  if (length > ORGANIZATION_NAME_MAX) {
     return { ok: false, error: `A name can have at most ${ORGANIZATION_NAME_MAX} characters.` };
   }
   return { ok: true, name };

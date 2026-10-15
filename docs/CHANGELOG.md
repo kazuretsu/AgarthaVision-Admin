@@ -2,6 +2,24 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Two laboratory names that differ only by an invisible character are refused as duplicates
+
+A name with a zero-width space, a byte-order mark, a no-break space, full-width letters or
+another invisible or look-alike character used to pass the unique name check and look the
+same as an existing laboratory. A name is now cleaned before it is checked and stored: Unicode
+NFKC, invisible and control characters removed, spaces collapsed and trimmed. The console does
+it (`cleanName`), and so does the database (`console_clean_name`, `admin/0016`), whose create
+and rename functions store the cleaned name and whose new constraint `organizations_name_clean`
+refuses any other. A look-alike gets "Another organization already has that name." Until
+`admin/0016` is applied, the console already sends cleaned names; the database's own
+check comes with the migration.
+
+The character lists in `admin/0016` and its test are written as escapes, never as the raw
+characters, so the file pastes cleanly into the SQL editor and shows no hidden text on GitHub.
+`src/lib/hidden-characters.test.ts` now fails on any zero-width, bidirectional, line-separator
+or other hidden character in a tracked text file (vendored files aside); the export's UTF-8
+byte-order mark is written as an escape for the same reason.
+
 ## [fix] When the database can't be reached, the console says so instead of "no access"
 
 A failed access read used to count as "no access", so during an outage every admin saw "This
