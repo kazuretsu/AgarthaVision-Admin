@@ -2,6 +2,17 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [test] The db tests cover app 0017: signed-out visitors reach no app table or function
+
+App `0017_advisor_hardening.sql` (14zcqntnqxe) takes every right on the app's tables from
+`anon`, closes the app's functions to signed-out callers, and makes `is_admin(uuid)` answer a
+signed-in client only about themselves. `app_0017_advisor_hardening.test.sql` checks each grant,
+a signed-out read and RPC call, `is_admin()` from a client and from a security-definer caller,
+the console's gate, and the phone's write flow as a medtech. `admin_0004` now accepts a refused
+signed-out read of `reports` as well as an empty one, so it passes before and after 0017. The
+console's own code is unchanged: its fallback gate already asks `is_admin()` about the signed-in
+user only.
+
 ## [fix] Two laboratory names that differ only by an invisible character are refused as duplicates
 
 A name with a zero-width space, a byte-order mark, a no-break space, full-width letters or
