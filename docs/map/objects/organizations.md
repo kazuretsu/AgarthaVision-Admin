@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-01
-commit: 219d9cc
+verified: 2026-10-15
+commit: 7ab22de
 ---
 
 # Organizations
@@ -33,7 +33,7 @@ altered or dropped. `bun run test:db` proves the app still registers patients af
 
 | Object                                                                  | Line                   | What it holds                                                                                |
 | ----------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
-| `organizations`                                                         | `:36`                  | name (unique ignoring case and spacing), `active` / `deactivated`                            |
+| `organizations`                                                         | `:36`                  | name (cleaned, unique ignoring case; below), `active` / `deactivated`                        |
 | `organization_members`                                                  | `:52`                  | keyed by `user_id` — **one organization per user** (D10); `role` is `org_admin` or `medtech` |
 | `patient_organizations`                                                 | `:67`                  | keyed by `patient_id` — the owning laboratory; filled for new patients by `admin/0002`       |
 | `admin_audit_log`                                                       | `:79`                  | actor, action, target, organization, details; **append-only**                                |
@@ -42,7 +42,8 @@ altered or dropped. `bun run test:db` proves the app still registers patients af
 | `console_write_audit(…)`                                                | `:176`                 | internal; no client may call it                                                              |
 | `console_create_organization` / `_rename_` / `_set_organization_status` | `:262`, `:286`, `:319` | super-admin writes, each auditing itself                                                     |
 
-Line numbers are in `supabase/migrations/admin/0001_organizations.sql`.
+Line numbers are in `supabase/migrations/admin/0001_organizations.sql`. `admin/0016` replaces
+the create and rename functions, with the same signatures, to clean the name first.
 
 **Reads** are RLS policies (`:209` on): a super admin reads everything; an org admin reads
 their own organization, its members, its patient links and its audit entries; every user
@@ -51,7 +52,7 @@ reads their own membership and their own organization's name.
 **Writes** have no table policy at all. Every write is a security-definer function that
 checks the caller, changes the row and appends the audit entry in one transaction — so a
 write without its audit entry cannot happen, and no client can forge one. The console
-checks the same rule first in `canManageOrganizations` (`src/domain/organizations.ts:46`);
+checks the same rule first in `canManageOrganizations` (`src/domain/organizations.ts:55`);
 the function is the second line, never the only one.
 
 **The audit log is append-only for everyone.** No role has an UPDATE or DELETE policy, and
@@ -81,6 +82,34 @@ since a role is a permission level and not a job — through audited functions;
 medtech and every existing patient, so nothing is orphaned when scoping arrives. Super
 admins are members of nothing; they see everything.
 
+## A name is cleaned (14zcqntjw7v, admin/0016)
+
+The unique index `organizations_name_unique` is on `lower(btrim(name))`: two laboratories
+cannot share a name, so a patient is not filed in the wrong one of two look-alikes.
+Invisible characters used to get round it ("Cebu Lab" and "Cebu Lab" with a zero-width
+space). Now a name is cleaned before it is checked and stored:
+
+1. Unicode NFKC: full-width letters and compatibility spaces become plain ones.
+2. Default-ignorable code points (zero-width characters, byte-order mark, bidirectional
+   marks, soft hyphen, variation selectors, Hangul fillers, tag characters) and control
+   characters are removed.
+3. Tabs, line breaks and every other Unicode space become one space; the ends are trimmed.
+
+`console_clean_name` (`supabase/migrations/admin/0016_organization_name_cleanup.sql:38`) does
+it in the database, and `console_create_organization` (`:86`) and
+`console_rename_organization` (`:110`) store its result, so a look-alike hits the unchanged
+unique index as `23505`: "Another organization already has that name." The check constraint
+`organizations_name_clean` (`:84`) refuses any stored name that is not its own cleaned form,
+whatever writes it. The console cleans the same way first (`cleanName`,
+`src/domain/organizations.ts:81`, used by `normaliseOrganizationName`), so the form checks
+what the database keeps; `supabase/tests/admin_0016_organization_name_cleanup.test.ts`
+checks the two agree character for character. Lengths (2 to 120) count characters of the
+cleaned name.
+
+The migration changes no row. If a stored name is not clean, it stops before applying
+anything and names the laboratory to rename; on 2026-10-15 the live database's one name
+was clean.
+
 ## In the console
 
 - Org-admin detection: `findOrgAdminMembership` (`src/adapters/supabase/auth.ts:74`) reads
@@ -100,7 +129,11 @@ admins are members of nothing; they see everything.
 - Everything that scopes by organization: the gate, `admin/0002` scoping, the audit page.
 - The app, if a change ever touches an app-owned object — which must instead go to the app
   repo as its own migration.
-- `supabase/tests/admin_0001_organizations.test.sql`.
+- `supabase/tests/admin_0001_organizations.test.sql`,
+  `supabase/tests/admin_0016_organization_name_cleanup.test.ts`.
+- The name cleaning: `console_clean_name` and `cleanName` must change together, or a name
+  the form accepts is stored differently. Training snapshot names use `cleanName` too
+  (through `normaliseOrganizationName`).
 
 **Does not hit**
 

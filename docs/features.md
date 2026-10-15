@@ -83,7 +83,9 @@ console can't reach its data, with a retry, and fail with a 500; downloads answe
 
 Super admins create, rename, deactivate and reactivate laboratory organizations at
 `/organizations`, and see each one's org admins, medtechs and patient count. Names are
-unique ignoring case and spacing. Deactivation asks for confirmation, deletes nothing, and
+unique ignoring case and spacing, and are cleaned before they are checked and stored
+(`admin/0016`): invisible characters are removed and look-alike letters and spaces made
+plain, so "Cebu Lab" with a zero-width space is "Cebu Lab", and refused if that exists. Deactivation asks for confirmation, deletes nothing, and
 locks the laboratory's org admins out until reactivated. Every change is written to the
 audit log in the same transaction by the database, which checks the caller again. Existing
 users and patients start in one "Starting laboratory". Org admins and medtechs get a 404.
