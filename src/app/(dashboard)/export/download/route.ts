@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
  * A UTF-8 byte-order mark. Excel on Windows reads a CSV without one as the
  * system code page and mangles the en dash in "0–2 LPF" and any non-ASCII name.
  */
-const UTF8_BOM = "﻿";
+const UTF8_BOM = "\uFEFF";
 
 export async function GET(request: NextRequest) {
   const access = await requireRouteAccess(ANY_CONSOLE_USER);

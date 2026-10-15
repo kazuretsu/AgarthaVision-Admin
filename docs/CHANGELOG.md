@@ -14,6 +14,12 @@ refuses any other. A look-alike gets "Another organization already has that name
 `admin/0016` is applied, the console already sends cleaned names; the database's own
 check comes with the migration.
 
+The character lists in `admin/0016` and its test are written as escapes, never as the raw
+characters, so the file pastes cleanly into the SQL editor and shows no hidden text on GitHub.
+`src/lib/hidden-characters.test.ts` now fails on any zero-width, bidirectional, line-separator
+or other hidden character in a tracked text file (vendored files aside); the export's UTF-8
+byte-order mark is written as an escape for the same reason.
+
 ## [fix] When the database can't be reached, the console says so instead of "no access"
 
 A failed access read used to count as "no access", so during an outage every admin saw "This

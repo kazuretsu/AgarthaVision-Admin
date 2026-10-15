@@ -8,7 +8,7 @@
 -- organizations_name_unique (admin/0001) is on lower(btrim(name)), so two laboratories cannot
 -- share a name: a patient filed in the wrong one of two look-alikes is the risk it guards.
 -- Invisible characters got round it. "Cebu Lab" and "Cebu<zero-width space> Lab" were both
--- accepted and look the same, and so did a no-break space for a space, or a full-width "Ｃ".
+-- accepted and look the same, and so did a no-break space for a space, or a full-width "C" (U+FF23).
 --
 -- ── console_clean_name(text) ─────────────────────────────────────────────────
 -- What a name is stored as, in this order:
@@ -48,9 +48,9 @@ as $$
                 pg_catalog.normalize(coalesce(p_name, ''), 'NFKC'),
                 -- Default-ignorable code points and control characters (but not the
                 -- tab, line breaks and NEL, which step 3 turns into spaces).
-                '[\u0001-\u0008\u000E-\u001F\u007F-\u0084\u0086-\u009F­͏؜ᅟᅠ឴឵᠋-᠏​-‏‪-‮⁠-⁯ㅤ︀-️﻿ﾠ￰-￸\U0001BCA0-\U0001BCA3\U0001D173-\U0001D17A\U000E0000-\U000E0FFF]',
+                '[\u0001-\u0008\u000E-\u001F\u007F-\u0084\u0086-\u009F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\U0001BCA0-\U0001BCA3\U0001D173-\U0001D17A\U000E0000-\U000E0FFF]',
                 '', 'g'),
-            '[ \t\n\u000B\f\r\u0085   -     　]+',
+            '[ \t\n\u000B\f\r\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+',
             ' ', 'g'),
         ' ');
 $$;

@@ -6,37 +6,37 @@ import { cleanName } from "../../src/domain";
 
 /** Names that must all read as "Cebu Lab". */
 const LOOK_ALIKES: [string, string][] = [
-  ["a zero-width space", "Cebu​ Lab"],
-  ["a zero-width joiner", "Cebu‍ Lab"],
-  ["a byte-order mark", "﻿Cebu Lab"],
-  ["a soft hyphen", "Ce­bu Lab"],
-  ["a right-to-left override", "‮Cebu Lab"],
-  ["a word joiner", "Cebu⁠ Lab"],
-  ["a variation selector", "Cebu️ Lab"],
+  ["a zero-width space", "Cebu\u200B Lab"],
+  ["a zero-width joiner", "Cebu\u200D Lab"],
+  ["a byte-order mark", "\uFEFFCebu Lab"],
+  ["a soft hyphen", "Ce\u00ADbu Lab"],
+  ["a right-to-left override", "\u202ECebu Lab"],
+  ["a word joiner", "Cebu\u2060 Lab"],
+  ["a variation selector", "Cebu\uFE0F Lab"],
   ["a tag character", "Cebu Lab\u{E0041}"],
-  ["a Hangul filler", "Cebu ㅤLab"],
+  ["a Hangul filler", "Cebu \u3164Lab"],
   ["a control character", "Cebu\u0007 Lab"],
-  ["a no-break space", "Cebu Lab"],
-  ["an ideographic space", "Cebu　Lab"],
-  ["a line separator", "Cebu Lab"],
+  ["a no-break space", "Cebu\u00A0Lab"],
+  ["an ideographic space", "Cebu\u3000Lab"],
+  ["a line separator", "Cebu\u2028Lab"],
   ["a tab and a line break", " Cebu\t\n Lab "],
-  ["full-width letters", "Ｃｅｂｕ Lab"],
+  ["full-width letters", "\uFF23\uFF45\uFF42\uFF55 Lab"],
   ["another case", "CEBU LAB"],
 ];
 
 /** Further inputs the console and the database must clean alike. */
 const OTHERS = [
-  "Café Lab",
-  "Laboratoryo ng Dumaguete — 第一",
+  "Cafe\u0301 Lab",
+  "Laboratoryo ng Dumaguete — \u7B2C\u4E00",
   "  Iloilo   Mission   Hospital  ",
-  "​​﻿",
-  "Lab    B",
+  "\u200B\u200B\uFEFF",
+  "Lab\u00A0\u00A0\u2003 B",
   "\u{1D400}\u{1D401} Lab",
   "Lab\u0085B",
-  "ﬁeld Lab",
-  "Lab ①",
-  "Ｌａｂ　Ｃ",
-  "Lab᠎ C",
+  "\uFB01eld Lab",
+  "Lab \u2460",
+  "\uFF2C\uFF41\uFF42\u3000\uFF23",
+  "Lab\u180E C",
   "Lab\u{1D173} C",
   "Lab\u{E0100} C",
   "",
@@ -101,7 +101,7 @@ export default async function test(sql: ReservedSQL) {
 
   // ── What is stored is clean ──
   const bacolod = await one<{ id: string }>(
-    sql`select public.console_create_organization(${"﻿Bacolod​  Lab‍"}) as id`,
+    sql`select public.console_create_organization(${"\uFEFFBacolod\u200B\u00A0 Lab\u200D"}) as id`,
   );
   const stored = await one<{ name: string }>(
     sql`select name from public.organizations where id = ${bacolod.id}::uuid`,
@@ -111,7 +111,7 @@ export default async function test(sql: ReservedSQL) {
     `a created name is stored clean (${JSON.stringify(stored.name)})`,
   );
 
-  await sql`select public.console_rename_organization(${iloilo.id}::uuid, ${"Iloilo⁠ City　Lab"})`;
+  await sql`select public.console_rename_organization(${iloilo.id}::uuid, ${"Iloilo\u2060 City\u3000Lab"})`;
   const renamed = await one<{ name: string }>(
     sql`select name from public.organizations where id = ${iloilo.id}::uuid`,
   );
@@ -125,13 +125,13 @@ export default async function test(sql: ReservedSQL) {
   // Renaming to the same name with only invisible characters added changes nothing.
   const before = await one<{ n: number }>(sql`
     select count(*)::int as n from public.admin_audit_log where organization_id = ${cebu.id}::uuid`);
-  await sql`select public.console_rename_organization(${cebu.id}::uuid, ${"Cebu​ Lab"})`;
+  await sql`select public.console_rename_organization(${cebu.id}::uuid, ${"Cebu\u200B Lab"})`;
   const after = await one<{ n: number }>(sql`
     select count(*)::int as n from public.admin_audit_log where organization_id = ${cebu.id}::uuid`);
   check(after.n === before.n, "a rename that cleans to the same name is no rename");
 
   await refused(
-    `select public.console_create_organization(${literal("​​﻿")})`,
+    `select public.console_create_organization(${literal("\u200B\u200B\uFEFF")})`,
     "23514",
     "a name of invisible characters only is too short",
   );
@@ -139,12 +139,12 @@ export default async function test(sql: ReservedSQL) {
   // ── No other write path can store an invisible character ──
   await sql`select tests.act_as_owner()`;
   await refused(
-    `update public.organizations set name = ${literal("Cebu​ Lab 2")} where id = '${cebu.id}'`,
+    `update public.organizations set name = ${literal("Cebu\u200B Lab 2")} where id = '${cebu.id}'`,
     "23514",
     "organizations_name_clean refuses a direct write of an uncleaned name",
   );
   await refused(
-    `insert into public.organizations (name) values (${literal("Davao Lab")})`,
+    `insert into public.organizations (name) values (${literal("Davao\u00A0Lab")})`,
     "23514",
     "organizations_name_clean refuses a direct insert of an uncleaned name",
   );
