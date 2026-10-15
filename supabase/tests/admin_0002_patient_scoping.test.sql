@@ -77,13 +77,25 @@ begin
 end
 $$;
 
--- ── A creator with no organization: the patient still syncs, unassigned ──────
+-- ── A creator with no organization ───────────────────────────────────────────
+-- From app 0018 on, writing field data needs an active membership, so the insert is refused.
+-- Before it, the patient still synced, unassigned.
 do $$
 declare
     f fx2;
     v_patient uuid;
 begin
     select * into f from fx2;
+    if to_regprocedure('app_private.require_active_lab_member()') is not null then
+        perform tests.act_as(f.loner);
+        perform tests.expect_error(
+            format('insert into public.patients (lastname, firstname, sex, birthdate, psgc_barangay_code, created_by) '
+                   'values (%L, %L, %L, %L, %L, %L)',
+                   'Loner', 'Patient', 'F', '2014-01-01', '0722217003', f.loner),
+            '42501', 'a creator with no organization cannot save a patient (app 0018)');
+        return;
+    end if;
+
     perform tests.act_as(f.loner);
     insert into public.patients (lastname, firstname, sex, birthdate, psgc_barangay_code, created_by)
     values ('Loner', 'Patient', 'F', '2014-01-01', '0722217003', f.loner);

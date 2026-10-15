@@ -2,6 +2,19 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [test] The db tests cover app 0018: field data is written only by an active laboratory member
+
+App `0018_writes_need_active_lab_member.sql` (14zcqntnqpa) refuses every write to field data and
+to the `samples` and `reports` buckets from an account that is not an active member of an active
+laboratory, with `not_active_lab_member` in the message, and moves the app's `TO public`
+policies to `TO authenticated`. `app_0018_writes_need_active_lab_member.test.sql` replays 16
+phone writes as an active medtech and an active org admin (allowed), as a deactivated medtech, a
+member of a deactivated laboratory and an account with no membership (each refused with the
+reason), and signed out (refused); a reactivated medtech writes again at once. `admin_0002`'s
+"creator with no organization" case now expects the refusal once 0018 is present, and the old
+"saved, unassigned" behaviour before it. The org admin's Deactivate now stops a medtech's writes
+at once, not only at their next sign-in.
+
 ## [test] The db tests cover app 0017: signed-out visitors reach no app table or function
 
 App `0017_advisor_hardening.sql` (14zcqntnqxe) takes every right on the app's tables from
