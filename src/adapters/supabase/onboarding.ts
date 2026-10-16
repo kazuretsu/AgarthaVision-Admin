@@ -7,6 +7,7 @@ import {
   type OnboardingPort,
 } from "@/ports/onboarding";
 import { createRequestClient, createServiceClient } from "./client";
+import { humanCheckOptions, isHumanCheckRefusal } from "./errors";
 
 /**
  * Supabase implementation of {@link OnboardingPort}.
@@ -23,6 +24,10 @@ import { createRequestClient, createServiceClient } from "./client";
  * 3. The visitor signs in as that account with the password they chose, and
  *    `console_accept_invitation` — run as them — adds the membership the
  *    invitation names and records it in the audit trail.
+ *
+ * The human check (14zcqntnqpc) is verified at step 3, the only call that takes it: the
+ * service role's `createUser` is not subject to it. A refused check after step 2 leaves an
+ * account that joined nothing; the next attempt finds it ("already registered") and signs in.
  */
 
 interface LinkRow {
@@ -83,7 +88,7 @@ export class SupabaseOnboardingAdapter implements OnboardingPort {
     };
   }
 
-  async acceptInvitation({ token, password, fullName }: AcceptInvitationRequest) {
+  async acceptInvitation({ token, password, fullName, humanCheckToken }: AcceptInvitationRequest) {
     const link = await this.findInvitation(token);
     if (!link) throw new AcceptInvitationError("invalid_link");
     if (link.state !== "pending") throw new AcceptInvitationError(link.state);
@@ -102,7 +107,14 @@ export class SupabaseOnboardingAdapter implements OnboardingPort {
       );
     }
 
-    const signedIn = await this.client.auth.signInWithPassword({ email: link.email, password });
+    const signedIn = await this.client.auth.signInWithPassword({
+      email: link.email,
+      password,
+      options: humanCheckOptions(humanCheckToken),
+    });
+    if (isHumanCheckRefusal(signedIn.error)) {
+      throw new AcceptInvitationError("human_check_failed", signedIn.error);
+    }
     if (signedIn.error || !signedIn.data.user) {
       throw new AcceptInvitationError(existing ? "wrong_password" : "failed", signedIn.error);
     }

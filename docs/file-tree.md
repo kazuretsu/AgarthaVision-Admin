@@ -98,7 +98,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
     │                          patient, dashboard, research-export, training-data and
-    │                          prevalence-map rules,
+    │                          prevalence-map rules, the human-check token,
     │                          the training zip's files, id checks.
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
@@ -108,10 +108,11 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
     │   │                      paging.ts), reports and prevalence-rows (row mapping), admin-write, storage, auth,
     │   │                      onboarding (accepting an invitation), account-access (bans),
-    │   │                      errors (a migration not applied yet).
+    │   │                      errors (a migration not applied yet; the human-check token and refusal).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
+    │   ├── auth/              HumanCheck: Cloudflare Turnstile on the sign-in and invitation forms.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter,
     │   │                      and the notice for an `org` that names no organization.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.

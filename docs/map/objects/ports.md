@@ -38,8 +38,11 @@ express the intent.
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:115`), `StorageAccessError`
 (`src/ports/storage.ts:30`), and `NotAuthenticatedError` / `NotAuthorizedError` /
-`AuthenticationFailedError` (`src/ports/auth.ts:55-77`), `AdminWriteError` (with a `hint`
+`AuthenticationFailedError` / `HumanCheckFailedError` (`src/ports/auth.ts`), `AdminWriteError` (with a `hint`
 naming which conflict it was), `AcceptInvitationError` and `MailSendError`.
+
+`Credentials` and `AcceptInvitationRequest` carry an optional `humanCheckToken`: the form's
+single-use Turnstile token, which the provider verifies (`docs/map/processes/human-check.md`).
 
 `requireConsoleActor()` returns the user together with their `ConsoleAccess`
 (`src/domain/access.ts:22`) — super admin, or org admin with their organization — and

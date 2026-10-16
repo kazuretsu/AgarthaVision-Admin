@@ -94,7 +94,7 @@ revoked, and monitoring saw nothing wrong.
   action's own access check throws it on the same way.
 - **A route handler** answers 503 as JSON, no detail (`requireRouteAccess`).
 - **Sign-in** with the right password signs straight back out and says the console cannot
-  reach its data (`src/app/(auth)/login/actions.ts:55`), never the medtech notice.
+  reach its data (`src/app/(auth)/login/actions.ts:63`), never the medtech notice.
 - **No detail reaches the browser.** In production it gets the digest only; the boundaries
   recognise the outage by its prefix and show the part after it as the reference, which is
   also in the server log with the cause. If a future Next.js stopped keeping an error's own
@@ -116,7 +116,7 @@ request. The trade-off, chosen deliberately: a page seen in the last 30 seconds 
 without a server check, so a revoked admin is refused on their next page **not** in that
 cache — at most 30 seconds later. It never fetches anything new for them. Every server action
 that changes data calls `revalidatePath`, which empties the cache, so one's own changes show
-at once; signing out empties it too (`src/app/(auth)/login/actions.ts:76`), so Back after
+at once; signing out empties it too (`src/app/(auth)/login/actions.ts:84`), so Back after
 sign-out shows nothing of the console.
 
 ## Why the gate is in the layout
@@ -135,10 +135,14 @@ console, so a caller cannot forget to branch on a role and leak a cross-user que
 ## Sign-in
 
 A medtech with correct credentials is signed straight back out
-(`src/app/(auth)/login/actions.ts:50-52`) and shown where to go instead. That message
+(`src/app/(auth)/login/actions.ts:57-59`) and shown where to go instead. That message
 appears only after a correct password, so it tells a stranger nothing; bad credentials and
 an unknown email return the **same** generic refusal, so the form does not confirm which
 addresses are real accounts.
+
+The form carries a Cloudflare Turnstile token (`docs/map/processes/human-check.md`). A refused
+check gets its own message, "The security check expired or did not pass", never the
+credentials refusal: the provider checks the token before the password.
 
 ## Outside the gate
 

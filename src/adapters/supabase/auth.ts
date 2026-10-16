@@ -3,6 +3,7 @@ import { resolveConsoleAccess, type OrgAdminMembership } from "@/domain/access";
 import {
   AuthUnavailableError,
   AuthenticationFailedError,
+  HumanCheckFailedError,
   NotAuthenticatedError,
   NotAuthorizedError,
   type AuthPort,
@@ -12,7 +13,7 @@ import {
 } from "@/ports/auth";
 import { timed } from "@/lib/timing";
 import { createRequestClient } from "./client";
-import { isFunctionNotFound } from "./errors";
+import { humanCheckOptions, isFunctionNotFound, isHumanCheckRefusal } from "./errors";
 
 /**
  * Supabase Auth implementation of {@link AuthPort}.
@@ -203,8 +204,17 @@ export class SupabaseAuthAdapter implements AuthPort {
     return this.toActor(user, facts);
   }
 
-  async signInWithPassword({ email, password }: Credentials): Promise<ConsoleActor> {
-    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+  async signInWithPassword({
+    email,
+    password,
+    humanCheckToken,
+  }: Credentials): Promise<ConsoleActor> {
+    const { data, error } = await this.client.auth.signInWithPassword({
+      email,
+      password,
+      options: humanCheckOptions(humanCheckToken),
+    });
+    if (isHumanCheckRefusal(error)) throw new HumanCheckFailedError(error);
     if (error || !data.user) throw new AuthenticationFailedError(error);
     // The client now carries the new session, so console_actor() answers about this user.
     const { user, facts } = await this.userFor({

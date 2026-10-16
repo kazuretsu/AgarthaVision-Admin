@@ -13,6 +13,8 @@ export interface AcceptInvitationRequest {
   token: string;
   password: string;
   fullName: string | null;
+  /** The form's human-check token, as for sign-in (`Credentials.humanCheckToken`). */
+  humanCheckToken?: string;
 }
 
 export interface OnboardingPort {
@@ -36,6 +38,7 @@ export type AcceptInvitationFailure =
   | "wrong_password"
   | "weak_password"
   | "already_member"
+  | "human_check_failed"
   | "failed";
 
 export class AcceptInvitationError extends Error {

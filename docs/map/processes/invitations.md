@@ -54,15 +54,16 @@ the organization, the role and the email, which cannot be edited. Expired, revok
 unknown links each say so; a deactivated organization reads `unavailable`. The page sends no
 referrer.
 
-`SupabaseOnboardingAdapter.acceptInvitation` (`src/adapters/supabase/onboarding.ts:86`):
+`SupabaseOnboardingAdapter.acceptInvitation` (`src/adapters/supabase/onboarding.ts:91`):
 
 1. Re-reads the link; only `pending` goes on. The action has already checked the password
    and the name's length, so nothing it can refuse is left for after the account exists.
 2. `auth.admin.createUser` with the **invitation's** email, the chosen password and
-   `email_confirm: true` (`:91`) — one of the console's two uses of the service-role key
+   `email_confirm: true` (`:96`) — one of the console's two uses of the service-role key
    (`createServiceClient`, `src/adapters/supabase/client.ts:52`). No `user_metadata` is
    written. If the email already has an account (a retry), that account is used.
-3. Signs in as that account (`:105`) and calls `console_accept_invitation` as the invitee
+3. Signs in as that account, passing the form's human-check token
+   (`docs/map/processes/human-check.md`; a refused one is `human_check_failed`), and calls `console_accept_invitation` as the invitee
    (`:313`), which checks the token, the expiry, the organization, that the signed-in email
    is the invited one and that they belong to no organization yet; then inserts the
    membership from the invitation row, fills `profiles.full_name`, marks the invitation
@@ -83,8 +84,8 @@ which tells them to sign in to the Android app.
 - `profiles` rows the app's `handle_new_user()` makes: accepting only sets `full_name`.
 - The membership rule (D10, one organization per user): the invitation is refused for a
   member, never moved.
-- Deployment settings: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `MAIL_FROM` and
-  `CONSOLE_URL` (`.env.example`).
+- Deployment settings: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `MAIL_FROM`,
+  `CONSOLE_URL` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (`.env.example`).
 - `supabase/tests/admin_0005_invitations.test.sql`.
 
 **Does not hit**

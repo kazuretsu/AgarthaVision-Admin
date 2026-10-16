@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { acceptInvitation } from "@/app/(auth)/invite/[token]/actions";
 import { EMPTY_ACCEPT_STATE } from "@/app/(auth)/invite/[token]/state";
 import { PASSWORD_MIN } from "@/domain/invitations";
+import { HumanCheck, useHumanCheck } from "@/components/auth/HumanCheck";
 import type { MembershipRole } from "@/domain/organizations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,9 +27,16 @@ export function AcceptInvitationForm({
   role: MembershipRole;
 }) {
   const [state, action, pending] = useActionState(acceptInvitation, EMPTY_ACCEPT_STATE);
+  const check = useHumanCheck();
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form
+      action={(formData) => {
+        check.consume();
+        action(formData);
+      }}
+      className="flex flex-col gap-4"
+    >
       <input type="hidden" name="token" value={token} />
 
       <div className="flex flex-col gap-1.5">
@@ -73,13 +81,20 @@ export function AcceptInvitationForm({
         />
       </div>
 
+      <HumanCheck check={check} action="accept-invitation" />
+
       {state.error ? (
         <p role="alert" className="text-[13px] text-danger">
           {state.error}
         </p>
       ) : null}
 
-      <Button type="submit" size="lg" disabled={pending} className="mt-2">
+      <Button
+        type="submit"
+        size="lg"
+        disabled={pending || (check.required && !check.token)}
+        className="mt-2"
+      >
         {pending
           ? "Setting up…"
           : role === "org_admin"
