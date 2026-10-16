@@ -2,6 +2,17 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Sign-in and accepting an invitation pass a Cloudflare Turnstile check
+
+`/login` and `/invite/[token]` show Turnstile (`src/components/auth/HumanCheck.tsx`) when the
+build has `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Submit waits for the check; each attempt uses its
+token once, and the widget runs again for the next. The token reaches Supabase as
+`captchaToken` through `Credentials.humanCheckToken` and `AcceptInvitationRequest.humanCheckToken`
+(14zcqntnqpc). A refused check (`captcha_failed`) says "The security check expired or did not
+pass", never that the password was wrong. Until Supabase's CAPTCHA protection is switched on,
+the token is sent and ignored; it is switched on last, after the mobile app's release that sends
+one is installed (`docs/map/processes/human-check.md`). Without a site key nothing changes.
+
 ## [test] The db tests cover app 0018: field data is written only by an active laboratory member
 
 App `0018_writes_need_active_lab_member.sql` (14zcqntnqpa) refuses every write to field data and

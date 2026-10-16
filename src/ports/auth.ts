@@ -28,6 +28,12 @@ export interface ConsoleActor {
 export interface Credentials {
   email: string;
   password: string;
+  /**
+   * The single-use token from the sign-in form's human check (Cloudflare Turnstile,
+   * 14zcqntnqpc), or none when the check is not configured. The provider verifies it; a
+   * refused one is {@link HumanCheckFailedError}, never a wrong password.
+   */
+  humanCheckToken?: string;
 }
 
 export interface AuthPort {
@@ -81,6 +87,18 @@ export class AuthUnavailableError extends Error {
   constructor(cause?: unknown) {
     super("Console access could not be read.");
     this.name = "AuthUnavailableError";
+    this.cause = cause;
+  }
+}
+
+/**
+ * The human check's token was missing, expired, already used or refused (14zcqntnqpc). Says
+ * nothing about the password: the provider checks the token before it looks at credentials.
+ */
+export class HumanCheckFailedError extends Error {
+  constructor(cause?: unknown) {
+    super("The security check did not pass.");
+    this.name = "HumanCheckFailedError";
     this.cause = cause;
   }
 }

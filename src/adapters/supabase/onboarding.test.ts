@@ -25,6 +25,7 @@ interface Script {
 function clients(script: Script) {
   const calls: string[] = [];
   const created: unknown[] = [];
+  const signIns: unknown[] = [];
   const visitor = {
     rpc(name: string, args: Record<string, unknown>) {
       calls.push(`rpc:${name}`);
@@ -40,6 +41,7 @@ function clients(script: Script) {
     auth: {
       signInWithPassword(credentials: { email: string }) {
         calls.push(`signIn:${credentials.email}`);
+        signIns.push(credentials);
         return Promise.resolve(
           script.signInError
             ? { data: { user: null }, error: script.signInError }
@@ -67,7 +69,7 @@ function clients(script: Script) {
     visitor as unknown as SupabaseClient,
     () => service as unknown as SupabaseClient,
   );
-  return { adapter, calls, created };
+  return { adapter, calls, created, signIns };
 }
 
 const REQUEST = { token: TOKEN, password: "long-enough", fullName: "Ana Cruz" };
@@ -143,6 +145,29 @@ describe("SupabaseOnboardingAdapter", () => {
     await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
       reason: "weak_password",
     });
+  });
+
+  it("passes the form's human-check token to the sign-in, not to createUser", async () => {
+    const { adapter, created, signIns } = clients({ link: PENDING });
+    await adapter.acceptInvitation({ ...REQUEST, humanCheckToken: "0.token" });
+    expect(created).toEqual([
+      { email: "ana@example.test", password: "long-enough", email_confirm: true },
+    ]);
+    expect(signIns).toEqual([
+      { email: "ana@example.test", password: "long-enough", options: { captchaToken: "0.token" } },
+    ]);
+  });
+
+  it("a refused human check is human_check_failed, and joins nothing", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: { code: "email_exists" },
+      signInError: { code: "captcha_failed", message: "captcha protection" },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "human_check_failed",
+    });
+    expect(calls).not.toContain("rpc:console_accept_invitation");
   });
 
   it("signs out again when the database refuses the acceptance", async () => {

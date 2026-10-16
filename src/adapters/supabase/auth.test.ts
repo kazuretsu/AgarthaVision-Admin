@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
-import { AuthUnavailableError, NotAuthenticatedError, NotAuthorizedError } from "@/ports/auth";
+import {
+  AuthUnavailableError,
+  AuthenticationFailedError,
+  HumanCheckFailedError,
+  NotAuthenticatedError,
+  NotAuthorizedError,
+} from "@/ports/auth";
 import { SupabaseAuthAdapter } from "./auth";
 
 vi.spyOn(console, "info").mockImplementation(() => {});
@@ -253,5 +259,55 @@ describe("SupabaseAuthAdapter — before admin/0010 is applied", () => {
     await expect(new SupabaseAuthAdapter(client).requireConsoleActor()).rejects.toBeInstanceOf(
       NotAuthorizedError,
     );
+  });
+});
+
+describe("SupabaseAuthAdapter — the human check (14zcqntnqpc)", () => {
+  function signInClient(error: unknown) {
+    const { client } = gateClient({ actor: row({ is_super_admin: true }) });
+    const sent: unknown[] = [];
+    Object.assign(client.auth, {
+      signInWithPassword: (credentials: unknown) => {
+        sent.push(credentials);
+        return Promise.resolve(
+          error
+            ? { data: { user: null }, error }
+            : { data: { user: { id: USER_ID, email: "a@example.test" } }, error: null },
+        );
+      },
+    });
+    return { adapter: new SupabaseAuthAdapter(client), sent };
+  }
+
+  it("hands the form's token to Supabase as captchaToken", async () => {
+    const { adapter, sent } = signInClient(null);
+    await adapter.signInWithPassword({
+      email: "a@example.test",
+      password: "x",
+      humanCheckToken: "0.token",
+    });
+    expect(sent).toEqual([
+      { email: "a@example.test", password: "x", options: { captchaToken: "0.token" } },
+    ]);
+  });
+
+  it("sends no captcha option when the form had no token", async () => {
+    const { adapter, sent } = signInClient(null);
+    await adapter.signInWithPassword({ email: "a@example.test", password: "x" });
+    expect(sent).toEqual([{ email: "a@example.test", password: "x", options: undefined }]);
+  });
+
+  it("a refused check is HumanCheckFailedError, not a wrong password", async () => {
+    const { adapter } = signInClient({ code: "captcha_failed", message: "captcha protection" });
+    await expect(
+      adapter.signInWithPassword({ email: "a@example.test", password: "x" }),
+    ).rejects.toBeInstanceOf(HumanCheckFailedError);
+  });
+
+  it("wrong credentials stay AuthenticationFailedError", async () => {
+    const { adapter } = signInClient({ code: "invalid_credentials" });
+    await expect(
+      adapter.signInWithPassword({ email: "a@example.test", password: "x" }),
+    ).rejects.toBeInstanceOf(AuthenticationFailedError);
   });
 });

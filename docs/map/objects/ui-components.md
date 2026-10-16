@@ -79,6 +79,10 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
 - **The map is not a shadcn component.** `src/components/map/PrevalenceMap.tsx` wraps
   MapLibre, which draws to a canvas; there is no registry item for it. Everything around it,
   the breadcrumb, the table, the cards, the filters and the spinner, is shadcn.
+- **The human check is not a shadcn component.** `src/components/auth/HumanCheck.tsx` mounts
+  Cloudflare Turnstile, which draws its own iframe; there is no registry item for it. It
+  renders a `div` for the widget and a hidden field for the token; the forms around it are
+  shadcn (`docs/map/processes/human-check.md`).
 - **Loading states** compose `Skeleton` and `Card` into page shapes in
   `src/components/loading/PageSkeletons.tsx` — header, filters, table, stat cards, chart
   cards — so every page's skeleton looks like that page and none is hand-drawn.

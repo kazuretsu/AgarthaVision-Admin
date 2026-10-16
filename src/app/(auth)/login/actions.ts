@@ -6,15 +6,21 @@ import { getAuth } from "@/adapters/registry";
 import {
   AuthUnavailableError,
   AuthenticationFailedError,
+  HumanCheckFailedError,
   NotAuthorizedError,
   type AuthPort,
 } from "@/ports/auth";
+import { HUMAN_CHECK_FIELD, readHumanCheckToken } from "@/domain/human-check";
 import { MissingEnvironmentError } from "@/lib/env";
 import { CONSOLE_UNAVAILABLE } from "@/lib/unavailable";
 import type { LoginState } from "./state";
 
 /** Shown for bad credentials, and for any provider failure. */
 const INVALID_CREDENTIALS = "These credentials cannot access the admin console.";
+
+/** Shown when the human check is refused: about the check, never the password. */
+const HUMAN_CHECK_FAILED =
+  "The security check expired or did not pass. Complete it again, then sign in.";
 
 /**
  * Shown only after the password was correct, so it tells the account holder
@@ -34,6 +40,7 @@ const MEDTECH_NOTICE =
 export async function signIn(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const humanCheckToken = readHumanCheckToken(formData.get(HUMAN_CHECK_FIELD));
 
   if (email.length === 0 || password.length === 0) {
     return { error: "Enter both an email address and a password." };
@@ -42,7 +49,7 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
   let auth: AuthPort | null = null;
   try {
     auth = await getAuth();
-    await auth.signInWithPassword({ email, password });
+    await auth.signInWithPassword({ email, password, humanCheckToken });
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return { error: `Server is not configured: ${cause.variable} is not set.` };
@@ -51,6 +58,7 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
       await auth?.signOut();
       return { error: MEDTECH_NOTICE };
     }
+    if (cause instanceof HumanCheckFailedError) return { error: HUMAN_CHECK_FAILED };
     if (cause instanceof AuthenticationFailedError) return { error: INVALID_CREDENTIALS };
     if (cause instanceof AuthUnavailableError) {
       // The password was right but access could not be read (14zcqntk6h2): no session is

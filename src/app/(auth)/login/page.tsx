@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { HumanCheck, useHumanCheck } from "@/components/auth/HumanCheck";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { EMPTY_LOGIN_STATE } from "./state";
  */
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(signIn, EMPTY_LOGIN_STATE);
+  const check = useHumanCheck();
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-8 px-6 py-16">
@@ -32,7 +34,13 @@ export default function LoginPage() {
 
       <Card>
         <CardContent>
-          <form action={formAction} className="flex flex-col gap-4">
+          <form
+            action={(formData) => {
+              check.consume();
+              formAction(formData);
+            }}
+            className="flex flex-col gap-4"
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" name="email" autoComplete="username" required />
@@ -49,13 +57,20 @@ export default function LoginPage() {
               />
             </div>
 
+            <HumanCheck check={check} action="sign-in" />
+
             {state.error ? (
               <p role="alert" className="text-[13px] text-maroon">
                 {state.error}
               </p>
             ) : null}
 
-            <Button type="submit" size="lg" disabled={pending} className="mt-2">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={pending || (check.required && !check.token)}
+              className="mt-2"
+            >
               {pending ? "Signing in…" : "Sign in"}
             </Button>
           </form>

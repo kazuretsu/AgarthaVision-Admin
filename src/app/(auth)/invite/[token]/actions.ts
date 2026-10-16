@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getAuth, getOnboarding } from "@/adapters/registry";
+import { HUMAN_CHECK_FIELD, readHumanCheckToken } from "@/domain/human-check";
 import { INVITEE_NAME_MAX, checkNewPassword } from "@/domain/invitations";
 import { AcceptInvitationError, type AcceptInvitationFailure } from "@/ports/onboarding";
 import { MissingEnvironmentError } from "@/lib/env";
@@ -17,6 +18,8 @@ const MESSAGES: Record<AcceptInvitationFailure, string> = {
     "This email already has an account. Enter that account's password to accept the invitation.",
   weak_password: "Choose a stronger password: longer, and not a common one.",
   already_member: "This account already belongs to a laboratory, so it cannot join another.",
+  human_check_failed:
+    "The security check expired or did not pass. Complete it again, then set your password.",
   failed: "The invitation could not be accepted. Try again in a moment.",
 };
 
@@ -37,6 +40,7 @@ export async function acceptInvitation(
   const confirmation = String(formData.get("confirmPassword") ?? "");
   const typedName = String(formData.get("fullName") ?? "");
   const fullName = typedName.trim().replace(/\s+/g, " ") || null;
+  const humanCheckToken = readHumanCheckToken(formData.get(HUMAN_CHECK_FIELD));
 
   // Checked before the account is made: a refusal after it would leave a login that
   // joined nothing.
@@ -51,7 +55,9 @@ export async function acceptInvitation(
 
   let role;
   try {
-    ({ role } = await (await getOnboarding()).acceptInvitation({ token, password, fullName }));
+    ({ role } = await (
+      await getOnboarding()
+    ).acceptInvitation({ token, password, fullName, humanCheckToken }));
   } catch (cause) {
     if (cause instanceof AcceptInvitationError) {
       return { error: MESSAGES[cause.reason], fullName: typedName };
