@@ -2,6 +2,30 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [test] The db tests cover app 0018: field data is written only by an active laboratory member
+
+App `0018_writes_need_active_lab_member.sql` (14zcqntnqpa) refuses every write to field data and
+to the `samples` and `reports` buckets from an account that is not an active member of an active
+laboratory, with `not_active_lab_member` in the message, and moves the app's `TO public`
+policies to `TO authenticated`. `app_0018_writes_need_active_lab_member.test.sql` replays 16
+phone writes as an active medtech and an active org admin (allowed), as a deactivated medtech, a
+member of a deactivated laboratory and an account with no membership (each refused with the
+reason), and signed out (refused); a reactivated medtech writes again at once. `admin_0002`'s
+"creator with no organization" case now expects the refusal once 0018 is present, and the old
+"saved, unassigned" behaviour before it. The org admin's Deactivate now stops a medtech's writes
+at once, not only at their next sign-in.
+
+## [test] The db tests cover app 0017: signed-out visitors reach no app table or function
+
+App `0017_advisor_hardening.sql` (14zcqntnqxe) takes every right on the app's tables from
+`anon`, closes the app's functions to signed-out callers, and makes `is_admin(uuid)` answer a
+signed-in client only about themselves. `app_0017_advisor_hardening.test.sql` checks each grant,
+a signed-out read and RPC call, `is_admin()` from a client and from a security-definer caller,
+the console's gate, and the phone's write flow as a medtech. `admin_0004` now accepts a refused
+signed-out read of `reports` as well as an empty one, so it passes before and after 0017. The
+console's own code is unchanged: its fallback gate already asks `is_admin()` about the signed-in
+user only.
+
 ## [fix] Two laboratory names that differ only by an invisible character are refused as duplicates
 
 A name with a zero-width space, a byte-order mark, a no-break space, full-width letters or
