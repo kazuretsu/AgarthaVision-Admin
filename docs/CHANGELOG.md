@@ -2,6 +2,19 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Offboard a medtech and hand their patients to a colleague
+
+An org admin (or super admin) can offboard an active medtech in one guided action
+(`OffboardMedtechDialog`, 14zcqntjnt5) instead of two separate chores. The console lists the
+patients where that medtech is the only active member assigned, and allows choosing who takes
+over — one colleague for all, or selected per patient. On confirm, `offboardMedtech`
+(`src/app/(dashboard)/people/actions.ts`) blocks the medtech's sign-in and runs
+`console_offboard_member` (`supabase/migrations/admin/0017_offboard_medtech.sql`), which reassigns
+the patients to active colleagues in the same laboratory, verifies that no patient is left with no
+active member, sets the medtech's membership to deactivated, and writes `member.offboard` alongside
+`assignment.add` and `assignment.remove` entries to the audit trail. Reminds the admin to collect
+the mobile device or ensure it is signed out. Clinical authorship is untouched, and nothing is deleted.
+
 ## [feat] Sign-in and accepting an invitation pass a Cloudflare Turnstile check
 
 `/login` and `/invite/[token]` show Turnstile (`src/components/auth/HumanCheck.tsx`) when the

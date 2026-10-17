@@ -105,6 +105,22 @@ expires (up to an hour, Supabase's default): RLS on clinical tables keys on the 
 the membership. **Nothing is deleted** — not the account, the profile, the patient links or
 any record (C8). Reactivating lifts the ban.
 
+## Guided offboarding for medtechs (`admin/0017`, 14zcqntjnt5)
+
+When a medtech leaves the laboratory, their open work must not be stranded. Instead of
+having to hand over patients one by one on each patient's page before deactivating the
+member, the org admin chooses **Offboard** from the medtech's row or page:
+
+1. Lists the patients where this medtech is the only active member assigned (`soleCover`).
+2. Asks who takes over: one active colleague for all patients, or selected per patient.
+3. Reminds the org admin to collect the mobile device or have the medtech signed out.
+4. On confirm, runs `offboardMedtech` (`src/app/(dashboard)/people/actions.ts`), which blocks
+   the login at the auth provider, calls `console_offboard_member` (`admin/0017`) to
+   reassign the patients and mark the membership deactivated in one transaction, and logs
+   `member.offboard` together with `assignment.add` and `assignment.remove` entries in the
+   audit trail.
+5. Authorship on sessions, samples and reports remains unchanged under the leaver's name.
+
 ## If you change this
 
 **Hits**

@@ -4,6 +4,7 @@ import { useActionState, useRef } from "react";
 import { setMemberStatus } from "@/app/(dashboard)/people/actions";
 import { EMPTY_MEMBER_FORM } from "@/app/(dashboard)/people/state";
 import type { MembershipRole, OrganizationStatus } from "@/domain/organizations";
+import type { MemberPatient } from "@/domain/assignments";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -13,10 +14,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  OffboardMedtechDialog,
+  type ColleagueSummary,
+} from "@/components/people/OffboardMedtechDialog";
 
 /**
- * Deactivate behind a confirmation, reactivate directly. Deactivating blocks
- * sign-in — to the app, and for an org admin the console too — and deletes nothing.
+ * Deactivate behind a confirmation, reactivate directly. For active medtechs,
+ * offers the guided Offboard action to hand over their patients in one flow (14zcqntjnt5).
  */
 export function MemberStatusForm({
   organizationId,
@@ -24,16 +29,32 @@ export function MemberStatusForm({
   name,
   role,
   status,
+  soleCoverPatients,
+  colleagues,
 }: {
   organizationId: string;
   userId: string;
   name: string;
   role: MembershipRole;
   status: OrganizationStatus;
+  soleCoverPatients?: MemberPatient[];
+  colleagues?: ColleagueSummary[];
 }) {
   const [state, action, pending] = useActionState(setMemberStatus, EMPTY_MEMBER_FORM);
   const form = useRef<HTMLFormElement>(null);
   const next: OrganizationStatus = status === "active" ? "deactivated" : "active";
+
+  if (status === "active" && role === "medtech") {
+    return (
+      <OffboardMedtechDialog
+        organizationId={organizationId}
+        userId={userId}
+        name={name}
+        initialSoleCoverPatients={soleCoverPatients}
+        initialColleagues={colleagues}
+      />
+    );
+  }
 
   return (
     <form ref={form} action={action} className="flex flex-col items-end gap-1">
