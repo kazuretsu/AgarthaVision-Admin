@@ -40,6 +40,7 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "invitation.accept": "Accepted an invitation",
   "member.deactivate": "Deactivated a member",
   "member.reactivate": "Reactivated a member",
+  "member.offboard": "Offboarded a medtech",
   "assignment.add": "Assigned a patient",
   "assignment.remove": "Removed a patient assignment",
   "training.snapshot.create": "Created a training snapshot",
@@ -112,6 +113,13 @@ export function describeAuditEntry(entry: AuditEntry): string {
       const who = `${text(d.name) ?? "a member"}${d.role === "org_admin" ? " (organization admin)" : ""}`;
       const verb = entry.action === "member.deactivate" ? "Deactivated" : "Reactivated";
       return `${verb} ${who} in ${entry.organizationName ?? "an organization"}`;
+    }
+    case "member.offboard": {
+      const who = text(d.name) ?? "a medtech";
+      const count = typeof d.reassigned_patients === "number" ? d.reassigned_patients : 0;
+      const countText =
+        count > 0 ? ` and handed over ${count} patient${count === 1 ? "" : "s"}` : "";
+      return `Offboarded ${who} in ${entry.organizationName ?? "an organization"}${countText}`;
     }
     case "assignment.add":
     case "assignment.remove": {

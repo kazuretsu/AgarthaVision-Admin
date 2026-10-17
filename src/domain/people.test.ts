@@ -3,6 +3,7 @@ import type { ConsoleAccess } from "./access";
 import type { Invitation } from "./invitations";
 import {
   canChangeMemberStatus,
+  canOffboardMember,
   canViewPeople,
   filterPeopleByRole,
   isLastActiveOrgAdmin,
@@ -207,5 +208,51 @@ describe("who may change whom", () => {
     expect(canViewPeople(ADMIN_A, "lab-a")).toBe(true);
     expect(canViewPeople(ADMIN_A, "lab-b")).toBe(false);
     expect(canViewPeople(SUPER, "lab-b")).toBe(true);
+  });
+
+  it("canOffboardMember: active medtechs only, never org admins or deactivated members or themselves", () => {
+    // Org admin of lab-a
+    expect(
+      canOffboardMember(ADMIN_A, "me", "lab-a", { userId: "m", role: "medtech", status: "active" }),
+    ).toBe(true);
+    // Already deactivated
+    expect(
+      canOffboardMember(ADMIN_A, "me", "lab-a", {
+        userId: "m",
+        role: "medtech",
+        status: "deactivated",
+      }),
+    ).toBe(false);
+    // Org admin member cannot be offboarded with medtech flow
+    expect(
+      canOffboardMember(ADMIN_A, "me", "lab-a", {
+        userId: "o",
+        role: "org_admin",
+        status: "active",
+      }),
+    ).toBe(false);
+    // Themselves
+    expect(
+      canOffboardMember(ADMIN_A, "me", "lab-a", {
+        userId: "me",
+        role: "medtech",
+        status: "active",
+      }),
+    ).toBe(false);
+    // Other lab
+    expect(
+      canOffboardMember(ADMIN_A, "me", "lab-b", { userId: "m", role: "medtech", status: "active" }),
+    ).toBe(false);
+    // Super admin
+    expect(
+      canOffboardMember(SUPER, "me", "lab-b", { userId: "m", role: "medtech", status: "active" }),
+    ).toBe(true);
+    expect(
+      canOffboardMember(SUPER, "me", "lab-b", {
+        userId: "m",
+        role: "medtech",
+        status: "deactivated",
+      }),
+    ).toBe(false);
   });
 });

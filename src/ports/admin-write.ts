@@ -77,6 +77,16 @@ export interface AdminWritePort {
   replaceAssignment(patientId: string, fromUserId: string, toUserId: string): Promise<void>;
 
   /**
+   * Offboards a medtech (admin/0017): reassigns each specified patient to an active colleague,
+   * ensures no patient is left with no active member, marks the member's status
+   * as deactivated, and records the whole offboarding in the audit trail.
+   */
+  offboardMember(
+    userId: string,
+    reassignments: Array<{ patientId: string; toUserId: string }>,
+  ): Promise<void>;
+
+  /**
    * Freezes a training snapshot and returns its id. Super admins only. Refused
    * (`invalid`, hint `stale`) when a frame is no longer live: preview again.
    */

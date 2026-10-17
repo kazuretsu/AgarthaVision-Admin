@@ -88,6 +88,30 @@ describe("member entries", () => {
         entry({ action: "member.deactivate", details: { name: "Olga", role: "org_admin" } }),
       ),
     ).toBe("Deactivated Olga (organization admin) in Lab A");
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.offboard",
+          details: { name: "Tess Tech", reassigned_patients: 2 },
+        }),
+      ),
+    ).toBe("Offboarded Tess Tech in Lab A and handed over 2 patients");
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.offboard",
+          details: { name: "Tess Tech", reassigned_patients: 1 },
+        }),
+      ),
+    ).toBe("Offboarded Tess Tech in Lab A and handed over 1 patient");
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.offboard",
+          details: { name: "Tess Tech", reassigned_patients: 0 },
+        }),
+      ),
+    ).toBe("Offboarded Tess Tech in Lab A");
   });
 });
 

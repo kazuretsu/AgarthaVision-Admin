@@ -119,6 +119,19 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
     });
   }
 
+  async offboardMember(
+    userId: string,
+    reassignments: Array<{ patientId: string; toUserId: string }>,
+  ): Promise<void> {
+    await this.call("console_offboard_member", {
+      p_user: userId,
+      p_reassignments: reassignments.map((r) => ({
+        patient_id: r.patientId,
+        to_user_id: r.toUserId,
+      })),
+    });
+  }
+
   async createTrainingSnapshot({
     name,
     filter,

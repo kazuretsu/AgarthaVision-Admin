@@ -191,6 +191,23 @@ export function canChangeMemberStatus(
 }
 
 /**
+ * Whether this user may offboard this member (14zcqntjnt5):
+ * Active medtechs only; never themselves; their own org admin or a super admin.
+ */
+export function canOffboardMember(
+  access: ConsoleAccess,
+  actorId: string,
+  organizationId: string,
+  person: Pick<Person, "userId" | "role" | "status">,
+): boolean {
+  return (
+    person.status === "active" &&
+    person.role === "medtech" &&
+    canChangeMemberStatus(access, actorId, organizationId, person)
+  );
+}
+
+/**
  * Whether this member is their laboratory's only active org admin, whom nobody
  * deactivates: without one, nobody there can invite medtechs or assign patients.
  * Reactivating is never refused. The database function checks the same.
