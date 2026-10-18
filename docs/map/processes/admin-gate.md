@@ -1,13 +1,14 @@
 ---
-verified: 2026-10-14
-commit: aa17053
+verified: 2026-10-18
+commit: 8d5e003
 ---
 
 # Admin gate
 
 Input: an HTTP request → Movement: refresh session, verify identity locally, resolve console
-access in one database call → Output: a rendered console page, the "use the mobile app"
-notice, the outage page, or a redirect to `/login`.
+access in one database call, check the session passed the authenticator code → Output: a
+rendered console page, the "use the mobile app" notice, the outage page, or a redirect to
+`/login` or `/verify`.
 
 ## Who gets in
 
@@ -27,7 +28,7 @@ database policy calls, so the console and the database never disagree — and th
 membership and organization (`docs/map/objects/organizations.md`). `super_admins` itself is
 closed to every client. `profiles.role` is retired and the console never reads it. Only an
 active `org_admin` membership in an active organization counts (`orgAdminMembership`,
-`src/adapters/supabase/auth.ts:84`), so revoking a grant or deactivating a membership or an
+`src/adapters/supabase/auth.ts:104`), so revoking a grant or deactivating a membership or an
 organization locks the person out on their next uncached page.
 
 ## Steps
@@ -37,37 +38,47 @@ organization locks the person out on their next uncached page.
    expired, which triggers the refresh-and-set-cookie cycle a Server Component cannot do.
    It sends `Server-Timing: session;dur=…` (`:55`). **This is refresh only — it is not the
    authorisation point.**
-2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:100`) calls `getClaims()`,
+2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:120`) calls `getClaims()`,
    which checks the JWT's signature and expiry against the project's published signing key
    (ECC P-256, fetched once from `/auth/v1/.well-known/jwks.json` and cached ten minutes per
    server instance): **no auth-server round trip**. A legacy shared-secret project falls back
    to asking the server. Never `getSession()`, which only decodes a cookie the browser can
    set.
-3. **Resolve the facts, in one call.** `facts` (`:109`) calls `console_actor()`: name,
+3. **Resolve the facts, in one call.** `facts` (`:133`) calls `console_actor()`: name,
    super-admin grant and membership. No row is no access at all. An **error** is not an
-   answer: it throws `AuthUnavailableError` (`:117`, below). If the function is not
-   installed yet (`PGRST202`/`42883`, `:115`), `factsWithoutActor` (`:141`) runs the three
+   answer: it throws `AuthUnavailableError` (`:141`, below). If the function is not
+   installed yet (`PGRST202`/`42883`, `:139`), `factsWithoutActor` (`:165`) runs the three
    reads it replaced (profile name and `is_admin()` in parallel, then the membership), so a
    deployment ahead of its migration keeps working; a failed `is_admin()` or membership
-   read throws the same way (`:146`, `:156`), a failed profile read only loses the name.
-4. **Resolve access.** `toActor` (`:188`) applies `resolveConsoleAccess`. No access throws
+   read throws the same way (`:170`, `:180`), a failed profile read only loses the name.
+4. **Resolve access.** `toActor` (`:212`) applies `resolveConsoleAccess`. No access throws
    `NotAuthorizedError`.
-5. **Gate the segment.** The `(dashboard)` layout calls `getConsoleActor()`
-   (`src/app/(dashboard)/layout.tsx:29`): no session redirects to `/login` (`:31`); no access
-   renders `NoConsoleAccess` (`:32`, `:98`) — a message and a sign-out button, no data, no
-   navigation. An outage is thrown on, past the layout (see below).
-6. **Narrow a page.** A page for fewer than all console users calls `requirePageAccess`
-   (`src/lib/console-access.ts:46`), which 404s anyone else (`:57`). It handles the
-   layout's two refusals itself (`:53-54`): no session redirects to `/login`, and no
-   access is a 404, so a client-side navigation after a revocation never reaches the error
-   boundary. The sidebar's `visibleTo` (`src/components/shell/nav.ts`) only hides links;
-   this call is the protection.
-7. **Repeat it in route handlers.** A handler does not render inside the layout and
-   inherits nothing. `requireRouteAccess` (`src/lib/console-access.ts:65`) returns 401, 403
-   or 503 as JSON — 503 for a missing environment variable and for an outage (`:91`);
-   `export/download` calls it first (`src/app/(dashboard)/export/download/route.ts:36`).
+5. **Check the second step (14zcqntjnt0).** `requireConsoleActor` (`:223`) then requires the
+   verified token to say `aal2` — the session passed an authenticator code — or throws
+   `SecondFactorRequiredError` (`:229`). It reads the same token as step 2, so it costs no
+   call. Access comes first, so a medtech is told where to go and never asked for a code.
+   `SecondFactorRequiredError` is a kind of `NotAuthenticatedError`: any caller that does not
+   handle it treats the session as signed out and shows and writes nothing.
+   `docs/map/processes/second-factor.md` has the rest.
+6. **Gate the segment.** The `(dashboard)` layout calls `getConsoleActor()`
+   (`src/app/(dashboard)/layout.tsx:29`): no code yet redirects to `/verify` (`:32`); no
+   session to `/login` (`:33`); no access renders `NoConsoleAccess` (`:34`, `:94`) — a message
+   and a sign-out button, no data, no navigation. An outage is thrown on, past the layout (see
+   below).
+7. **Narrow a page.** A page for fewer than all console users calls `requirePageAccess`
+   (`src/lib/console-access.ts:48`), which 404s anyone else (`:60`). It handles the
+   layout's refusals itself (`:55-57`): no code yet redirects to `/verify`, no session to
+   `/login`, and no access is a 404, so a client-side navigation after a revocation never
+   reaches the error boundary. The sidebar's `visibleTo` (`src/components/shell/nav.ts`) only
+   hides links; this call is the protection.
+8. **Repeat it in route handlers.** A handler does not render inside the layout and
+   inherits nothing. `requireRouteAccess` (`src/lib/console-access.ts:68`) returns 401 (no
+   session, or no code yet, `:78`), 403 or 503 as JSON — 503 for a missing environment
+   variable and for an outage (`:99`); `export/download` calls it first
+   (`src/app/(dashboard)/export/download/route.ts:36`).
+9. **Server actions** call `getConsoleActor()` themselves and refuse as signed out.
 
-`getConsoleActor` is wrapped in React's `cache()` (`src/lib/console-access.ts:29`), so the
+`getConsoleActor` is wrapped in React's `cache()` (`src/lib/console-access.ts:30`), so the
 layout and the page share one lookup per request. A warm page therefore makes **one**
 database round trip for access (`auth.actor`) before its own reads; the timing log lines
 (`src/lib/timing.ts`) show it per request.
@@ -116,7 +127,7 @@ request. The trade-off, chosen deliberately: a page seen in the last 30 seconds 
 without a server check, so a revoked admin is refused on their next page **not** in that
 cache — at most 30 seconds later. It never fetches anything new for them. Every server action
 that changes data calls `revalidatePath`, which empties the cache, so one's own changes show
-at once; signing out empties it too (`src/app/(auth)/login/actions.ts:84`), so Back after
+at once; signing out empties it too (`src/app/(auth)/login/actions.ts:85`), so Back after
 sign-out shows nothing of the console.
 
 ## Why the gate is in the layout
@@ -140,13 +151,19 @@ appears only after a correct password, so it tells a stranger nothing; bad crede
 an unknown email return the **same** generic refusal, so the form does not confirm which
 addresses are real accounts.
 
+A correct password never opens the console on its own: the action sends every admin on to
+`/verify` (`src/app/(auth)/login/actions.ts:76`) for their authenticator code, or to set up an
+app the first time (`docs/map/processes/second-factor.md`).
+
 The form carries a Cloudflare Turnstile token (`docs/map/processes/human-check.md`). A refused
 check gets its own message, "The security check expired or did not pass", never the
 credentials refusal: the provider checks the token before the password.
 
 ## Outside the gate
 
-`/login` and `/invite/[token]` (with `/invite/joined`) render outside `(dashboard)/`. The
+`/login`, `/verify` and `/invite/[token]` (with `/invite/joined`) render outside
+`(dashboard)/`. `/verify` reads the second step through the auth port itself and renders
+nothing of the console. The
 invitation page is open to anyone holding a link; the token is the permission, and what it
 can do is described in `docs/map/processes/invitations.md`.
 
@@ -166,6 +183,8 @@ redirect.
 - `console_actor()` and `factsWithoutActor` must return the same facts;
   `supabase/tests/admin_0010_console_actor.test.sql`, `src/adapters/supabase/auth.test.ts`.
 - `src/app/(auth)/login/actions.ts`, which applies the same rule at sign-in.
+- `src/app/(auth)/verify/`, the one place a session short of the second step is answered
+  rather than refused (`docs/map/processes/second-factor.md`).
 - `src/app/error.tsx` and `src/app/(dashboard)/error.tsx`, which must keep telling an outage
   apart by its digest (`src/lib/unavailable.ts`).
 - `src/components/shell/nav.ts`, whose `visibleTo` must agree with each page's
@@ -184,4 +203,4 @@ redirect.
 
 `src/domain/access.ts`, `src/adapters/supabase/auth.ts`, `src/lib/console-access.ts`,
 `src/lib/unavailable.ts`, `src/app/(dashboard)/layout.tsx`, `src/app/error.tsx`,
-`src/proxy.ts`.
+`src/proxy.ts`, `src/domain/second-factor.ts`.

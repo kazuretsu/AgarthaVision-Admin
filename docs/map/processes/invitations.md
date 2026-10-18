@@ -69,7 +69,8 @@ referrer.
    membership from the invitation row, fills `profiles.full_name`, marks the invitation
    accepted and writes the audit entry. If it refuses, the adapter signs out again.
 
-An org admin lands on `/dashboard`. A medtech is signed out and sent to `/invite/joined`,
+An org admin goes on to `/verify` to set up their authenticator app before seeing anything
+(`docs/map/processes/second-factor.md`). A medtech is signed out and sent to `/invite/joined`,
 which tells them to sign in to the Android app.
 
 ## Audit

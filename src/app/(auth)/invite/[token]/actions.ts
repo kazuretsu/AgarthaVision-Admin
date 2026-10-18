@@ -71,7 +71,8 @@ export async function acceptInvitation(
     throw cause;
   }
 
-  if (role === "org_admin") redirect("/dashboard");
+  // An org admin sets up their authenticator app before seeing anything (14zcqntjnt0).
+  if (role === "org_admin") redirect("/verify");
 
   await (await getAuth()).signOut();
   redirect("/invite/joined");

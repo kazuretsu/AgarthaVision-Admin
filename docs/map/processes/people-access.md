@@ -81,7 +81,7 @@ Reactivating is never refused for either.
 
 ## Deactivate and reactivate
 
-`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:78`):
+`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:79`):
 
 1. Reads the laboratory's people and finds the member; checks `canChangeMemberStatus` (above).
    A forged member id from elsewhere is "no longer in this laboratory". For a deactivation it
@@ -104,6 +104,15 @@ the phone (SE2 14zcqntjph8). A session already open keeps working until its acce
 expires (up to an hour, Supabase's default): RLS on clinical tables keys on the author, not
 the membership. **Nothing is deleted** — not the account, the profile, the patient links or
 any record (C8). Reactivating lifts the ban.
+
+## Reset an authenticator app (14zcqntjnt0)
+
+A super admin viewing an org admin sees a "Two-step sign-in" card: whether an app is set up,
+read from the auth provider, and "Reset authenticator app" behind a confirmation, for a lost
+phone. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:182`) records
+`member.authenticator_reset` first (`admin/0017`), then removes the login's factors; the org
+admin sets up a new app at their next sign-in. Org admins, medtechs' pages and one's own get no
+card (`canResetSecondFactor`). The whole flow: `docs/map/processes/second-factor.md`.
 
 ## If you change this
 

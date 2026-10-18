@@ -79,6 +79,17 @@ is down or unreachable), nobody gets in and nobody is told they lack access: pag
 console can't reach its data, with a retry, and fail with a 500; downloads answer 503.
 `src/proxy.ts` refreshes tokens and is deliberately not the authorisation point.
 
+### Two-step sign-in (14zcqntjnt0)
+
+Super admins and org admins enter a six-digit code from an authenticator app after their
+password; the first time, `/verify` walks them through setting the app up (QR code or typed
+key). Until the session has passed the code, no page, data, download or write is reached: pages
+go to `/verify`, downloads answer 401. Medtechs are never asked. A super admin resets an org
+admin's app from their People page (lost phone), recorded in the audit trail before it happens
+(`admin/0017`). Supabase's authenticator-app MFA, free on every plan. An org admin who also uses
+the Android app is signed out of it each time they enter a code, until the app asks for the code
+too (`docs/map/processes/second-factor.md`).
+
 ### Organizations
 
 Super admins create, rename, deactivate and reactivate laboratory organizations at

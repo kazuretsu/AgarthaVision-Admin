@@ -71,6 +71,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── error.tsx          The boundary above the gate: an outage (the gate could not read
     │   │                      access) answers 500 with the outage message and no shell.
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
+    │   ├── (auth)/verify/     The authenticator code, or setting up the app (14zcqntjnt0).
     │   ├── (auth)/invite/     [token]/ accept page and action (outside the gate); joined/.
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
@@ -113,6 +114,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── auth/              HumanCheck: Cloudflare Turnstile on the sign-in and invitation forms.
+    │   │                      SecondFactor: setting up an authenticator app, entering its code.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter,
     │   │                      and the notice for an `org` that names no organization.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.

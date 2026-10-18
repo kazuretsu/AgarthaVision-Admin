@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAccountAccess, getAdminWrites, getDatabase } from "@/adapters/registry";
 import {
   canChangeMemberStatus,
+  canResetSecondFactor,
   isLastActiveOrgAdmin,
   isUuid,
   type OrganizationStatus,
@@ -169,5 +170,79 @@ export async function setMemberStatus(
     done: allowed
       ? `${name} can sign in again.`
       : `${name} is deactivated and can no longer sign in.`,
+  };
+}
+
+/**
+ * Resets an org admin's authenticator app, for a lost phone (14zcqntjnt0). Super admins only,
+ * never their own. Recorded first, then reset at the auth provider, as an export is recorded
+ * before the file leaves: a reset nobody recorded must not happen. The person sets up a new app
+ * at their next page in the console; nothing else about them changes.
+ */
+export async function resetAuthenticator(
+  _previous: MemberFormState,
+  formData: FormData,
+): Promise<MemberFormState> {
+  const actor = await requireActor();
+  if (!("user" in actor)) return actor;
+  if (actor.access.kind !== "super_admin") return NOT_PERMITTED;
+
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+  if (!isUuid(organizationId) || !isUuid(userId)) return NOT_FOUND;
+
+  let person;
+  try {
+    person = (await (await getDatabase()).listPeople(organizationId)).find(
+      (candidate) => candidate.userId === userId,
+    );
+  } catch (cause) {
+    if (cause instanceof DatabaseReadError) return NOT_PERMITTED;
+    if (cause instanceof MissingEnvironmentError) {
+      return { error: `Server is not configured: ${cause.variable} is not set.`, done: null };
+    }
+    throw cause;
+  }
+  if (!person) return NOT_FOUND;
+  if (!canResetSecondFactor(actor.access, actor.user.id, person) || !person.accountId) {
+    return NOT_PERMITTED;
+  }
+  const name = personName(person);
+
+  try {
+    await (await getAdminWrites()).recordAuthenticatorReset(userId);
+  } catch (cause) {
+    if (cause instanceof AdminWriteError) {
+      return {
+        error:
+          cause.reason === "forbidden"
+            ? NOT_PERMITTED.error
+            : cause.reason === "not_found"
+              ? NOT_FOUND.error
+              : "The reset could not be recorded, so nothing changed. Try again.",
+        done: null,
+      };
+    }
+    throw cause;
+  }
+
+  try {
+    await (await getAccountAccess()).resetAuthenticator(person.accountId);
+  } catch (cause) {
+    if (cause instanceof AccountAccessError || cause instanceof MissingEnvironmentError) {
+      console.error("Authenticator not reset", cause);
+      return {
+        error: `${name}'s authenticator app could not be reset. The attempt is in the audit trail; try again.`,
+        done: null,
+      };
+    }
+    throw cause;
+  }
+
+  revalidatePath(`/people/${userId}`);
+  revalidatePath("/audit");
+  return {
+    error: null,
+    done: `${name}'s authenticator app is reset. They set up a new one the next time they use the console.`,
   };
 }

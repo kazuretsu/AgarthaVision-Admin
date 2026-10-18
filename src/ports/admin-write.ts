@@ -66,6 +66,13 @@ export interface AdminWritePort {
    */
   setMemberStatus(userId: string, status: OrganizationStatus): Promise<void>;
 
+  /**
+   * Records a super admin's reset of an org admin's authenticator app, about to happen
+   * (14zcqntjnt0). Callers must not reset it if this throws: the reset itself is
+   * {@link AccountAccessPort}'s, at the auth provider, after this.
+   */
+  recordAuthenticatorReset(userId: string): Promise<void>;
+
   /** Assigns a patient to an active medtech of its laboratory. Org admins only. */
   assignPatient(patientId: string, userId: string): Promise<void>;
   /**

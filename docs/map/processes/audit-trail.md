@@ -32,32 +32,35 @@ nothing: an unrecorded download of patient data must not happen. The function
 their own organization whatever the console passes (`:30`), so an entry cannot be misfiled.
 A training snapshot's download is recorded the same way, before the zip starts
 (`training-data.md`). Training entries are filed under no organization, so only super admins
-read them, and an org admin's action filter does not offer them (`auditActionsFor`).
+read them, and an org admin's action filter does not offer them (`auditActionsFor`). An
+authenticator reset (14zcqntjnt0) follows the same order: recorded, then reset at the auth
+provider (`docs/map/processes/second-factor.md`).
 
-| Action                       | Written by                         |
-| ---------------------------- | ---------------------------------- |
-| `organization.create`        | `console_create_organization`      |
-| `organization.rename`        | `console_rename_organization`      |
-| `organization.deactivate`    | `console_set_organization_status`  |
-| `organization.reactivate`    | `console_set_organization_status`  |
-| `organization.backfill`      | `admin/0001`, once                 |
-| `export.research`            | `console_record_export`            |
-| `invitation.create`          | `console_invite`                   |
-| `invitation.resend`          | `console_resend_invitation`        |
-| `invitation.revoke`          | `console_revoke_invitation`        |
-| `invitation.accept`          | `console_accept_invitation`        |
-| `member.deactivate`          | `console_set_member_status`        |
-| `member.reactivate`          | `console_set_member_status`        |
-| `assignment.add`             | `console_assign_patient`           |
-| `assignment.remove`          | `console_unassign_patient`         |
-| `training.snapshot.create`   | `console_create_training_snapshot` |
-| `training.snapshot.download` | `console_record_training_download` |
+| Action                       | Written by                                                            |
+| ---------------------------- | --------------------------------------------------------------------- |
+| `organization.create`        | `console_create_organization`                                         |
+| `organization.rename`        | `console_rename_organization`                                         |
+| `organization.deactivate`    | `console_set_organization_status`                                     |
+| `organization.reactivate`    | `console_set_organization_status`                                     |
+| `organization.backfill`      | `admin/0001`, once                                                    |
+| `export.research`            | `console_record_export`                                               |
+| `invitation.create`          | `console_invite`                                                      |
+| `invitation.resend`          | `console_resend_invitation`                                           |
+| `invitation.revoke`          | `console_revoke_invitation`                                           |
+| `invitation.accept`          | `console_accept_invitation`                                           |
+| `member.deactivate`          | `console_set_member_status`                                           |
+| `member.reactivate`          | `console_set_member_status`                                           |
+| `member.authenticator_reset` | `console_record_authenticator_reset` (`admin/0017`), before the reset |
+| `assignment.add`             | `console_assign_patient`                                              |
+| `assignment.remove`          | `console_unassign_patient`                                            |
+| `training.snapshot.create`   | `console_create_training_snapshot`                                    |
+| `training.snapshot.download` | `console_record_training_download`                                    |
 
 ## Reading
 
 `listAuditEntries` (`src/adapters/supabase/database.ts:672`) reads newest first, scoped like
 every other read: an org admin sees their organization's entries (and RLS agrees); a super
-admin sees all or one organization. `describeAuditEntry` (`src/domain/audit.ts:43`) turns an
+admin sees all or one organization. `describeAuditEntry` (`src/domain/audit.ts:76`) turns an
 entry into one line; an action this build does not know is shown as recorded, never hidden.
 The page caps at 500 entries and says so.
 
@@ -69,7 +72,7 @@ the profile is later removed.
 **Hits**
 
 - Every new administrative write: it must call `console_write_audit` in its own function,
-  and its action belongs in `AUDIT_ACTIONS` (`src/domain/audit.ts:24`).
+  and its action belongs in `AUDIT_ACTIONS` (`src/domain/audit.ts:30`).
 - The export route's fail-closed order: record first, then serve.
 
 **Does not hit**

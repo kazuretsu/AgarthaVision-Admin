@@ -89,6 +89,17 @@ describe("member entries", () => {
       ),
     ).toBe("Deactivated Olga (organization admin) in Lab A");
   });
+
+  it("name whose authenticator app a super admin reset (14zcqntjnt0)", () => {
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.authenticator_reset",
+          details: { name: "Olga", role: "org_admin" },
+        }),
+      ),
+    ).toBe("Reset the authenticator app of Olga (organization admin) in Lab A");
+  });
 });
 
 describe("assignment entries", () => {

@@ -6,6 +6,7 @@ import {
   AuthUnavailableError,
   NotAuthenticatedError,
   NotAuthorizedError,
+  SecondFactorRequiredError,
   type ConsoleActor,
 } from "@/ports/auth";
 import { MissingEnvironmentError } from "@/lib/env";
@@ -40,8 +41,9 @@ export const getConsoleActor = cache(async (): Promise<ConsoleActor> => {
  * 404: a page an org admin may not open is not a page that exists for them.
  *
  * On a client-side navigation the layout does not re-render, so this is the only
- * check that runs: a session that ended goes to `/login`, and access revoked
- * since the last click is a 404 rather than the error boundary.
+ * check that runs: a session that ended goes to `/login`, one short of the second
+ * step to `/verify` (14zcqntjnt0), and access revoked since the last click is a 404
+ * rather than the error boundary.
  */
 export async function requirePageAccess(
   allowed: readonly ConsoleAccessKind[],
@@ -50,6 +52,7 @@ export async function requirePageAccess(
   try {
     actor = await getConsoleActor();
   } catch (cause) {
+    if (cause instanceof SecondFactorRequiredError) redirect("/verify");
     if (cause instanceof NotAuthenticatedError) redirect("/login");
     if (cause instanceof NotAuthorizedError) notFound();
     throw cause;
@@ -72,6 +75,11 @@ export async function requireRouteAccess(
     }
     return { actor };
   } catch (cause) {
+    if (cause instanceof SecondFactorRequiredError) {
+      return {
+        response: Response.json({ error: "Authenticator code required." }, { status: 401 }),
+      };
+    }
     if (cause instanceof NotAuthenticatedError) {
       return { response: Response.json({ error: "Not authenticated." }, { status: 401 }) };
     }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { accessLabel } from "@/domain/access";
-import { NotAuthenticatedError, NotAuthorizedError } from "@/ports/auth";
+import { NotAuthenticatedError, NotAuthorizedError, SecondFactorRequiredError } from "@/ports/auth";
 import { MissingEnvironmentError } from "@/lib/env";
 import { getConsoleActor } from "@/lib/console-access";
 import { navFor } from "@/components/shell/nav";
@@ -28,6 +28,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   try {
     actor = await getConsoleActor();
   } catch (cause) {
+    // No page and no data before the authenticator code (14zcqntjnt0).
+    if (cause instanceof SecondFactorRequiredError) redirect("/verify");
     if (cause instanceof NotAuthenticatedError) redirect("/login");
     if (cause instanceof NotAuthorizedError) return <NoConsoleAccess />;
     if (cause instanceof MissingEnvironmentError) {

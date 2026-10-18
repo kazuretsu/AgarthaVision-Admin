@@ -3,6 +3,7 @@ import {
   AuthUnavailableError,
   NotAuthenticatedError,
   NotAuthorizedError,
+  SecondFactorRequiredError,
   type AuthPort,
 } from "@/ports/auth";
 import { unavailableReference } from "./unavailable";
@@ -58,5 +59,17 @@ describe("getConsoleActor (14zcqntk6h2)", () => {
     const thrown = (await getConsoleActor().catch((e) => e)) as Error & { digest?: string };
     expect(thrown).toBeInstanceOf(NotAuthorizedError);
     expect(thrown.digest).toBeUndefined();
+  });
+});
+
+describe("requireRouteAccess — the authenticator code (14zcqntjnt0)", () => {
+  it("refuses a session that has not entered its code with 401, serving nothing", async () => {
+    requireConsoleActor.mockRejectedValue(
+      new SecondFactorRequiredError({ user, access: { kind: "super_admin" } }),
+    );
+    const result = await requireRouteAccess(ANY_CONSOLE_USER);
+    if (!("response" in result)) throw new Error("expected a response");
+    expect(result.response.status).toBe(401);
+    expect(await result.response.text()).toContain("Authenticator code required");
   });
 });
