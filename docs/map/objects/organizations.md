@@ -73,6 +73,11 @@ deactivates their laboratory's medtechs; only a super admin deactivates an org a
 laboratory's last active one, and nobody is deactivated while they are a patient's only active
 member.
 
+**Resetting an org admin's authenticator app** (`admin/0018`,
+`docs/map/processes/second-factor.md`): super admins only, never their own; recorded as
+`member.authenticator_reset` under the member's laboratory before the reset happens at the auth
+provider.
+
 **Assigning patients** (`admin/0007`, `admin/0008`, `docs/map/processes/patient-assignment.md`):
 an org admin links their laboratory's patients to its active members — org admins included,
 since a role is a permission level and not a job — through audited functions;
@@ -112,11 +117,11 @@ was clean.
 
 ## In the console
 
-- Org-admin detection: `findOrgAdminMembership` (`src/adapters/supabase/auth.ts:74`) reads
+- Org-admin detection: `orgAdminMembership` (`src/adapters/supabase/auth.ts:104`) reads
   the user's own membership; only an active `org_admin` in an active organization counts.
 - Writes go through `AdminWritePort` (`src/ports/admin-write.ts`), implemented by one RPC
-  call per method (`src/adapters/supabase/admin-write.ts:35`), with SQLSTATEs mapped to
-  reasons a page can explain (`:16`).
+  call per method (`src/adapters/supabase/admin-write.ts:46`), with SQLSTATEs mapped to
+  reasons a page can explain (`:24`).
 - Pages: `/organizations` and `/organizations/[id]`, super admins only
   (`requirePageAccess(["super_admin"])`). Server actions re-check the rule before writing
   (`src/app/(dashboard)/organizations/actions.ts:27`). A malformed organization id is a 404

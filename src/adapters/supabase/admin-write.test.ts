@@ -64,3 +64,25 @@ describe("SupabaseAdminWriteAdapter — a refusal's reason", () => {
     });
   });
 });
+
+describe("SupabaseAdminWriteAdapter — recording an authenticator reset (14zcqntjnt0)", () => {
+  it("calls the audited function for the member, as the signed-in super admin", async () => {
+    const calls: [string, unknown][] = [];
+    const client = {
+      rpc: async (fn: string, args: unknown) => {
+        calls.push([fn, args]);
+        return { data: null, error: null };
+      },
+    } as unknown as SupabaseClient;
+    await new SupabaseAdminWriteAdapter(client).recordAuthenticatorReset("user-1");
+    expect(calls).toEqual([["console_record_authenticator_reset", { p_user: "user-1" }]]);
+  });
+
+  it("a refusal is an AdminWriteError, so no reset follows", async () => {
+    const error = await failingWith("42501")
+      .recordAuthenticatorReset("user-1")
+      .catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(AdminWriteError);
+    expect((error as AdminWriteError).reason).toBe("forbidden");
+  });
+});

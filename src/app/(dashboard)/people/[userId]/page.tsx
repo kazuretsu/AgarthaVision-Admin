@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getDatabase } from "@/adapters/registry";
+import { getAccountAccess, getDatabase } from "@/adapters/registry";
 import {
   canChangeMemberStatus,
+  canResetSecondFactor,
   isLastActiveOrgAdmin,
   isUuid,
   memberPatientLabel,
   ROLE_LABEL,
   type MemberPatient,
 } from "@/domain";
+import { AccountAccessError } from "@/ports/account-access";
 import { DatabaseReadError } from "@/ports/db";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
@@ -18,6 +20,7 @@ import { pageCount, pageLinks, pageOffset, parsePage } from "@/lib/pagination";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Fact } from "@/components/records/Fact";
+import { AuthenticatorResetForm } from "@/components/people/AuthenticatorResetForm";
 import { MemberStatusForm } from "@/components/people/MemberStatusForm";
 import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
 import { LinkPending } from "@/components/loading/LinkPending";
@@ -187,6 +190,53 @@ async function AssignedPatients({
   );
 }
 
+/**
+ * An org admin's authenticator app, for a super admin (14zcqntjnt0): whether one is set up, and
+ * the reset for a lost phone. Read from the auth provider, so it streams in on its own.
+ */
+async function Authenticator({
+  accountId,
+  organizationId,
+  userId,
+  name,
+}: {
+  accountId: string;
+  organizationId: string;
+  userId: string;
+  name: string;
+}) {
+  let setUp: boolean | null;
+  try {
+    setUp = await (await getAccountAccess()).hasAuthenticator(accountId);
+  } catch (cause) {
+    if (!(cause instanceof AccountAccessError || cause instanceof MissingEnvironmentError)) {
+      throw cause;
+    }
+    console.error("Authenticator status not read", cause);
+    setUp = null;
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-[15px] font-semibold text-stone-ink">Two-step sign-in</h2>
+        <p className="text-[12px] text-stone-mid">
+          {setUp === null
+            ? "Whether an authenticator app is set up could not be read."
+            : setUp
+              ? `${name} signs in with a password and a code from an authenticator app.`
+              : `${name} has not set up an authenticator app yet; the console asks at their next sign-in.`}
+        </p>
+      </div>
+      <AuthenticatorResetForm
+        organizationId={organizationId}
+        userId={userId}
+        name={name}
+        resettable={setUp !== false}
+      />
+    </div>
+  );
+}
+
 export default async function PersonPage({
   params,
   searchParams,
@@ -220,6 +270,7 @@ export default async function PersonPage({
   const name = personName(person);
   const orgQuery = actor.access.kind === "super_admin" ? `?org=${organizationId}` : "";
   const changeable = canChangeMemberStatus(actor.access, actor.user.id, organizationId, person);
+  const resettable = canResetSecondFactor(actor.access, actor.user.id, person);
   const requestedPage = parsePage(param(query.page));
   const colleagues = people
     .filter((candidate) => candidate.userId !== userId && candidate.status === "active")
@@ -268,6 +319,23 @@ export default async function PersonPage({
           <Fact label="Assigned patients" value={String(person.assignedPatients)} mono />
         </CardContent>
       </Card>
+
+      {resettable && person.accountId ? (
+        <Card>
+          <CardContent>
+            <Suspense
+              fallback={<p className="text-[12px] text-stone-mid">Reading two-step sign-in…</p>}
+            >
+              <Authenticator
+                accountId={person.accountId}
+                organizationId={organizationId}
+                userId={person.userId}
+                name={name}
+              />
+            </Suspense>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">

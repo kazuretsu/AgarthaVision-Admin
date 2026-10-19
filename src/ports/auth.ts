@@ -1,4 +1,5 @@
 import type { ConsoleAccess } from "@/domain/access";
+import type { SecondFactorStep } from "@/domain/second-factor";
 
 /**
  * The authentication port.
@@ -36,6 +37,16 @@ export interface Credentials {
   humanCheckToken?: string;
 }
 
+/** A new authenticator app, waiting for its first code (14zcqntjnt0). */
+export interface SecondFactorSetUp {
+  /** Which set-up the first code confirms. Not a secret: it is useless without the session. */
+  setUpId: string;
+  /** The app's QR code, as an image URL the page can show. */
+  qrCode: string;
+  /** The same secret as text, for an app that cannot scan. */
+  secret: string;
+}
+
 export interface AuthPort {
   /**
    * The signed-in user, or `null` when there is no valid session. Throws
@@ -46,10 +57,37 @@ export interface AuthPort {
   /**
    * The signed-in user and their console access, read server-side on every call.
    * Throws {@link NotAuthenticatedError} with no session,
-   * {@link NotAuthorizedError} when the user has no console access (a medtech), and
-   * {@link AuthUnavailableError} when access could not be read at all.
+   * {@link NotAuthorizedError} when the user has no console access (a medtech),
+   * {@link SecondFactorRequiredError} — a kind of {@link NotAuthenticatedError} — when the
+   * session has not passed the second step (14zcqntjnt0), and {@link AuthUnavailableError}
+   * when access could not be read at all.
    */
   requireConsoleActor(): Promise<ConsoleActor>;
+
+  /**
+   * Where the signed-in console user stands on the second step. Throws as
+   * {@link requireConsoleActor} does, except that a session short of the second step is
+   * answered, not refused. A medtech is {@link NotAuthorizedError}: they are never asked.
+   */
+  secondFactorStatus(): Promise<{ actor: ConsoleActor; step: SecondFactorStep }>;
+
+  /**
+   * Starts setting up an authenticator app, for a console user who has none. Throws
+   * {@link SecondFactorError} when the provider refuses, including when one is already set up.
+   */
+  beginSecondFactorSetUp(): Promise<SecondFactorSetUp>;
+
+  /**
+   * Confirms a new app with its first code. On success the session has passed the second step.
+   * Throws {@link SecondFactorError} for a wrong code.
+   */
+  confirmSecondFactorSetUp(setUpId: string, code: string): Promise<void>;
+
+  /**
+   * Checks a code from the app already set up. On success the session has passed the second
+   * step. Throws {@link SecondFactorError} for a wrong code.
+   */
+  verifySecondFactor(code: string): Promise<void>;
 
   /**
    * Signs in and returns the actor. Throws {@link AuthenticationFailedError} on
@@ -67,6 +105,40 @@ export class NotAuthenticatedError extends Error {
   constructor() {
     super("No authenticated session.");
     this.name = "NotAuthenticatedError";
+  }
+}
+
+/**
+ * A console user whose session has not passed the second step (14zcqntjnt0): no authenticator
+ * code yet. A kind of {@link NotAuthenticatedError}, so any caller that does not handle it
+ * treats the session as signed out and shows and writes nothing. The gate sends them to
+ * `/verify`.
+ */
+export class SecondFactorRequiredError extends NotAuthenticatedError {
+  constructor(public readonly actor: ConsoleActor) {
+    super();
+    this.name = "SecondFactorRequiredError";
+  }
+}
+
+/** Why the second step was refused. */
+export type SecondFactorFailure =
+  /** The code was wrong or expired. */
+  | "rejected"
+  /** Too many attempts; the provider is making them wait. */
+  | "rate_limited"
+  /** Anything else, including a set-up that is no longer pending. */
+  | "failed";
+
+/** The provider refused or failed a second-step request. */
+export class SecondFactorError extends Error {
+  constructor(
+    public readonly reason: SecondFactorFailure,
+    cause?: unknown,
+  ) {
+    super(`The second step failed: ${reason}.`);
+    this.name = "SecondFactorError";
+    this.cause = cause;
   }
 }
 

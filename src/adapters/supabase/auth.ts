@@ -1,19 +1,28 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveConsoleAccess, type OrgAdminMembership } from "@/domain/access";
+import { secondFactorStep, type SecondFactorStep } from "@/domain/second-factor";
 import {
   AuthUnavailableError,
   AuthenticationFailedError,
   HumanCheckFailedError,
   NotAuthenticatedError,
   NotAuthorizedError,
+  SecondFactorError,
+  SecondFactorRequiredError,
   type AuthPort,
   type AuthenticatedUser,
   type ConsoleActor,
   type Credentials,
+  type SecondFactorSetUp,
 } from "@/ports/auth";
 import { timed } from "@/lib/timing";
 import { createRequestClient } from "./client";
-import { humanCheckOptions, isFunctionNotFound, isHumanCheckRefusal } from "./errors";
+import {
+  humanCheckOptions,
+  isFunctionNotFound,
+  isHumanCheckRefusal,
+  secondFactorFailure,
+} from "./errors";
 
 /**
  * Supabase Auth implementation of {@link AuthPort}.
@@ -40,6 +49,11 @@ import { humanCheckOptions, isFunctionNotFound, isHumanCheckRefusal } from "./er
  * as "no access". Only a read that succeeds and finds no grant and no membership is a
  * refusal. Either way, nobody gets in.
  *
+ * 3. **Second step (14zcqntjnt0):** a console user's session must carry `aal2`, Supabase's
+ *    mark that it passed an authenticator code — read from the same verified token, so it
+ *    costs nothing. Short of that, {@link SecondFactorRequiredError}. Supabase answers a
+ *    password sign-in with `aal1` and upgrades the session when a code is verified.
+ *
  * A medtech is a refusal, not a downgrade. There is no partial console:
  * `requireConsoleActor()` throws rather than returning a reduced view, so a
  * caller cannot forget to branch on a role and leak a cross-user query.
@@ -48,7 +62,12 @@ import { humanCheckOptions, isFunctionNotFound, isHumanCheckRefusal } from "./er
 interface Identity {
   id: string;
   email: string | null;
+  /** The verified token says this session passed an authenticator code (`aal2`). */
+  secondFactorPassed: boolean;
 }
+
+/** The authenticator app's name in the provider, and the issuer the app shows beside the code. */
+const AUTHENTICATOR_ISSUER = "AgarthaVision Admin";
 
 /** What the gate needs about the caller, however it was read. */
 interface ActorFacts {
@@ -104,7 +123,11 @@ export class SupabaseAuthAdapter implements AuthPort {
     const { data, error } = await timed("auth.claims", () => this.client.auth.getClaims());
     const claims = data?.claims;
     if (error || !claims || typeof claims.sub !== "string") return null;
-    return { id: claims.sub, email: typeof claims.email === "string" ? claims.email : null };
+    return {
+      id: claims.sub,
+      email: typeof claims.email === "string" ? claims.email : null,
+      secondFactorPassed: claims.aal === "aal2",
+    };
   }
 
   private async facts(userId: string): Promise<ActorFacts> {
@@ -172,7 +195,7 @@ export class SupabaseAuthAdapter implements AuthPort {
   }
 
   private async userFor(
-    identity: Identity,
+    identity: Pick<Identity, "id" | "email">,
   ): Promise<{ user: AuthenticatedUser; facts: ActorFacts }> {
     const facts = await this.facts(identity.id);
     return {
@@ -201,7 +224,75 @@ export class SupabaseAuthAdapter implements AuthPort {
     const identity = await this.identity();
     if (!identity) throw new NotAuthenticatedError();
     const { user, facts } = await this.userFor(identity);
-    return this.toActor(user, facts);
+    // Access first, so a medtech is told where to go and never asked for a code.
+    const actor = this.toActor(user, facts);
+    if (!identity.secondFactorPassed) throw new SecondFactorRequiredError(actor);
+    return actor;
+  }
+
+  async secondFactorStatus(): Promise<{ actor: ConsoleActor; step: SecondFactorStep }> {
+    const identity = await this.identity();
+    if (!identity) throw new NotAuthenticatedError();
+    const { user, facts } = await this.userFor(identity);
+    const actor = this.toActor(user, facts);
+    if (identity.secondFactorPassed) {
+      return { actor, step: secondFactorStep({ sessionPassed: true, hasAuthenticator: true }) };
+    }
+    const hasAuthenticator = (await this.confirmedAuthenticator()) !== null;
+    return { actor, step: secondFactorStep({ sessionPassed: false, hasAuthenticator }) };
+  }
+
+  /**
+   * The account's confirmed authenticator app, or null. Asks the auth server (`getUser`), not
+   * the cookie, which only says what the browser claims.
+   */
+  private async confirmedAuthenticator(): Promise<string | null> {
+    const { data, error } = await timed("auth.factors", () => this.client.auth.mfa.listFactors());
+    if (error) throw new AuthUnavailableError(error);
+    return data.totp[0]?.id ?? null;
+  }
+
+  async beginSecondFactorSetUp(): Promise<SecondFactorSetUp> {
+    // An abandoned set-up (the page closed before the first code) is never confirmed; clear it
+    // so set-ups do not pile up against the provider's limit. Unconfirmed ones only: removing a
+    // confirmed app needs a session that already passed the step.
+    const listed = await this.client.auth.mfa.listFactors();
+    if (listed.error) throw new SecondFactorError(secondFactorFailure(listed.error), listed.error);
+    for (const factor of listed.data.all) {
+      if (factor.factor_type === "totp" && factor.status === "unverified") {
+        await this.client.auth.mfa.unenroll({ factorId: factor.id });
+      }
+    }
+
+    const { data, error } = await this.client.auth.mfa.enroll({
+      factorType: "totp",
+      issuer: AUTHENTICATOR_ISSUER,
+      // Unique, because the provider refuses a second set-up under a name already in use.
+      friendlyName: `${AUTHENTICATOR_ISSUER} ${new Date().toISOString()}`,
+    });
+    // Refused outright when an app is already confirmed and this session has not passed it.
+    if (error) throw new SecondFactorError(secondFactorFailure(error), error);
+    return { setUpId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret };
+  }
+
+  async confirmSecondFactorSetUp(setUpId: string, code: string): Promise<void> {
+    await this.verify(setUpId, code);
+  }
+
+  async verifySecondFactor(code: string): Promise<void> {
+    const factorId = await this.confirmedAuthenticator();
+    if (!factorId) throw new SecondFactorError("failed");
+    await this.verify(factorId, code);
+  }
+
+  /**
+   * One challenge and its code. On success the provider upgrades this session to `aal2` and the
+   * request client writes the new session cookies. The provider also ends the account's other
+   * sessions that have not passed a code — a phone signed in to the app with only a password.
+   */
+  private async verify(factorId: string, code: string): Promise<void> {
+    const { error } = await this.client.auth.mfa.challengeAndVerify({ factorId, code });
+    if (error) throw new SecondFactorError(secondFactorFailure(error), error);
   }
 
   async signInWithPassword({

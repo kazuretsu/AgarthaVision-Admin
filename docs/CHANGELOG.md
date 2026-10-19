@@ -2,6 +2,22 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Super admins and org admins sign in with a code from an authenticator app
+
+A correct password now leads to `/verify`, not the console (14zcqntjnt0). The first time, the
+admin sets up an authenticator app from a QR code (or typed key) and confirms it with a code;
+every later sign-in asks for the six-digit code. Until the session has passed it — Supabase's
+`aal2` on the verified token — every page redirects to `/verify`, downloads answer 401 and
+server actions refuse as signed out (`SecondFactorRequiredError`, a kind of
+`NotAuthenticatedError`). Medtechs are never asked. A super admin resets an org admin's app from
+their People page for a lost phone; `admin/0018` adds `console_record_authenticator_reset`,
+which writes `member.authenticator_reset` before the reset happens. **Apply `admin/0018` by
+hand** (already applied on live; it was numbered 0017 before PR #36 took that number); until
+then a reset is refused and nothing changes. Supabase's TOTP MFA is free and on by
+default: no setting to change. Every code entered makes Supabase end the account's
+password-only sessions, so an org admin who also uses the Android app is signed out of it
+until the app asks for the code too (`docs/map/processes/second-factor.md`).
+
 ## [feat] Offboard a medtech and hand their patients to a colleague
 
 An org admin (or super admin) can offboard an active medtech in one guided action
