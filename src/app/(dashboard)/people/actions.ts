@@ -7,6 +7,8 @@ import {
   canResetSecondFactor,
   isLastActiveOrgAdmin,
   isUuid,
+  type MemberPatient,
+  type MembershipRole,
   type OrganizationStatus,
 } from "@/domain";
 import {
@@ -170,6 +172,193 @@ export async function setMemberStatus(
     done: allowed
       ? `${name} can sign in again.`
       : `${name} is deactivated and can no longer sign in.`,
+  };
+}
+
+export async function loadOffboardData(
+  organizationId: string,
+  userId: string,
+): Promise<{
+  error?: string;
+  soleCoverPatients?: MemberPatient[];
+  colleagues?: Array<{
+    userId: string;
+    fullName: string | null;
+    email: string | null;
+    role: MembershipRole;
+  }>;
+}> {
+  const actor = await requireActor();
+  if (!("user" in actor)) return { error: actor.error ?? "Not authenticated." };
+
+  const targetOrg =
+    actor.access.kind === "org_admin" ? actor.access.organizationId : organizationId;
+  if (!isUuid(targetOrg) || !isUuid(userId)) return { error: "Not found." };
+
+  try {
+    const db = await getDatabase();
+    const [people, soleCoverIds, memberPatients] = await Promise.all([
+      db.listPeople(targetOrg),
+      db.listSoleCoverPatients(userId),
+      db.listMemberPatients(userId),
+    ]);
+
+    const person = people.find((p) => p.userId === userId);
+    if (!person || !canChangeMemberStatus(actor.access, actor.user.id, targetOrg, person)) {
+      return { error: "You cannot offboard this member." };
+    }
+
+    const soleSet = new Set(soleCoverIds);
+    const soleCoverPatients = memberPatients.filter((p) => soleSet.has(p.patientId));
+    const colleagues = people
+      .filter((p) => p.userId !== userId && p.status === "active")
+      .map((p) => ({
+        userId: p.userId,
+        fullName: p.fullName,
+        email: p.email,
+        role: p.role,
+      }));
+
+    return { soleCoverPatients, colleagues };
+  } catch (cause) {
+    if (cause instanceof DatabaseReadError) return { error: "Could not read laboratory data." };
+    throw cause;
+  }
+}
+
+export async function offboardMedtech(
+  _previous: MemberFormState,
+  formData: FormData,
+): Promise<MemberFormState> {
+  const actor = await requireActor();
+  if (!("user" in actor)) return actor;
+
+  const submitted = String(formData.get("organizationId") ?? "");
+  const organizationId =
+    actor.access.kind === "org_admin" ? actor.access.organizationId : submitted;
+  const userId = String(formData.get("userId") ?? "");
+  if (!isUuid(organizationId) || !isUuid(userId)) return NOT_FOUND;
+
+  let people;
+  let soleCover: string[] = [];
+  try {
+    const db = await getDatabase();
+    people = await db.listPeople(organizationId);
+    if (people.some((candidate) => candidate.userId === userId)) {
+      soleCover = await db.listSoleCoverPatients(userId);
+    }
+  } catch (cause) {
+    if (cause instanceof DatabaseReadError) return NOT_PERMITTED;
+    if (cause instanceof MissingEnvironmentError) {
+      return { error: `Server is not configured: ${cause.variable} is not set.`, done: null };
+    }
+    throw cause;
+  }
+
+  const person = people.find((candidate) => candidate.userId === userId);
+  if (!person) return NOT_FOUND;
+  if (!canChangeMemberStatus(actor.access, actor.user.id, organizationId, person)) {
+    return NOT_PERMITTED;
+  }
+  if (person.role !== "medtech") {
+    return { error: "Only a medtech can be offboarded here.", done: null };
+  }
+  if (person.status === "deactivated") {
+    return { error: `${personName(person)} is already deactivated.`, done: null };
+  }
+
+  let reassignments: Array<{ patientId: string; toUserId: string }> = [];
+  const rawReassignments = formData.get("reassignments");
+  if (typeof rawReassignments === "string" && rawReassignments.trim()) {
+    try {
+      const parsed = JSON.parse(rawReassignments);
+      if (Array.isArray(parsed)) {
+        reassignments = parsed
+          .filter((item) => isUuid(item.patientId) && isUuid(item.toUserId))
+          .map((item) => ({ patientId: item.patientId, toUserId: item.toUserId }));
+      }
+    } catch {
+      return { error: "Invalid reassignment data.", done: null };
+    }
+  }
+
+  const name = personName(person);
+  const reassignedPatientIds = new Set(reassignments.map((r) => r.patientId));
+  const activeColleagues = new Set(
+    people.filter((p) => p.userId !== userId && p.status === "active").map((p) => p.userId),
+  );
+
+  for (const patientId of soleCover) {
+    if (!reassignedPatientIds.has(patientId)) {
+      return {
+        error: `Every patient with no other active cover must be handed over before offboarding ${name}.`,
+        done: null,
+      };
+    }
+  }
+
+  for (const r of reassignments) {
+    if (!activeColleagues.has(r.toUserId)) {
+      return {
+        error: "Patients may only be handed over to active colleagues of this laboratory.",
+        done: null,
+      };
+    }
+  }
+
+  if (person.accountId) {
+    try {
+      await (await getAccountAccess()).setSignInAllowed(person.accountId, false);
+    } catch (cause) {
+      if (cause instanceof AccountAccessError || cause instanceof MissingEnvironmentError) {
+        console.error("Sign-in setting not changed", cause);
+        return {
+          error: `${name}'s sign-in could not be blocked, so nothing changed. Try again.`,
+          done: null,
+        };
+      }
+      throw cause;
+    }
+  }
+
+  try {
+    await (await getAdminWrites()).offboardMember(userId, reassignments);
+  } catch (cause) {
+    if (person.accountId) {
+      await (
+        await getAccountAccess()
+      )
+        .setSignInAllowed(person.accountId, true)
+        .catch((undo) => console.error("Sign-in change not undone", undo));
+    }
+    if (cause instanceof AdminWriteError) {
+      if (cause.hint === "sole_cover") return soleCoverError(name, null);
+      return {
+        error:
+          cause.reason === "forbidden"
+            ? NOT_PERMITTED.error
+            : cause.reason === "not_found"
+              ? NOT_FOUND.error
+              : "The offboarding could not be saved. Try again.",
+        done: null,
+      };
+    }
+    throw cause;
+  }
+
+  revalidatePath("/people");
+  revalidatePath(`/people/${userId}`);
+  revalidatePath(`/organizations/${organizationId}`);
+  revalidatePath("/audit");
+
+  const handoverCount = reassignments.length;
+  const handoverText =
+    handoverCount > 0
+      ? ` and handed over ${handoverCount} patient${handoverCount === 1 ? "" : "s"}`
+      : "";
+  return {
+    error: null,
+    done: `${name} has been offboarded${handoverText}. Remember to collect their device or ensure it is signed out.`,
   };
 }
 

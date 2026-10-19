@@ -73,7 +73,7 @@ deactivates their laboratory's medtechs; only a super admin deactivates an org a
 laboratory's last active one, and nobody is deactivated while they are a patient's only active
 member.
 
-**Resetting an org admin's authenticator app** (`admin/0017`,
+**Resetting an org admin's authenticator app** (`admin/0018`,
 `docs/map/processes/second-factor.md`): super admins only, never their own; recorded as
 `member.authenticator_reset` under the member's laboratory before the reset happens at the auth
 provider.

@@ -109,9 +109,9 @@ async function AssignedPatients({
           className="rounded-[12px] border border-stone-hair bg-warn-tint px-4 py-3 text-[13px] text-warn"
         >
           {name} is the only active member on {soleCover.size} patient
-          {soleCover.size === 1 ? "" : "s"}, marked below. Hand{" "}
-          {soleCover.size === 1 ? "it" : "them"} over on the patient&apos;s page before deactivating{" "}
-          {name}: a patient always keeps an active member of its laboratory.
+          {soleCover.size === 1 ? "" : "s"}, marked below. Choose Offboard above to reassign{" "}
+          {soleCover.size === 1 ? "it" : "them"} and deactivate {name} in one flow: a patient always
+          keeps an active member of its laboratory.
         </p>
       ) : null}
       {patients.length === 0 ? (
@@ -272,6 +272,14 @@ export default async function PersonPage({
   const changeable = canChangeMemberStatus(actor.access, actor.user.id, organizationId, person);
   const resettable = canResetSecondFactor(actor.access, actor.user.id, person);
   const requestedPage = parsePage(param(query.page));
+  const colleagues = people
+    .filter((candidate) => candidate.userId !== userId && candidate.status === "active")
+    .map((candidate) => ({
+      userId: candidate.userId,
+      fullName: candidate.fullName,
+      email: candidate.email,
+      role: candidate.role,
+    }));
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
@@ -299,6 +307,7 @@ export default async function PersonPage({
             name={name}
             role={person.role}
             status={person.status}
+            colleagues={colleagues}
           />
         )}
       </header>

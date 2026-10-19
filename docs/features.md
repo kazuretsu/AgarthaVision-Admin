@@ -86,7 +86,7 @@ password; the first time, `/verify` walks them through setting the app up (QR co
 key). Until the session has passed the code, no page, data, download or write is reached: pages
 go to `/verify`, downloads answer 401. Medtechs are never asked. A super admin resets an org
 admin's app from their People page (lost phone), recorded in the audit trail before it happens
-(`admin/0017`). Supabase's authenticator-app MFA, free on every plan. An org admin who also uses
+(`admin/0018`). Supabase's authenticator-app MFA, free on every plan. An org admin who also uses
 the Android app is signed out of it each time they enter a code, until the app asks for the code
 too (`docs/map/processes/second-factor.md`).
 

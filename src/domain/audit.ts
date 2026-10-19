@@ -41,6 +41,7 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "member.deactivate": "Deactivated a member",
   "member.reactivate": "Reactivated a member",
   "member.authenticator_reset": "Reset an authenticator app",
+  "member.offboard": "Offboarded a medtech",
   "assignment.add": "Assigned a patient",
   "assignment.remove": "Removed a patient assignment",
   "training.snapshot.create": "Created a training snapshot",
@@ -116,6 +117,13 @@ export function describeAuditEntry(entry: AuditEntry): string {
     }
     case "member.authenticator_reset":
       return `Reset the authenticator app of ${text(d.name) ?? "a member"} (organization admin) in ${entry.organizationName ?? "an organization"}`;
+    case "member.offboard": {
+      const who = text(d.name) ?? "a medtech";
+      const count = typeof d.reassigned_patients === "number" ? d.reassigned_patients : 0;
+      const countText =
+        count > 0 ? ` and handed over ${count} patient${count === 1 ? "" : "s"}` : "";
+      return `Offboarded ${who} in ${entry.organizationName ?? "an organization"}${countText}`;
+    }
     case "assignment.add":
     case "assignment.remove": {
       // The patient by record id only: super admins read this trail (constraint #14).

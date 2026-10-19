@@ -10,12 +10,26 @@ every later sign-in asks for the six-digit code. Until the session has passed it
 `aal2` on the verified token — every page redirects to `/verify`, downloads answer 401 and
 server actions refuse as signed out (`SecondFactorRequiredError`, a kind of
 `NotAuthenticatedError`). Medtechs are never asked. A super admin resets an org admin's app from
-their People page for a lost phone; `admin/0017` adds `console_record_authenticator_reset`,
-which writes `member.authenticator_reset` before the reset happens. **Apply `admin/0017` by
-hand**; until then a reset is refused and nothing changes. Supabase's TOTP MFA is free and on by
+their People page for a lost phone; `admin/0018` adds `console_record_authenticator_reset`,
+which writes `member.authenticator_reset` before the reset happens. **Apply `admin/0018` by
+hand** (already applied on live; it was numbered 0017 before PR #36 took that number); until
+then a reset is refused and nothing changes. Supabase's TOTP MFA is free and on by
 default: no setting to change. Every code entered makes Supabase end the account's
 password-only sessions, so an org admin who also uses the Android app is signed out of it
 until the app asks for the code too (`docs/map/processes/second-factor.md`).
+
+## [feat] Offboard a medtech and hand their patients to a colleague
+
+An org admin (or super admin) can offboard an active medtech in one guided action
+(`OffboardMedtechDialog`, 14zcqntjnt5) instead of two separate chores. The console lists the
+patients where that medtech is the only active member assigned, and allows choosing who takes
+over — one colleague for all, or selected per patient. On confirm, `offboardMedtech`
+(`src/app/(dashboard)/people/actions.ts`) blocks the medtech's sign-in and runs
+`console_offboard_member` (`supabase/migrations/admin/0017_offboard_medtech.sql`), which reassigns
+the patients to active colleagues in the same laboratory, verifies that no patient is left with no
+active member, sets the medtech's membership to deactivated, and writes `member.offboard` alongside
+`assignment.add` and `assignment.remove` entries to the audit trail. Reminds the admin to collect
+the mobile device or ensure it is signed out. Clinical authorship is untouched, and nothing is deleted.
 
 ## [feat] Sign-in and accepting an invitation pass a Cloudflare Turnstile check
 

@@ -15,7 +15,7 @@ import { toSnapshotItemsPayload } from "./training-rows";
  * Supabase implementation of {@link AdminWritePort}.
  *
  * Each write is one call to a security-definer function (`admin/0001`, `0003`,
- * `0005`–`0009`, `0012`, `0017`), run as the signed-in user. The function checks the caller,
+ * `0005`–`0009`, `0012`, `0017`, `0018`), run as the signed-in user. The function checks the caller,
  * performs the write and appends the audit row in one transaction, so a write
  * without its audit entry
  * cannot happen. No table is written directly: the tables have no write policies.
@@ -120,6 +120,19 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
       p_patient: patientId,
       p_from: fromUserId,
       p_to: toUserId,
+    });
+  }
+
+  async offboardMember(
+    userId: string,
+    reassignments: Array<{ patientId: string; toUserId: string }>,
+  ): Promise<void> {
+    await this.call("console_offboard_member", {
+      p_user: userId,
+      p_reassignments: reassignments.map((r) => ({
+        patient_id: r.patientId,
+        to_user_id: r.toUserId,
+      })),
     });
   }
 

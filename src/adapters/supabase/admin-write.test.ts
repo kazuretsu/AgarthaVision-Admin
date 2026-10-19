@@ -32,6 +32,37 @@ describe("SupabaseAdminWriteAdapter — a refusal's reason", () => {
   ])("%s is %s", async (code, reason) => {
     expect(await reasonOf(code)).toBe(reason);
   });
+
+  it("offboardMember calls console_offboard_member with mapped reassignments", async () => {
+    let calledFn = "";
+    let calledArgs: unknown = null;
+    const client = {
+      rpc: async (fn: string, args: unknown) => {
+        calledFn = fn;
+        calledArgs = args;
+        return { data: null, error: null };
+      },
+    } as unknown as SupabaseClient;
+
+    const adapter = new SupabaseAdminWriteAdapter(client);
+    await adapter.offboardMember("00000000-0000-4000-8000-000000000001", [
+      {
+        patientId: "90000000-0000-4000-8000-000000000001",
+        toUserId: "00000000-0000-4000-8000-000000000002",
+      },
+    ]);
+
+    expect(calledFn).toBe("console_offboard_member");
+    expect(calledArgs).toEqual({
+      p_user: "00000000-0000-4000-8000-000000000001",
+      p_reassignments: [
+        {
+          patient_id: "90000000-0000-4000-8000-000000000001",
+          to_user_id: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+  });
 });
 
 describe("SupabaseAdminWriteAdapter — recording an authenticator reset (14zcqntjnt0)", () => {

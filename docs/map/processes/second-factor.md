@@ -76,11 +76,11 @@ still opens what the app can reach.**
 A super admin opens an org admin's page (`/people/[userId]?org=…`). The "Two-step sign-in"
 card reads whether an app is set up (`hasAuthenticator`, service role,
 `src/adapters/supabase/account-access.ts`) and offers "Reset authenticator app" behind a
-confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:182`):
+confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:371`):
 
 1. checks `canResetSecondFactor` (`src/domain/second-factor.ts`): super admins only, for an
    org admin with a login, never themselves;
-2. **records first**: `console_record_authenticator_reset` (`admin/0017`) writes
+2. **records first**: `console_record_authenticator_reset` (`admin/0018`) writes
    `member.authenticator_reset` under the member's laboratory, and refuses anyone else the
    same way. If it fails, nothing is reset;
 3. then deletes every factor the login has (`auth.admin.mfa.deleteFactor`). Supabase drops
@@ -109,7 +109,7 @@ session, or an audit entry and a reset.
 - Every page, route handler and server action through `requireConsoleActor`
   (`docs/map/processes/admin-gate.md`).
 - The Android app's sessions for org admins (above), until it asks for the code itself.
-- `admin/0017` and `src/domain/audit.ts` (`member.authenticator_reset`).
+- `admin/0018` and `src/domain/audit.ts` (`member.authenticator_reset`).
 - A provider swap: the rule (`secondFactorStep`, `canResetSecondFactor`) and the `/verify`
   page stay; the adapter must report "this session passed a second factor" and "this account
   has an app", and must refuse a second app to a session that has not passed.
@@ -125,9 +125,9 @@ session, or an audit entry and a reset.
 `src/domain/second-factor.test.ts`, `src/adapters/supabase/auth.test.ts` (the gate, status,
 set-up, codes, refusals), `src/adapters/supabase/account-access.test.ts`,
 `src/adapters/supabase/admin-write.test.ts`, `src/lib/console-access.test.ts`,
-`supabase/tests/admin_0017_authenticator_reset.test.sql`.
+`supabase/tests/admin_0018_authenticator_reset.test.sql`.
 
 ## See
 
 `src/domain/second-factor.ts`, `src/app/(auth)/verify/`, `src/components/auth/SecondFactor.tsx`,
-`src/components/people/AuthenticatorResetForm.tsx`, `supabase/migrations/admin/0017_authenticator_reset.sql`.
+`src/components/people/AuthenticatorResetForm.tsx`, `supabase/migrations/admin/0018_authenticator_reset.sql`.

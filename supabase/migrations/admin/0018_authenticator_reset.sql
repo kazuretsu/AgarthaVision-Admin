@@ -1,4 +1,4 @@
--- admin/0017 · Recording a super admin's reset of an org admin's authenticator app
+-- admin/0018 · Recording a super admin's reset of an org admin's authenticator app
 --
 -- Run via: Supabase dashboard → SQL Editor → paste → Run. By hand, once.
 -- Requires: admin/0001 (console_write_audit), admin/0009 (org admin status).

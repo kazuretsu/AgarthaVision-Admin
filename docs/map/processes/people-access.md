@@ -81,7 +81,7 @@ Reactivating is never refused for either.
 
 ## Deactivate and reactivate
 
-`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:79`):
+`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:81`):
 
 1. Reads the laboratory's people and finds the member; checks `canChangeMemberStatus` (above).
    A forged member id from elsewhere is "no longer in this laboratory". For a deactivation it
@@ -109,10 +109,26 @@ any record (C8). Reactivating lifts the ban.
 
 A super admin viewing an org admin sees a "Two-step sign-in" card: whether an app is set up,
 read from the auth provider, and "Reset authenticator app" behind a confirmation, for a lost
-phone. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:182`) records
-`member.authenticator_reset` first (`admin/0017`), then removes the login's factors; the org
+phone. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:371`) records
+`member.authenticator_reset` first (`admin/0018`), then removes the login's factors; the org
 admin sets up a new app at their next sign-in. Org admins, medtechs' pages and one's own get no
 card (`canResetSecondFactor`). The whole flow: `docs/map/processes/second-factor.md`.
+
+## Guided offboarding for medtechs (`admin/0017`, 14zcqntjnt5)
+
+When a medtech leaves the laboratory, their open work must not be stranded. Instead of
+having to hand over patients one by one on each patient's page before deactivating the
+member, the org admin chooses **Offboard** from the medtech's row or page:
+
+1. Lists the patients where this medtech is the only active member assigned (`soleCover`).
+2. Asks who takes over: one active colleague for all patients, or selected per patient.
+3. Reminds the org admin to collect the mobile device or have the medtech signed out.
+4. On confirm, runs `offboardMedtech` (`src/app/(dashboard)/people/actions.ts`), which blocks
+   the login at the auth provider, calls `console_offboard_member` (`admin/0017`) to
+   reassign the patients and mark the membership deactivated in one transaction, and logs
+   `member.offboard` together with `assignment.add` and `assignment.remove` entries in the
+   audit trail.
+5. Authorship on sessions, samples and reports remains unchanged under the leaver's name.
 
 ## If you change this
 

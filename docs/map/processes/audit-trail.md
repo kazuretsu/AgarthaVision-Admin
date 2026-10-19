@@ -50,7 +50,7 @@ provider (`docs/map/processes/second-factor.md`).
 | `invitation.accept`          | `console_accept_invitation`                                           |
 | `member.deactivate`          | `console_set_member_status`                                           |
 | `member.reactivate`          | `console_set_member_status`                                           |
-| `member.authenticator_reset` | `console_record_authenticator_reset` (`admin/0017`), before the reset |
+| `member.authenticator_reset` | `console_record_authenticator_reset` (`admin/0018`), before the reset |
 | `assignment.add`             | `console_assign_patient`                                              |
 | `assignment.remove`          | `console_unassign_patient`                                            |
 | `training.snapshot.create`   | `console_create_training_snapshot`                                    |

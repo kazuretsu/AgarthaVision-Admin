@@ -1,4 +1,4 @@
--- admin/0017 · a super admin's reset of an org admin's authenticator app is recorded; nobody else's.
+-- admin/0018 · a super admin's reset of an org admin's authenticator app is recorded; nobody else's.
 
 create temporary table fx17 on commit drop as
 select tests.create_user('s17@example.test', 'admin')   as super_admin,
