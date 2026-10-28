@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 import { getAuth, getOnboarding } from "@/adapters/registry";
 import { HUMAN_CHECK_FIELD, readHumanCheckToken } from "@/domain/human-check";
 import { INVITEE_NAME_MAX, checkNewPassword } from "@/domain/invitations";
+import { passwordGapMessage, passwordGaps } from "@/domain/password-policy";
 import { AcceptInvitationError, type AcceptInvitationFailure } from "@/ports/onboarding";
 import { MissingEnvironmentError } from "@/lib/env";
 import type { AcceptState } from "./state";
 
-const MESSAGES: Record<AcceptInvitationFailure, string> = {
+const MESSAGES: Record<Exclude<AcceptInvitationFailure, "weak_password">, string> = {
   invalid_link: "This invitation link is not valid. Use the newest email you received.",
   expired: "This invitation has expired. Ask whoever invited you to send it again.",
   revoked: "This invitation was withdrawn. Ask whoever invited you if you still need access.",
@@ -16,7 +17,6 @@ const MESSAGES: Record<AcceptInvitationFailure, string> = {
   unavailable: "This laboratory is not taking new members right now. Ask whoever invited you.",
   wrong_password:
     "This email already has an account. Enter that account's password to accept the invitation.",
-  weak_password: "Choose a stronger password: longer, and not a common one.",
   already_member: "This account already belongs to a laboratory, so it cannot join another.",
   human_check_failed:
     "The security check expired or did not pass. Complete it again, then set your password.",
@@ -60,7 +60,12 @@ export async function acceptInvitation(
     ).acceptInvitation({ token, password, fullName, humanCheckToken }));
   } catch (cause) {
     if (cause instanceof AcceptInvitationError) {
-      return { error: MESSAGES[cause.reason], fullName: typedName };
+      // The provider says only that a rule was missed; the policy names which.
+      const error =
+        cause.reason === "weak_password"
+          ? passwordGapMessage(passwordGaps(password))
+          : MESSAGES[cause.reason];
+      return { error, fullName: typedName };
     }
     if (cause instanceof MissingEnvironmentError) {
       return {
