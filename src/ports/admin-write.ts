@@ -14,6 +14,11 @@ export interface InviteRequest {
   organizationId: string;
 }
 
+export interface SuperAdminInviteRequest {
+  email: string;
+  fullName: string | null;
+}
+
 export interface TrainingSnapshotRequest {
   name: string;
   filter: TrainingFilter;
@@ -56,6 +61,23 @@ export interface AdminWritePort {
   resendInvitation(invitationId: string): Promise<Omit<IssuedInvitation, "invitationId">>;
   /** Withdraws a pending invitation. Nothing is deleted. */
   revokeInvitation(invitationId: string): Promise<void>;
+
+  /**
+   * Invites a super admin (admin/0019). Super admins only. Refuses an email that already has
+   * an account in a laboratory, is already a super admin, or has a live invitation of either
+   * kind (`conflict`, hint `account_exists` or `invitation_pending`).
+   */
+  inviteSuperAdmin(request: SuperAdminInviteRequest): Promise<IssuedInvitation>;
+  /** A new link and expiry for a pending super admin invitation; the old link stops working. */
+  resendSuperAdminInvitation(invitationId: string): Promise<Omit<IssuedInvitation, "invitationId">>;
+  /** Withdraws a pending super admin invitation. Nothing is deleted. */
+  revokeSuperAdminInvitation(invitationId: string): Promise<void>;
+  /**
+   * Revokes a super admin's grant; the row stays, with who revoked it and when. Refused
+   * (`forbidden`, hint `self`) for the caller's own grant, and (`invalid`, hint
+   * `last_super_admin`) for the last one.
+   */
+  revokeSuperAdmin(userId: string): Promise<void>;
 
   /**
    * Records a member's membership as deactivated or active; an org admin's, super

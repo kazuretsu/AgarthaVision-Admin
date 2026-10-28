@@ -55,6 +55,11 @@ provider (`docs/map/processes/second-factor.md`).
 | `assignment.remove`          | `console_unassign_patient`                                            |
 | `training.snapshot.create`   | `console_create_training_snapshot`                                    |
 | `training.snapshot.download` | `console_record_training_download`                                    |
+| `super_admin.invite`         | `console_invite_super_admin` (`admin/0019`), no organization          |
+| `super_admin.invite_resend`  | `console_resend_super_admin_invitation`, no organization              |
+| `super_admin.invite_revoke`  | `console_revoke_super_admin_invitation`, no organization              |
+| `super_admin.grant`          | `console_accept_super_admin_invitation`, by the invitee               |
+| `super_admin.revoke`         | `console_revoke_super_admin`, no organization                         |
 
 ## Reading
 

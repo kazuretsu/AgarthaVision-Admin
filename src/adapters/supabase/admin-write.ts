@@ -6,6 +6,7 @@ import {
   type AdminWritePort,
   type InviteRequest,
   type IssuedInvitation,
+  type SuperAdminInviteRequest,
   type TrainingSnapshotRequest,
 } from "@/ports/admin-write";
 import { createRequestClient } from "./client";
@@ -15,7 +16,7 @@ import { toSnapshotItemsPayload } from "./training-rows";
  * Supabase implementation of {@link AdminWritePort}.
  *
  * Each write is one call to a security-definer function (`admin/0001`, `0003`,
- * `0005`–`0009`, `0012`, `0017`, `0018`), run as the signed-in user. The function checks the caller,
+ * `0005`–`0009`, `0012`, `0017`–`0019`), run as the signed-in user. The function checks the caller,
  * performs the write and appends the audit row in one transaction, so a write
  * without its audit entry
  * cannot happen. No table is written directly: the tables have no write policies.
@@ -97,6 +98,32 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
 
   async revokeInvitation(invitationId: string): Promise<void> {
     await this.call("console_revoke_invitation", { p_id: invitationId });
+  }
+
+  async inviteSuperAdmin({ email, fullName }: SuperAdminInviteRequest): Promise<IssuedInvitation> {
+    const row = await this.callOne<{ invitation_id: string; token: string; expires_at: string }>(
+      "console_invite_super_admin",
+      { p_email: email, p_full_name: fullName },
+    );
+    return { invitationId: row.invitation_id, token: row.token, expiresAt: row.expires_at };
+  }
+
+  async resendSuperAdminInvitation(
+    invitationId: string,
+  ): Promise<Omit<IssuedInvitation, "invitationId">> {
+    const row = await this.callOne<{ token: string; expires_at: string }>(
+      "console_resend_super_admin_invitation",
+      { p_id: invitationId },
+    );
+    return { token: row.token, expiresAt: row.expires_at };
+  }
+
+  async revokeSuperAdminInvitation(invitationId: string): Promise<void> {
+    await this.call("console_revoke_super_admin_invitation", { p_id: invitationId });
+  }
+
+  async revokeSuperAdmin(userId: string): Promise<void> {
+    await this.call("console_revoke_super_admin", { p_user: userId });
   }
 
   async setMemberStatus(userId: string, status: OrganizationStatus): Promise<void> {

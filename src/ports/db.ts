@@ -12,6 +12,8 @@ import type {
   Person,
   OrganizationSummary,
   ReadScope,
+  SuperAdmin,
+  SuperAdminInvitation,
 } from "@/domain";
 
 /**
@@ -183,6 +185,18 @@ export interface DatabasePort {
 
   /** One invitation by id; `null` when absent or hidden. */
   getInvitation(invitationId: string): Promise<Invitation | null>;
+
+  /**
+   * The active super admins, oldest grant first, with who granted each (admin/0019). Super
+   * admins only: anyone else is refused with {@link DatabaseReadError}.
+   */
+  listSuperAdmins(): Promise<SuperAdmin[]>;
+
+  /** Super admin invitations, newest first, at most {@link INVITATION_LIST_LIMIT}. */
+  listSuperAdminInvitations(): Promise<SuperAdminInvitation[]>;
+
+  /** One super admin invitation by id; `null` when absent or hidden. */
+  getSuperAdminInvitation(invitationId: string): Promise<SuperAdminInvitation | null>;
 
   /** Audit entries, newest first. */
   listAuditEntries(query: AuditQuery): Promise<AuditEntry[]>;

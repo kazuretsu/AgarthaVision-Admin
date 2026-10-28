@@ -70,6 +70,13 @@ describe("sectionFor — where the not-found page's button goes (14zcqntk6h4)", 
   });
 });
 
+describe("super admins", () => {
+  it("is a super admin's entry only (14zcqntjwjg)", () => {
+    expect(navFor("super_admin").some((item) => item.href === "/super-admins")).toBe(true);
+    expect(navFor("org_admin").some((item) => item.href === "/super-admins")).toBe(false);
+  });
+});
+
 describe("settings", () => {
   it("is everyone's entry: each admin's own sign-in (14zcqntr31c)", () => {
     expect(navFor("org_admin").some((item) => item.href === "/settings")).toBe(true);

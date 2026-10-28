@@ -48,7 +48,7 @@ function Notice({ message, signIn }: { message: string; signIn?: boolean }) {
         <p role="alert">{message}</p>
         {signIn ? (
           <p className="text-[13px] text-stone-mid">
-            Organization admins sign in at{" "}
+            Super admins and organization admins sign in at{" "}
             <Link href="/login" className="text-maroon underline-offset-4 hover:underline">
               the console
             </Link>
@@ -104,12 +104,21 @@ export default async function AcceptInvitationPage({
   }
 
   const role = invitedRoleLabel(link.role);
+  const article = /^[aeiou]/i.test(role) ? "an" : "a";
   return (
     <Shell>
       <p className="-mt-4 text-[14px] text-stone-deep">
-        You are invited to join <strong className="text-stone-ink">{link.organizationName}</strong>{" "}
-        as {/^[aeiou]/i.test(role) ? "an" : "a"} {role}. Set a password to finish. This link works
-        until {formatDateTime(link.expiresAt)}.
+        {link.organizationName === null ? (
+          <>
+            You are invited to AgarthaVision as {article} {role}.
+          </>
+        ) : (
+          <>
+            You are invited to join{" "}
+            <strong className="text-stone-ink">{link.organizationName}</strong> as {article} {role}.
+          </>
+        )}{" "}
+        Set a password to finish. This link works until {formatDateTime(link.expiresAt)}.
       </p>
       <Card>
         <CardContent>

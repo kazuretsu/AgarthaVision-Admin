@@ -11,6 +11,7 @@ import {
   Map,
   Microscope,
   Settings,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -25,6 +26,7 @@ const ICONS = {
   training: BrainCircuit,
   people: Users,
   organizations: Building2,
+  super_admins: ShieldCheck,
   audit: History,
   settings: Settings,
 } as const;

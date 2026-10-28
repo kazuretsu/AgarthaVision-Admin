@@ -6,7 +6,7 @@ import { acceptInvitation } from "@/app/(auth)/invite/[token]/actions";
 import { EMPTY_ACCEPT_STATE } from "@/app/(auth)/invite/[token]/state";
 import { PASSWORD_RULES, passwordGaps } from "@/domain/password-policy";
 import { HumanCheck, useHumanCheck } from "@/components/auth/HumanCheck";
-import type { MembershipRole } from "@/domain/organizations";
+import { invitedToConsole, type InvitedRole } from "@/domain/invitations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,7 @@ export function AcceptInvitationForm({
   token: string;
   email: string;
   fullName: string | null;
-  role: MembershipRole;
+  role: InvitedRole;
 }) {
   const [state, action, pending] = useActionState(acceptInvitation, EMPTY_ACCEPT_STATE);
   const check = useHumanCheck();
@@ -123,7 +123,7 @@ export function AcceptInvitationForm({
       >
         {pending
           ? "Setting up…"
-          : role === "org_admin"
+          : invitedToConsole(role)
             ? "Set password and open the console"
             : "Set password"}
       </Button>

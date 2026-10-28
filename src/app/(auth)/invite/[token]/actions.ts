@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { getAuth, getOnboarding } from "@/adapters/registry";
 import { HUMAN_CHECK_FIELD, readHumanCheckToken } from "@/domain/human-check";
-import { INVITEE_NAME_MAX, checkNewPassword } from "@/domain/invitations";
+import { INVITEE_NAME_MAX, checkNewPassword, invitedToConsole } from "@/domain/invitations";
 import { passwordGapMessage, passwordGaps } from "@/domain/password-policy";
 import { AcceptInvitationError, type AcceptInvitationFailure } from "@/ports/onboarding";
 import { MissingEnvironmentError } from "@/lib/env";
@@ -28,8 +28,8 @@ const MESSAGES: Record<Exclude<AcceptInvitationFailure, "weak_password">, string
  *
  * The token is the only thing that names the invitation. The email, role and
  * organization are read from the stored invitation by the adapter, never from
- * this form. An org admin lands in the console; a medtech is signed out again and
- * sent to `/invite/joined`, because their place is the mobile app.
+ * this form. An org admin or super admin lands in the console; a medtech is signed
+ * out again and sent to `/invite/joined`, because their place is the mobile app.
  */
 export async function acceptInvitation(
   _previous: AcceptState,
@@ -76,9 +76,9 @@ export async function acceptInvitation(
     throw cause;
   }
 
-  // An org admin goes straight in; they can set up an authenticator app on /settings
-  // (14zcqntr31c).
-  if (role === "org_admin") redirect("/dashboard");
+  // An org admin or super admin goes straight in; they can set up an authenticator app on
+  // /settings (14zcqntr31c).
+  if (invitedToConsole(role)) redirect("/dashboard");
 
   await (await getAuth()).signOut();
   redirect("/invite/joined");

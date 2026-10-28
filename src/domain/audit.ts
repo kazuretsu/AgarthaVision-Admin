@@ -46,15 +46,26 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "assignment.remove": "Removed a patient assignment",
   "training.snapshot.create": "Created a training snapshot",
   "training.snapshot.download": "Downloaded a training snapshot",
+  "super_admin.invite": "Invited a super admin",
+  "super_admin.invite_resend": "Re-sent a super admin invitation",
+  "super_admin.invite_revoke": "Withdrew a super admin invitation",
+  "super_admin.grant": "Became a super admin",
+  "super_admin.revoke": "Revoked a super admin",
 };
 
 /**
- * Actions only a super admin takes, filed under no organization (training data,
- * admin/0012): an org admin can never read one, so their filter does not offer them.
+ * Actions only a super admin takes, filed under no organization (training data, admin/0012;
+ * super admins themselves, admin/0019): an org admin can never read one, so their filter does
+ * not offer them.
  */
 const SUPER_ADMIN_ONLY_ACTIONS: ReadonlySet<string> = new Set([
   "training.snapshot.create",
   "training.snapshot.download",
+  "super_admin.invite",
+  "super_admin.invite_resend",
+  "super_admin.invite_revoke",
+  "super_admin.grant",
+  "super_admin.revoke",
 ]);
 
 /** The actions a reader's action filter offers, as `[action, label]`. */
@@ -124,6 +135,16 @@ export function describeAuditEntry(entry: AuditEntry): string {
         count > 0 ? ` and handed over ${count} patient${count === 1 ? "" : "s"}` : "";
       return `Offboarded ${who} in ${entry.organizationName ?? "an organization"}${countText}`;
     }
+    case "super_admin.invite":
+      return `Invited ${text(d.email) ?? "someone"} as a super admin`;
+    case "super_admin.invite_resend":
+      return `Re-sent the super admin invitation to ${text(d.email) ?? "someone"}`;
+    case "super_admin.invite_revoke":
+      return `Withdrew the super admin invitation to ${text(d.email) ?? "someone"}`;
+    case "super_admin.grant":
+      return `${text(d.email) ?? "Someone"} accepted an invitation and became a super admin`;
+    case "super_admin.revoke":
+      return `Revoked ${text(d.name) ?? "someone"}'s super admin access`;
     case "assignment.add":
     case "assignment.remove": {
       // The patient by record id only: super admins read this trail (constraint #14).

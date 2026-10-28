@@ -1,5 +1,4 @@
-import type { InvitationLink } from "@/domain/invitations";
-import type { MembershipRole } from "@/domain/organizations";
+import type { InvitationLink, InvitedRole } from "@/domain/invitations";
 
 /**
  * Accepting an invitation: the one path by which an account is made.
@@ -23,10 +22,10 @@ export interface OnboardingPort {
 
   /**
    * Makes the account (or signs in to the one already made for this email), joins
-   * the organization the invitation names and leaves the invitee signed in. Throws
-   * {@link AcceptInvitationError}.
+   * the organization the invitation names, or for a super admin invitation adds the
+   * grant, and leaves the invitee signed in. Throws {@link AcceptInvitationError}.
    */
-  acceptInvitation(request: AcceptInvitationRequest): Promise<{ role: MembershipRole }>;
+  acceptInvitation(request: AcceptInvitationRequest): Promise<{ role: InvitedRole }>;
 }
 
 export type AcceptInvitationFailure =

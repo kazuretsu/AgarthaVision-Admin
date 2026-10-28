@@ -104,3 +104,11 @@ which tells them to sign in to the Android app.
 
 `supabase/migrations/admin/0005_invitations.sql`, `src/domain/invitations.ts`,
 `src/ports/onboarding.ts`, `src/ports/mail.ts`, `docs/map/objects/organizations.md`.
+
+## Super admin invitations
+
+A super admin invitation (`admin/0019`) uses the same link page, form and account step: the
+adapter looks the token up in `organization_invitations` first and `super_admin_invitations`
+second, and accepts it with `console_accept_super_admin_invitation`, which adds a
+`super_admins` grant instead of a membership. Its link works for 72 hours.
+`docs/map/processes/super-admins.md` has the rest.
