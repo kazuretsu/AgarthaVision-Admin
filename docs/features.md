@@ -117,6 +117,17 @@ account, or already has a live invitation, is refused. Expired, revoked, used an
 links each say so. The role and organization come from the stored invitation, never from the
 invitee. Each invite, re-send, revoke and acceptance is in the audit trail.
 
+### Super admins (14zcqntjwjg)
+
+`/super-admins` (super admins only) lists the active super admins, with when and by whom each
+was granted, and their invitations. A super admin invites another by email: the link works for
+72 hours, can be re-sent or withdrawn, and opens the same `/invite/<token>` page, where the
+invitee sets their own password and becomes a super admin, with no laboratory membership. A
+super admin revokes another behind a confirmation; nobody revokes themselves, so one always
+remains. An email already in a laboratory, already a super admin, or with a live invitation
+is refused. Every step is in the audit trail under no laboratory (`admin/0019`,
+`docs/map/processes/super-admins.md`).
+
 ### People
 
 `/people` (the sidebar's **People**; `/medtechs` redirects here) lists everyone in a laboratory —
@@ -316,7 +327,7 @@ most 20,000 frames a snapshot.
 ## Not built yet
 
 This file lists what is built, not what is planned. The console is not finished: open work
-(MFA for console users, forgot password, guarded super admin grants,
+(forgot password,
 sharing a patient, the report verification page, among others) is tracked in the sprint
 lists in ClickUp, which is where plans live (`SESSION_INIT.md`). Work decided against is
 listed below.

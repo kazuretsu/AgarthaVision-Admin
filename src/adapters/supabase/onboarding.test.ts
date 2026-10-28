@@ -16,6 +16,8 @@ const PENDING = {
 
 interface Script {
   link?: Record<string, unknown> | null;
+  /** What `console_super_admin_invitation_by_token` answers (admin/0019). */
+  superAdminLink?: Record<string, unknown> | null;
   createError?: { code?: string; message?: string } | null;
   signInError?: unknown;
   acceptError?: { code?: string; hint?: string } | null;
@@ -31,6 +33,12 @@ function clients(script: Script) {
       calls.push(`rpc:${name}`);
       if (name === "console_invitation_by_token") {
         return Promise.resolve({ data: script.link ? [script.link] : [], error: null });
+      }
+      if (name === "console_super_admin_invitation_by_token") {
+        return Promise.resolve({
+          data: script.superAdminLink ? [script.superAdminLink] : [],
+          error: null,
+        });
       }
       return Promise.resolve({
         data: [{ organization_id: "lab-a", role: "medtech" }],
@@ -80,6 +88,39 @@ describe("isInvitationToken", () => {
     expect(isInvitationToken(TOKEN.toUpperCase())).toBe(false);
     expect(isInvitationToken("ab")).toBe(false);
     expect(isInvitationToken(`${TOKEN}'--`)).toBe(false);
+  });
+});
+
+describe("SupabaseOnboardingAdapter — super admin invitations (14zcqntjwjg)", () => {
+  const SUPER = {
+    email: "nova@example.test",
+    full_name: "Nova",
+    state: "pending",
+    expires_at: "2026-10-12T00:00:00Z",
+  };
+
+  it("finds a super admin link when no laboratory invitation has the token", async () => {
+    const { adapter } = clients({ link: null, superAdminLink: SUPER });
+    expect(await adapter.findInvitation(TOKEN)).toEqual({
+      email: "nova@example.test",
+      fullName: "Nova",
+      role: "super_admin",
+      organizationName: null,
+      state: "pending",
+      expiresAt: "2026-10-12T00:00:00Z",
+    });
+  });
+
+  it("names nothing when neither kind has the token", async () => {
+    const { adapter } = clients({ link: null, superAdminLink: null });
+    expect(await adapter.findInvitation(TOKEN)).toBeNull();
+  });
+
+  it("accepts it through the super admin function, never the laboratory one", async () => {
+    const { adapter, calls } = clients({ link: null, superAdminLink: SUPER });
+    await expect(adapter.acceptInvitation(REQUEST)).resolves.toEqual({ role: "super_admin" });
+    expect(calls).toContain("rpc:console_accept_super_admin_invitation");
+    expect(calls).not.toContain("rpc:console_accept_invitation");
   });
 });
 

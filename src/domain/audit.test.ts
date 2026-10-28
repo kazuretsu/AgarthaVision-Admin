@@ -167,12 +167,32 @@ describe("assignment entries", () => {
       ),
     ).toBe("Downloaded a training snapshot (1 frame)");
   });
+
+  it("name who was invited, granted or revoked as a super admin (admin/0019)", () => {
+    const base = { organizationId: null, organizationName: null };
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "super_admin.invite", details: { email: "a@example.test" } }),
+      ),
+    ).toBe("Invited a@example.test as a super admin");
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "super_admin.grant", details: { email: "a@example.test" } }),
+      ),
+    ).toBe("a@example.test accepted an invitation and became a super admin");
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "super_admin.revoke", details: { name: "Ana" } }),
+      ),
+    ).toBe("Revoked Ana's super admin access");
+  });
 });
 
 describe("auditActionsFor", () => {
   it("offers an org admin no action they can never see", () => {
     const orgAdmin = auditActionsFor(false).map(([action]) => action);
     expect(orgAdmin).not.toContain("training.snapshot.create");
+    expect(orgAdmin).not.toContain("super_admin.revoke");
     expect(orgAdmin).toContain("member.deactivate");
     expect(auditActionsFor(true).map(([action]) => action)).toContain("training.snapshot.download");
   });

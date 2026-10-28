@@ -1,5 +1,4 @@
-import { invitedRoleLabel } from "@/domain/invitations";
-import type { MembershipRole } from "@/domain/organizations";
+import { invitedRoleLabel, invitedToConsole, type InvitedRole } from "@/domain/invitations";
 import type { MailMessage } from "@/ports/mail";
 import { formatDateTime } from "./format";
 
@@ -10,8 +9,9 @@ import { formatDateTime } from "./format";
 export interface InvitationEmailInput {
   to: string;
   fullName: string | null;
-  role: MembershipRole;
-  organizationName: string;
+  role: InvitedRole;
+  /** Null for a super admin invitation, which is into no laboratory. */
+  organizationName: string | null;
   inviterName: string;
   link: string;
   expiresAt: string;
@@ -27,8 +27,8 @@ function escapeHtml(value: string): string {
 }
 
 /** What the invitee will use once they are in. */
-function nextStep(role: MembershipRole): string {
-  return role === "org_admin"
+function nextStep(role: InvitedRole): string {
+  return invitedToConsole(role)
     ? "You will then be signed in to the AgarthaVision Admin Console."
     : "You will then sign in to the AgarthaVision mobile app with this email and that password.";
 }
@@ -37,7 +37,10 @@ export function invitationEmail(input: InvitationEmailInput): MailMessage {
   const greeting = input.fullName ? `Hello ${input.fullName},` : "Hello,";
   const role = invitedRoleLabel(input.role);
   const article = /^[aeiou]/i.test(role) ? "an" : "a";
-  const invited = `${input.inviterName} invited you to join ${input.organizationName} on AgarthaVision as ${article} ${role}.`;
+  const invited =
+    input.organizationName === null
+      ? `${input.inviterName} invited you to AgarthaVision as ${article} ${role}.`
+      : `${input.inviterName} invited you to join ${input.organizationName} on AgarthaVision as ${article} ${role}.`;
   const expires = `This link works until ${formatDateTime(input.expiresAt)} (Philippine time) and can be used once.`;
   const ignore =
     "If you did not expect this, ignore this email: no account is made until you open the link and set a password.";
@@ -68,7 +71,10 @@ export function invitationEmail(input: InvitationEmailInput): MailMessage {
 
   return {
     to: input.to,
-    subject: `You're invited to ${input.organizationName} on AgarthaVision`,
+    subject:
+      input.organizationName === null
+        ? `You're invited to AgarthaVision as ${article} ${role}`
+        : `You're invited to ${input.organizationName} on AgarthaVision`,
     text,
     html,
   };

@@ -54,6 +54,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── lab-scoping.md         Who sees which laboratory's records, enforced twice.
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
+│       │   ├── super-admins.md        Invite, accept and revoke a super admin; always one left.
 │       │   ├── people-access.md       The People page; deactivate = ban the login, record, undo.
 │       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
@@ -96,6 +97,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          their assigned patients; the member-status action.
     │       ├── assignments/   Assign, remove and hand-over server actions (no page).
     │       ├── invitations/   Invite, re-send and revoke server actions (no page).
+    │       ├── super-admins/  Super admins only: the active ones, invite, re-send, withdraw,
+    │                          revoke (14zcqntjwjg). No loading.tsx: an org admin's 404.
     │       └── audit/         The audit trail, filtered and scoped.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
     │                          patient, dashboard, research-export, training-data and

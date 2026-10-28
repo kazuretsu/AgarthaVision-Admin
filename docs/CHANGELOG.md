@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] A super admin invites and revokes super admins from the console
+
+`/super-admins` (super admins only, in the sidebar) lists the active super admins and their
+invitations (14zcqntjwjg). A super admin invites another by email; the link works for 72 hours,
+can be re-sent or withdrawn, and opens `/invite/<token>`, where the invitee sets their own
+password and becomes a super admin with no laboratory membership. A super admin revokes
+another behind a confirmation; nobody revokes themselves, and the database locks every active
+grant first, so one always remains. Each invite, re-send, withdrawal, grant and revocation is
+in the audit trail with no organization. **Apply `admin/0019` by hand**: it adds
+`super_admin_invitations` and the `console_*super_admin*` functions; until then the page fails
+to read and a super admin link names nothing (`docs/map/processes/super-admins.md`).
+
 ## [feat] Super admins and org admins sign in with a code from an authenticator app
 
 A correct password now leads to `/verify`, not the console (14zcqntjnt0). The first time, the

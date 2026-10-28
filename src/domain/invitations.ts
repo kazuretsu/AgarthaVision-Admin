@@ -110,18 +110,31 @@ export function checkNewPassword(
   return { ok: true };
 }
 
+/**
+ * Who a link makes someone: a laboratory role, or a super admin (admin/0019, 14zcqntjwjg),
+ * which is a grant and no membership.
+ */
+export type InvitedRole = MembershipRole | "super_admin";
+
 /** What a link resolves to on the accept page, before anyone has an account. */
 export interface InvitationLink {
   email: string;
   fullName: string | null;
-  role: MembershipRole;
-  organizationName: string;
+  role: InvitedRole;
+  /** Null for a super admin invitation, which is into no laboratory. */
+  organizationName: string | null;
   /** `unavailable`: the organization was deactivated after the invitation was sent. */
   state: InvitationState | "unavailable";
   expiresAt: string;
 }
 
 /** How each role is named to the person invited. */
-export function invitedRoleLabel(role: MembershipRole): string {
+export function invitedRoleLabel(role: InvitedRole): string {
+  if (role === "super_admin") return "super admin";
   return role === "org_admin" ? "organization admin" : "medtech";
+}
+
+/** Whether accepting this role leads into the console; a medtech's place is the mobile app. */
+export function invitedToConsole(role: InvitedRole): boolean {
+  return role !== "medtech";
 }

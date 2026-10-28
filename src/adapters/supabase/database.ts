@@ -29,6 +29,8 @@ import type {
 import { sortMembers, type PrevalenceView } from "@/domain";
 import type {
   Invitation,
+  SuperAdmin,
+  SuperAdminInvitation,
   MemberPatient,
   PatientAssignment,
   Person,
@@ -328,6 +330,27 @@ interface InvitationRow {
   accepted_at: string | null;
   revoked_at: string | null;
   organizations: { name: string } | null;
+}
+
+const SUPER_ADMIN_INVITATION_COLUMNS =
+  "id, email, full_name, status, expires_at, invited_by, invited_at, sent_count, last_sent_at, accepted_at, revoked_at";
+
+type SuperAdminInvitationRow = Omit<InvitationRow, "organization_id" | "role" | "organizations">;
+
+function toSuperAdminInvitation(row: SuperAdminInvitationRow): SuperAdminInvitation {
+  return {
+    id: row.id,
+    email: row.email,
+    fullName: row.full_name,
+    status: row.status === "accepted" || row.status === "revoked" ? row.status : "pending",
+    expiresAt: row.expires_at,
+    invitedAt: row.invited_at,
+    invitedById: row.invited_by,
+    sentCount: row.sent_count,
+    lastSentAt: row.last_sent_at,
+    acceptedAt: row.accepted_at,
+    revokedAt: row.revoked_at,
+  };
 }
 
 function toInvitation(row: InvitationRow): Invitation {
@@ -954,6 +977,50 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
 
     if (error) throw new DatabaseReadError("getInvitation", error);
     return data ? toInvitation(data as unknown as InvitationRow) : null;
+  }
+
+  async listSuperAdmins(): Promise<SuperAdmin[]> {
+    const { data, error } = await this.client.rpc("console_list_super_admins");
+    if (error) throw new DatabaseReadError("listSuperAdmins", error);
+    type Row = {
+      user_id: string;
+      full_name: string | null;
+      email: string | null;
+      granted_at: string;
+      granted_by: string | null;
+      granted_by_label: string | null;
+    };
+    return ((data as Row[] | null) ?? []).map((row) => ({
+      userId: row.user_id,
+      fullName: row.full_name,
+      email: row.email,
+      grantedAt: row.granted_at,
+      grantedById: row.granted_by,
+      grantedByLabel: row.granted_by_label,
+    }));
+  }
+
+  async listSuperAdminInvitations(): Promise<SuperAdminInvitation[]> {
+    const { data, error } = await this.client
+      .from("super_admin_invitations")
+      .select(SUPER_ADMIN_INVITATION_COLUMNS)
+      .order("invited_at", { ascending: false })
+      .limit(INVITATION_LIST_LIMIT);
+    if (error) throw new DatabaseReadError("listSuperAdminInvitations", error);
+    return ((data as unknown as SuperAdminInvitationRow[] | null) ?? []).map(
+      toSuperAdminInvitation,
+    );
+  }
+
+  async getSuperAdminInvitation(invitationId: string): Promise<SuperAdminInvitation | null> {
+    if (!isUuid(invitationId)) return null;
+    const { data, error } = await this.client
+      .from("super_admin_invitations")
+      .select(SUPER_ADMIN_INVITATION_COLUMNS)
+      .eq("id", invitationId)
+      .maybeSingle();
+    if (error) throw new DatabaseReadError("getSuperAdminInvitation", error);
+    return data ? toSuperAdminInvitation(data as unknown as SuperAdminInvitationRow) : null;
   }
 
   async listAuditEntries(query: AuditQuery): Promise<AuditEntry[]> {

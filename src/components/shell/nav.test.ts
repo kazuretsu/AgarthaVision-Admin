@@ -69,3 +69,10 @@ describe("sectionFor — where the not-found page's button goes (14zcqntk6h4)", 
     expect(href("/people/00000000-0000-4000-8000-000000000001")).toBe("/people");
   });
 });
+
+describe("super admins", () => {
+  it("is a super admin's entry only (14zcqntjwjg)", () => {
+    expect(navFor("super_admin").some((item) => item.href === "/super-admins")).toBe(true);
+    expect(navFor("org_admin").some((item) => item.href === "/super-admins")).toBe(false);
+  });
+});

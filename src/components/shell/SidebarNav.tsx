@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Map,
   Microscope,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -24,6 +25,7 @@ const ICONS = {
   training: BrainCircuit,
   people: Users,
   organizations: Building2,
+  super_admins: ShieldCheck,
   audit: History,
 } as const;
 

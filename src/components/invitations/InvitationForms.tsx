@@ -20,7 +20,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-function Feedback({ error, done }: { error: string | null; done: string | null }) {
+export function Feedback({ error, done }: { error: string | null; done: string | null }) {
   if (error) {
     return (
       <p role="alert" className="text-[13px] text-danger">

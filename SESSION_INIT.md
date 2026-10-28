@@ -36,6 +36,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Changing which laboratory's records someone sees | `docs/map/processes/lab-scoping.md`                                  |
 | Changing who can reach a route                   | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
 | Inviting people, or how an account is made       | `docs/map/processes/invitations.md`, `docs/constraints.md` (#2)      |
+| Adding or revoking a super admin                 | `docs/map/processes/super-admins.md`                                 |
 | The human check (Turnstile) on sign-in forms     | `docs/map/processes/human-check.md`                                  |
 | Two-step sign-in (authenticator codes, resets)   | `docs/map/processes/second-factor.md`                                |
 | A laboratory's people, deactivating someone      | `docs/map/processes/people-access.md`                                |

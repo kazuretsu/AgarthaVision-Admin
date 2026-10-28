@@ -34,6 +34,14 @@ describe("invitationEmail", () => {
     expect(admin.text).toContain("Admin Console");
   });
 
+  it("invites a super admin to AgarthaVision, into no laboratory, and to the console", () => {
+    const mail = invitationEmail({ ...BASE, role: "super_admin", organizationName: null });
+    expect(mail.subject).toBe("You're invited to AgarthaVision as a super admin");
+    expect(mail.text).toContain("Org Admin invited you to AgarthaVision as a super admin.");
+    expect(mail.text).toContain("Admin Console");
+    expect(mail.text).not.toContain("null");
+  });
+
   it("says when the link stops working, in Philippine time", () => {
     expect(invitationEmail(BASE).text).toContain("Oct 12, 2026");
     expect(invitationEmail(BASE).text).toContain("Philippine time");

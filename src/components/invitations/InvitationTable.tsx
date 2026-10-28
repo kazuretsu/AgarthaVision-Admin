@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { InvitationActions } from "./InvitationForms";
 
-const STATE_BADGE: Record<
+export const STATE_BADGE: Record<
   InvitationState,
   { label: string; variant: "default" | "neutral" | "ok" | "warn" }
 > = {
@@ -30,7 +30,10 @@ const STATE_BADGE: Record<
 };
 
 /** When the row's state happened, or will lapse. */
-function stateDate(invitation: Invitation, state: InvitationState): string {
+export function stateDate(
+  invitation: Pick<Invitation, "expiresAt" | "acceptedAt" | "revokedAt">,
+  state: InvitationState,
+): string {
   switch (state) {
     case "pending":
       return `Until ${formatDateTime(invitation.expiresAt)}`;
