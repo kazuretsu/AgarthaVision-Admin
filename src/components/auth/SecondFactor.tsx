@@ -1,17 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState } from "react";
-import { setUpAuthenticator, verifyCode } from "@/app/(auth)/verify/actions";
+import { useActionState, useState } from "react";
+import { verifyCode } from "@/app/(auth)/verify/actions";
 import { EMPTY_VERIFY_STATE } from "@/app/(auth)/verify/state";
+import { setUpAuthenticator, turnOffAuthenticator } from "@/app/(dashboard)/settings/actions";
+import { EMPTY_SET_UP_STATE, EMPTY_TURN_OFF_STATE } from "@/app/(dashboard)/settings/state";
 import { SECOND_FACTOR_CODE_FIELD } from "@/domain/second-factor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /**
- * The two forms of the second step (14zcqntjnt0): setting up an authenticator app, and
- * entering its code. Composed from the shadcn primitives; the server actions do the work.
+ * The authenticator forms: entering its code at sign-in (14zcqntjnt0), and setting one up or
+ * turning it off on `/settings` (14zcqntr31c). Composed from the shadcn primitives; the server
+ * actions do the work.
  */
 
 /** The six-digit field both forms share. */
@@ -42,16 +45,16 @@ function Problem({ message }: { message: string | null }) {
   ) : null;
 }
 
-/** First sign-in: show a QR code, then confirm the app with its first code. */
+/** Settings: show a QR code, then confirm the app with its first code. */
 export function AuthenticatorSetUp() {
-  const [state, action, pending] = useActionState(setUpAuthenticator, EMPTY_VERIFY_STATE);
+  const [state, action, pending] = useActionState(setUpAuthenticator, EMPTY_SET_UP_STATE);
   const { setUp } = state;
 
   if (!setUp) {
     return (
       <form action={action} className="flex flex-col gap-4">
         <Problem message={state.error} />
-        <Button type="submit" size="lg" disabled={pending}>
+        <Button type="submit" className="w-fit" disabled={pending}>
           {pending ? "Preparing…" : "Set up authenticator app"}
         </Button>
       </form>
@@ -86,14 +89,14 @@ export function AuthenticatorSetUp() {
       </ol>
       <CodeField autoFocus />
       <Problem message={state.error} />
-      <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Checking…" : "Turn on and continue"}
+      <Button type="submit" className="w-fit" disabled={pending}>
+        {pending ? "Checking…" : "Turn on"}
       </Button>
     </form>
   );
 }
 
-/** Every later sign-in: the code from the app already set up. */
+/** Sign-in: the code from the app already set up. */
 export function AuthenticatorCode() {
   const [state, action, pending] = useActionState(verifyCode, EMPTY_VERIFY_STATE);
   return (
@@ -103,6 +106,39 @@ export function AuthenticatorCode() {
       <Button type="submit" size="lg" disabled={pending}>
         {pending ? "Checking…" : "Continue"}
       </Button>
+    </form>
+  );
+}
+
+/** Settings: turning the app off takes a code from it, so an open session alone cannot. */
+export function AuthenticatorTurnOff() {
+  const [state, action, pending] = useActionState(turnOffAuthenticator, EMPTY_TURN_OFF_STATE);
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <Button type="button" variant="outline" className="w-fit" onClick={() => setOpen(true)}>
+        Turn off
+      </Button>
+    );
+  }
+
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <p className="text-[13px] text-stone-deep">
+        Enter the code your app shows now to turn two-step sign-in off. After that, signing in needs
+        only your password.
+      </p>
+      <CodeField autoFocus />
+      <Problem message={state.error} />
+      <div className="flex gap-2">
+        <Button type="submit" variant="destructive" disabled={pending}>
+          {pending ? "Turning off…" : "Turn off two-step sign-in"}
+        </Button>
+        <Button type="button" variant="ghost" disabled={pending} onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
     </form>
   );
 }

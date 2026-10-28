@@ -69,3 +69,10 @@ describe("sectionFor — where the not-found page's button goes (14zcqntk6h4)", 
     expect(href("/people/00000000-0000-4000-8000-000000000001")).toBe("/people");
   });
 });
+
+describe("settings", () => {
+  it("is everyone's entry: each admin's own sign-in (14zcqntr31c)", () => {
+    expect(navFor("org_admin").some((item) => item.href === "/settings")).toBe(true);
+    expect(navFor("super_admin").some((item) => item.href === "/settings")).toBe(true);
+  });
+});

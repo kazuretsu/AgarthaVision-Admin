@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-18
-commit: 8d5e003
+verified: 2026-10-28
+commit: 2e84353
 ---
 
 # Admin gate
@@ -28,7 +28,7 @@ database policy calls, so the console and the database never disagree — and th
 membership and organization (`docs/map/objects/organizations.md`). `super_admins` itself is
 closed to every client. `profiles.role` is retired and the console never reads it. Only an
 active `org_admin` membership in an active organization counts (`orgAdminMembership`,
-`src/adapters/supabase/auth.ts:104`), so revoking a grant or deactivating a membership or an
+`src/adapters/supabase/auth.ts:108`), so revoking a grant or deactivating a membership or an
 organization locks the person out on their next uncached page.
 
 ## Steps
@@ -38,25 +38,27 @@ organization locks the person out on their next uncached page.
    expired, which triggers the refresh-and-set-cookie cycle a Server Component cannot do.
    It sends `Server-Timing: session;dur=…` (`:55`). **This is refresh only — it is not the
    authorisation point.**
-2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:120`) calls `getClaims()`,
+2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:124`) calls `getClaims()`,
    which checks the JWT's signature and expiry against the project's published signing key
    (ECC P-256, fetched once from `/auth/v1/.well-known/jwks.json` and cached ten minutes per
    server instance): **no auth-server round trip**. A legacy shared-secret project falls back
    to asking the server. Never `getSession()`, which only decodes a cookie the browser can
    set.
-3. **Resolve the facts, in one call.** `facts` (`:133`) calls `console_actor()`: name,
+3. **Resolve the facts, in one call.** `facts` (`:137`) calls `console_actor()`: name,
    super-admin grant and membership. No row is no access at all. An **error** is not an
-   answer: it throws `AuthUnavailableError` (`:141`, below). If the function is not
-   installed yet (`PGRST202`/`42883`, `:139`), `factsWithoutActor` (`:165`) runs the three
+   answer: it throws `AuthUnavailableError` (`:145`, below). If the function is not
+   installed yet (`PGRST202`/`42883`, `:143`), `factsWithoutActor` (`:169`) runs the three
    reads it replaced (profile name and `is_admin()` in parallel, then the membership), so a
    deployment ahead of its migration keeps working; a failed `is_admin()` or membership
-   read throws the same way (`:170`, `:180`), a failed profile read only loses the name.
-4. **Resolve access.** `toActor` (`:212`) applies `resolveConsoleAccess`. No access throws
+   read throws the same way (`:174`, `:184`), a failed profile read only loses the name.
+4. **Resolve access.** `toActor` (`:216`) applies `resolveConsoleAccess`. No access throws
    `NotAuthorizedError`.
-5. **Check the second step (14zcqntjnt0).** `requireConsoleActor` (`:223`) then requires the
-   verified token to say `aal2` — the session passed an authenticator code — or throws
-   `SecondFactorRequiredError` (`:229`). It reads the same token as step 2, so it costs no
-   call. Access comes first, so a medtech is told where to go and never asked for a code.
+5. **Check the second step (14zcqntjnt0, 14zcqntr31c).** `requireConsoleActor` (`:227`) then
+   admits a verified token that says `aal2` (the session passed an authenticator code) at no
+   further cost. Short of it, it asks the auth server whether the account has an app: with one,
+   `SecondFactorRequiredError`; without, the session is admitted on its password, since
+   setting an app up is each admin's choice. Access comes first, so a medtech is told where to
+   go and never asked for a code.
    `SecondFactorRequiredError` is a kind of `NotAuthenticatedError`: any caller that does not
    handle it treats the session as signed out and shows and writes nothing.
    `docs/map/processes/second-factor.md` has the rest.
@@ -151,9 +153,9 @@ appears only after a correct password, so it tells a stranger nothing; bad crede
 an unknown email return the **same** generic refusal, so the form does not confirm which
 addresses are real accounts.
 
-A correct password never opens the console on its own: the action sends every admin on to
-`/verify` (`src/app/(auth)/login/actions.ts:76`) for their authenticator code, or to set up an
-app the first time (`docs/map/processes/second-factor.md`).
+A correct password sends the admin to `/dashboard` (`src/app/(auth)/login/actions.ts`). If
+they have set up an authenticator app, the gate sends them on to `/verify` for its code
+(`docs/map/processes/second-factor.md`).
 
 The form carries a Cloudflare Turnstile token (`docs/map/processes/human-check.md`). A refused
 check gets its own message, "The security check expired or did not pass", never the
