@@ -111,6 +111,13 @@ export interface AuthPort {
    */
   signInWithPassword(credentials: Credentials): Promise<ConsoleActor>;
 
+  /**
+   * Changes the signed-in user's password, after checking their current one (14zcqntr35e). On
+   * success every other session of the account is ended — other browsers and the mobile app —
+   * and this one stays signed in. Throws {@link PasswordChangeError} when the provider refuses.
+   */
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
+
   signOut(): Promise<void>;
 }
 
@@ -152,6 +159,31 @@ export class SecondFactorError extends Error {
   ) {
     super(`The second step failed: ${reason}.`);
     this.name = "SecondFactorError";
+    this.cause = cause;
+  }
+}
+
+/** Why a password change was refused. */
+export type PasswordChangeFailure =
+  /** The current password given was not the account's. */
+  | "wrong_current_password"
+  /** The new password is the current one. */
+  | "same_password"
+  /** The new password misses the provider's rules. */
+  | "weak_password"
+  /** Too many attempts; the provider is making them wait. */
+  | "rate_limited"
+  /** Anything else. */
+  | "failed";
+
+/** The provider refused or failed a password change. Nothing was changed. */
+export class PasswordChangeError extends Error {
+  constructor(
+    public readonly reason: PasswordChangeFailure,
+    cause?: unknown,
+  ) {
+    super(`The password change failed: ${reason}.`);
+    this.name = "PasswordChangeError";
     this.cause = cause;
   }
 }

@@ -95,6 +95,20 @@ export interface AdminWritePort {
    */
   recordAuthenticatorReset(userId: string): Promise<void>;
 
+  /**
+   * Sets the signed-in console user's own name (admin/0020, 14zcqntr35e): trimmed, inner spaces
+   * collapsed, 1 to 120 characters. Refused (`invalid`, hint `name_required` or `name_too_long`)
+   * for a bad name and (`forbidden`) for anyone but a super admin or an active org admin. The
+   * same name again changes and records nothing.
+   */
+  setOwnName(fullName: string): Promise<void>;
+
+  /**
+   * Records that the signed-in console user just changed their own password (admin/0020). Called
+   * after the provider accepted the change; nothing about the password is written.
+   */
+  recordOwnPasswordChange(): Promise<void>;
+
   /** Assigns a patient to an active medtech of its laboratory. Org admins only. */
   assignPatient(patientId: string, userId: string): Promise<void>;
   /**

@@ -55,6 +55,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
 │       │   ├── super-admins.md        Invite, accept and revoke a super admin; always one left.
+│       │   ├── own-profile.md         An admin's own name and password; signed out elsewhere.
 │       │   ├── people-access.md       The People page; deactivate = ban the login, record, undo.
 │       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
@@ -100,10 +101,11 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── super-admins/  Super admins only: the active ones, invite, re-send, withdraw,
     │                          revoke (14zcqntjwjg). No loading.tsx: an org admin's 404.
     │       ├── audit/         The audit trail, filtered and scoped.
-    │       └── settings/      The admin's own settings: set up or turn off two-step sign-in
-                               (14zcqntr31c); its actions; loading.tsx.
+    │       └── settings/      The admin's own settings: name and password (14zcqntr35e), set
+                               up or turn off two-step sign-in (14zcqntr31c); its actions;
+                               loading.tsx.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
-    │                          patient, dashboard, research-export, training-data and
+    │                          patient, own profile, dashboard, research-export, training-data and
     │                          prevalence-map rules, the human-check token,
     │                          the training zip's files, id checks.
     │                          No I/O.
@@ -114,12 +116,15 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
     │   │                      paging.ts), reports and prevalence-rows (row mapping), admin-write, storage, auth,
     │   │                      onboarding (accepting an invitation), account-access (bans),
-    │   │                      errors (a migration not applied yet; the human-check token and refusal).
+    │   │                      errors (a migration not applied yet; the human-check token and refusal;
+    │   │                      a refused password change).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
     │   ├── auth/              HumanCheck: Cloudflare Turnstile on the sign-in and invitation forms.
     │   │                      SecondFactor: setting up an authenticator app, entering its code.
+    │   │                      PasswordInput (eye button) and NewPasswordFields (rules checklist).
+    │   ├── settings/          The name and password forms on /settings.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter,
     │   │                      and the notice for an `org` that names no organization.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.

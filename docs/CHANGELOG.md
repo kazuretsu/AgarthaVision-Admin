@@ -2,6 +2,20 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Admins change their own name and password on Settings
+
+`/settings` gains a Profile card (email shown; name editable) and a Password card (14zcqntr35e).
+The name is saved by `console_set_own_name`, which writes only the caller's own profile and
+records `profile.rename`. A password change asks for the current password, shows the rules as
+they are met, and **warns in a dialog first** that it signs out every other session, the mobile
+app's included; this session stays signed in. Supabase checks the current password, sets the
+new one and ends the other sessions in one request (`AuthPort.changePassword`), and the change
+is then recorded as `profile.password_change`, with nothing about the password. Every password
+field (`/settings`, `/login`, the invitation form) now has an eye button to show what was
+typed (shadcn `input-group`). **Apply `admin/0020` by hand**, and **turn on "Require current
+password when changing password"** in Supabase Auth: without it Supabase ignores the current
+password (`docs/map/processes/own-profile.md`).
+
 ## [feat] A super admin invites and revokes super admins from the console
 
 `/super-admins` (super admins only, in the sidebar) lists the active super admins and their
