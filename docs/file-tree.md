@@ -72,7 +72,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── error.tsx          The boundary above the gate: an outage (the gate could not read
     │   │                      access) answers 500 with the outage message and no shell.
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
-    │   ├── (auth)/verify/     The authenticator code, or setting up the app (14zcqntjnt0).
+    │   ├── (auth)/verify/     The authenticator code, for an admin who has an app (14zcqntjnt0).
     │   ├── (auth)/invite/     [token]/ accept page and action (outside the gate); joined/.
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
@@ -99,7 +99,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │       ├── invitations/   Invite, re-send and revoke server actions (no page).
     │       ├── super-admins/  Super admins only: the active ones, invite, re-send, withdraw,
     │                          revoke (14zcqntjwjg). No loading.tsx: an org admin's 404.
-    │       └── audit/         The audit trail, filtered and scoped.
+    │       ├── audit/         The audit trail, filtered and scoped.
+    │       └── settings/      The admin's own settings: set up or turn off two-step sign-in
+                               (14zcqntr31c); its actions; loading.tsx.
     ├── domain/                Entities, read models, access rules, clinical (LPF),
     │                          patient, dashboard, research-export, training-data and
     │                          prevalence-map rules, the human-check token,

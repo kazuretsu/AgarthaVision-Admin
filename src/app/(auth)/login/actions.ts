@@ -71,9 +71,9 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
   }
 
   // Outside the try: redirect() signals by throwing, and catching it here would
-  // swallow the navigation and leave the visitor on the form. A password alone never
-  // passes the second step (14zcqntjnt0), so every admin goes on to their code.
-  redirect("/verify");
+  // swallow the navigation and leave the visitor on the form. An admin with an authenticator
+  // app is sent on to `/verify` by the console gate (14zcqntjnt0); one without goes straight in.
+  redirect("/dashboard");
 }
 
 /** Ends the session and returns to the sign-in form. */

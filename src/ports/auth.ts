@@ -59,7 +59,8 @@ export interface AuthPort {
    * Throws {@link NotAuthenticatedError} with no session,
    * {@link NotAuthorizedError} when the user has no console access (a medtech),
    * {@link SecondFactorRequiredError} — a kind of {@link NotAuthenticatedError} — when the
-   * session has not passed the second step (14zcqntjnt0), and {@link AuthUnavailableError}
+   * account has an authenticator app and the session has not entered its code (14zcqntjnt0,
+   * 14zcqntr31c; an account without one is admitted), and {@link AuthUnavailableError}
    * when access could not be read at all.
    */
   requireConsoleActor(): Promise<ConsoleActor>;
@@ -68,8 +69,14 @@ export interface AuthPort {
    * Where the signed-in console user stands on the second step. Throws as
    * {@link requireConsoleActor} does, except that a session short of the second step is
    * answered, not refused. A medtech is {@link NotAuthorizedError}: they are never asked.
+   * `hasAuthenticator` is read from the auth server every time, so it is current even for a
+   * session that passed before its app was reset.
    */
-  secondFactorStatus(): Promise<{ actor: ConsoleActor; step: SecondFactorStep }>;
+  secondFactorStatus(): Promise<{
+    actor: ConsoleActor;
+    step: SecondFactorStep;
+    hasAuthenticator: boolean;
+  }>;
 
   /**
    * Starts setting up an authenticator app, for a console user who has none. Throws
@@ -88,6 +95,13 @@ export interface AuthPort {
    * step. Throws {@link SecondFactorError} for a wrong code.
    */
   verifySecondFactor(code: string): Promise<void>;
+
+  /**
+   * Removes the account's authenticator app, after checking a current code from it, so a
+   * session left open on a shared computer cannot. The next sign-in needs only the password.
+   * Throws {@link SecondFactorError} for a wrong code, or when no app is set up.
+   */
+  turnOffSecondFactor(code: string): Promise<void>;
 
   /**
    * Signs in and returns the actor. Throws {@link AuthenticationFailedError} on
@@ -109,8 +123,8 @@ export class NotAuthenticatedError extends Error {
 }
 
 /**
- * A console user whose session has not passed the second step (14zcqntjnt0): no authenticator
- * code yet. A kind of {@link NotAuthenticatedError}, so any caller that does not handle it
+ * A console user with an authenticator app whose session has not entered its code yet
+ * (14zcqntjnt0). A kind of {@link NotAuthenticatedError}, so any caller that does not handle it
  * treats the session as signed out and shows and writes nothing. The gate sends them to
  * `/verify`.
  */

@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Map,
   Microscope,
+  Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const ICONS = {
   organizations: Building2,
   super_admins: ShieldCheck,
   audit: History,
+  settings: Settings,
 } as const;
 
 /**

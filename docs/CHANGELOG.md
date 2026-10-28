@@ -14,6 +14,33 @@ in the audit trail with no organization. **Apply `admin/0019` by hand**: it adds
 `super_admin_invitations` and the `console_*super_admin*` functions; until then the page fails
 to read and a super admin link names nothing (`docs/map/processes/super-admins.md`).
 
+## [feat] Two-step sign-in is each admin's choice, set up on a new Settings page
+
+An authenticator app is no longer forced at the first sign-in (14zcqntr31c). A correct password
+now goes to `/dashboard`, and so does accepting an org admin invitation. The gate
+(`requireConsoleActor`) still holds an admin who **has** an app to its code (`/verify`), but
+admits one without an app on their password: whether the account has one is asked of the auth
+server, never the cookie, at one call per request for a session that has not entered a code.
+The new `/settings` page (sidebar, every admin) shows two-step sign-in on or off, sets an app
+up (QR code, then its first code) and turns it off again after a current code
+(`AuthPort.turnOffSecondFactor`). `/verify` now only takes the code. During validation and demo
+this deviates from the app repo's privacy position (Position 6, MFA mandatory for admin
+accounts), resting on validation using synthetic patients only; it must be mandatory again
+before real patient data (`docs/map/processes/second-factor.md`). No migration and no Supabase
+setting.
+
+## [fix] The invitation form shows the password rules Supabase actually applies
+
+`/invite/[token]` said "At least 8 characters", but Supabase requires 12 with a lowercase
+letter, an uppercase letter, a number and a symbol, so a password that followed the hint was
+refused with "Choose a stronger password: longer, and not a common one", which named no rule
+and mentioned leaked-password protection that is off (14zcqntr31d). The rules now live in
+`src/domain/password-policy.ts`, mirroring Supabase's setting (change both together). The form
+lists them under the field and ticks each off as it is met, and a refusal names the rule missed
+("Add a symbol."). The console no longer refuses a short password itself: an account that
+already exists signs in on the same form with the password it has, and only a new account is
+held to the rules, by Supabase.
+
 ## [feat] Super admins and org admins sign in with a code from an authenticator app
 
 A correct password now leads to `/verify`, not the console (14zcqntjnt0). The first time, the

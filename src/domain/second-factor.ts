@@ -2,13 +2,13 @@ import type { ConsoleAccess } from "./access";
 import type { Person } from "./people";
 
 /**
- * The second step of signing in to the console (14zcqntjnt0).
+ * The second step of signing in (14zcqntjnt0), and choosing to take it (14zcqntr31c).
  *
- * The signed privacy position (`docs/patient-pii-position.md` §3) makes multi-factor
- * authentication mandatory for administrative accounts: super admins and org admins can read
- * patients' personal data. After their password, they enter a six-digit code from an
- * authenticator app; the first time, they set the app up. Until they have, they reach no page
- * and no data. Medtechs, who never use the console, are never asked.
+ * After their password, an admin who has set up an authenticator app enters the six-digit code
+ * it shows; until they have, they reach no page and no data. Setting an app up is the admin's
+ * own choice, made on `/settings`: during validation and demo the console does not insist, so
+ * an admin without one goes straight in on their password (`docs/patient-pii-position.md` §3).
+ * Medtechs, who never use the console, are never offered one.
  *
  * The rule lives here, in plain TypeScript; the auth adapter only reports the facts it rests on,
  * so a later provider keeps the rule (D7).
@@ -20,8 +20,8 @@ export type SecondFactorStep =
   | "passed"
   /** An authenticator app is set up; this session has not entered its code yet. */
   | "enter_code"
-  /** No authenticator app yet: set one up before anything else. */
-  | "set_up";
+  /** No authenticator app: nothing to enter. One can be set up on `/settings`. */
+  | "not_set_up";
 
 /** The facts the step rests on, read by the auth adapter. */
 export interface SecondFactorFacts {
@@ -36,7 +36,15 @@ export function secondFactorStep({
   hasAuthenticator,
 }: SecondFactorFacts): SecondFactorStep {
   if (sessionPassed) return "passed";
-  return hasAuthenticator ? "enter_code" : "set_up";
+  return hasAuthenticator ? "enter_code" : "not_set_up";
+}
+
+/**
+ * Whether a session on this step may use the console. Only an account with an app has a step
+ * to pass; until its code is entered, nothing opens.
+ */
+export function secondFactorAdmits(step: SecondFactorStep): boolean {
+  return step !== "enter_code";
 }
 
 /** The form field a code travels in. */

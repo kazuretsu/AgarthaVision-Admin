@@ -57,11 +57,18 @@ referrer.
 `SupabaseOnboardingAdapter.acceptInvitation` (`src/adapters/supabase/onboarding.ts:91`):
 
 1. Re-reads the link; only `pending` goes on. The action has already checked the password
-   and the name's length, so nothing it can refuse is left for after the account exists.
+   (both fields match, at most 72 bytes) and the name's length, so nothing it can refuse is
+   left for after the account exists.
 2. `auth.admin.createUser` with the **invitation's** email, the chosen password and
    `email_confirm: true` (`:96`) — one of the console's two uses of the service-role key
    (`createServiceClient`, `src/adapters/supabase/client.ts:52`). No `user_metadata` is
    written. If the email already has an account (a retry), that account is used.
+   Supabase applies the password rules only to a new account: at least 12 characters with a
+   lowercase letter, an uppercase letter, a number and a symbol. A miss is `weak_password`,
+   and the action names the rule from `passwordGaps` (`src/domain/password-policy.ts`), which
+   mirrors Supabase's setting and must change with it. The form lists the same rules under the
+   password field and ticks them off as the person types; they do not disable the button,
+   because an existing account signs in here with the password it already has.
 3. Signs in as that account, passing the form's human-check token
    (`docs/map/processes/human-check.md`; a refused one is `human_check_failed`), and calls `console_accept_invitation` as the invitee
    (`:313`), which checks the token, the expiry, the organization, that the signed-in email

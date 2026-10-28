@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { canResetSecondFactor, readSecondFactorCode, secondFactorStep } from "./second-factor";
+import {
+  canResetSecondFactor,
+  readSecondFactorCode,
+  secondFactorAdmits,
+  secondFactorStep,
+} from "./second-factor";
 
 describe("secondFactorStep", () => {
   it("passes a session that entered its code", () => {
@@ -10,8 +15,19 @@ describe("secondFactorStep", () => {
     expect(secondFactorStep({ sessionPassed: false, hasAuthenticator: true })).toBe("enter_code");
   });
 
-  it("asks a first-time admin to set up an app", () => {
-    expect(secondFactorStep({ sessionPassed: false, hasAuthenticator: false })).toBe("set_up");
+  it("has nothing to ask of an admin without an app", () => {
+    expect(secondFactorStep({ sessionPassed: false, hasAuthenticator: false })).toBe("not_set_up");
+  });
+});
+
+describe("secondFactorAdmits", () => {
+  it("admits a passed session and an account with no app (14zcqntr31c)", () => {
+    expect(secondFactorAdmits("passed")).toBe(true);
+    expect(secondFactorAdmits("not_set_up")).toBe(true);
+  });
+
+  it("holds back an account with an app until its code is entered", () => {
+    expect(secondFactorAdmits("enter_code")).toBe(false);
   });
 });
 

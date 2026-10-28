@@ -76,3 +76,10 @@ describe("super admins", () => {
     expect(navFor("org_admin").some((item) => item.href === "/super-admins")).toBe(false);
   });
 });
+
+describe("settings", () => {
+  it("is everyone's entry: each admin's own sign-in (14zcqntr31c)", () => {
+    expect(navFor("org_admin").some((item) => item.href === "/settings")).toBe(true);
+    expect(navFor("super_admin").some((item) => item.href === "/settings")).toBe(true);
+  });
+});
