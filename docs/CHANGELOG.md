@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] The invitation form shows the password rules Supabase actually applies
+
+`/invite/[token]` said "At least 8 characters", but Supabase requires 12 with a lowercase
+letter, an uppercase letter, a number and a symbol, so a password that followed the hint was
+refused with "Choose a stronger password: longer, and not a common one", which named no rule
+and mentioned leaked-password protection that is off (14zcqntr31d). The rules now live in
+`src/domain/password-policy.ts`, mirroring Supabase's setting (change both together). The form
+lists them under the field and ticks each off as it is met, and a refusal names the rule missed
+("Add a symbol."). The console no longer refuses a short password itself: an account that
+already exists signs in on the same form with the password it has, and only a new account is
+held to the rules, by Supabase.
+
 ## [feat] Super admins and org admins sign in with a code from an authenticator app
 
 A correct password now leads to `/verify`, not the console (14zcqntjnt0). The first time, the

@@ -1,5 +1,6 @@
 import type { ConsoleAccess } from "./access";
 import type { MembershipRole } from "./organizations";
+import { PASSWORD_MAX_BYTES } from "./password-policy";
 
 /**
  * Invitations (admin/0005): the only way anyone gets an account.
@@ -91,18 +92,17 @@ export function normaliseInvitee(
   return { ok: true, email: address, fullName: name.length > 0 ? name : null };
 }
 
-export const PASSWORD_MIN = 8;
-/** bcrypt, which Supabase Auth uses, reads only the first 72 bytes. */
-export const PASSWORD_MAX_BYTES = 72;
-
-/** The invitee's chosen password, checked before any account is made. */
+/**
+ * What is checked about the invitee's password before the provider is asked: that it fits
+ * bcrypt and that both fields match. The strength rules (`password-policy.ts`) are left to the
+ * provider here, because the same form also takes the password of an account that already
+ * exists, which may predate them; the provider applies them only to a new account.
+ */
 export function checkNewPassword(
   password: string,
   confirmation: string,
 ): { ok: true } | { ok: false; error: string } {
-  if (password.length < PASSWORD_MIN) {
-    return { ok: false, error: `Use at least ${PASSWORD_MIN} characters.` };
-  }
+  if (password.length === 0) return { ok: false, error: "Enter a password." };
   if (new TextEncoder().encode(password).length > PASSWORD_MAX_BYTES) {
     return { ok: false, error: "That password is too long. Use a shorter one." };
   }
