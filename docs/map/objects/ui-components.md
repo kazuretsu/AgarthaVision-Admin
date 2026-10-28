@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-06
-commit: a62ef7a
+verified: 2026-10-28
+commit: efed466
 ---
 
 # UI components
@@ -49,6 +49,7 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
 
   | File                | Registry item   | Base UI primitive  | Source             |
   | ------------------- | --------------- | ------------------ | ------------------ |
+  | `alert.tsx`         | `alert`         | none               | hand-ported        |
   | `alert-dialog.tsx`  | `alert-dialog`  | `alert-dialog`     | hand-ported        |
   | `badge.tsx`         | `badge`         | none               | hand-ported        |
   | `breadcrumb.tsx`    | `breadcrumb`    | none (`useRender`) | hand-ported        |
@@ -73,6 +74,11 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   `ui.shadcn.com`. Base UI renders a hidden input, so it submits with a plain GET form; the
   training data filter uses `uncheckedValue="0"` so an unticked option survives the round
   trip.
+- **`alert`** was ported from the registry's `base` source with the `base-nova` style's
+  classes inlined, in 14zcqntr35f, where the CLI could not reach `ui.shadcn.com`. One
+  adaptation: a `warning` variant (`border-warn bg-warn-tint`, amber icon) beside the
+  registry's `default` and `destructive`. `role` defaults to `alert` as in the registry; the
+  notices pass `role="status"` for info and warning (`docs/map/processes/notices.md`).
 - **`breadcrumb`** was ported from the registry's `base` source with the `base-nova` style's
   classes inlined and lucide's chevron and ellipsis, in 14zcqntjnt3, where the CLI could not
   reach `ui.shadcn.com`. `BreadcrumbLink` takes `render={<Link …/>}` for a client navigation.

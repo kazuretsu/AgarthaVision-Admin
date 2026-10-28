@@ -68,7 +68,8 @@ export async function setUpAuthenticator(
     return { error: secondFactorProblem(cause), setUp: previous.setUp };
   }
   // Outside the try: redirect() signals by throwing.
-  revalidatePath("/settings");
+  // The whole console: the layout's notices change with it (14zcqntr35f).
+  revalidatePath("/", "layout");
   redirect("/settings");
 }
 
@@ -100,6 +101,7 @@ export async function turnOffAuthenticator(
   } catch (cause) {
     return { error: secondFactorProblem(cause) };
   }
-  revalidatePath("/settings");
+  // The whole console: the layout's notices change with it (14zcqntr35f).
+  revalidatePath("/", "layout");
   redirect("/settings");
 }

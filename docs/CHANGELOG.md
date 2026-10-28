@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] A notices strip across the console, starting with "turn on two-step sign-in"
+
+Every console page now has a strip of closable notices above the page (14zcqntr35f), built on
+shadcn `alert` (ported from the registry source; the CLI could not reach `ui.shadcn.com`, with
+a `warning` variant added). The first, "Turn on two-step sign-in", shows to any super admin or
+org admin without an authenticator app, everywhere but `/settings`, with "Set up now". Closing
+it hides it for 7 days on that browser (a cookie per notice, keyed by the admin); it comes back
+while the app is off and is gone once one is set up. Whether the account has an app comes from
+what the gate already knew, so no page pays an extra call: `ConsoleActor.secondFactorOn`. A
+notice is one entry in `src/domain/notices.ts`. No migration, no setting
+(`docs/map/processes/notices.md`).
+
 ## [feat] A super admin invites and revokes super admins from the console
 
 `/super-admins` (super admins only, in the sidebar) lists the active super admins and their

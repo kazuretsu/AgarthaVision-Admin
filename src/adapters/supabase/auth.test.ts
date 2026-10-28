@@ -383,6 +383,15 @@ describe("SupabaseAuthAdapter — the authenticator code (14zcqntjnt0)", () => {
     });
     const actor = await new SupabaseAuthAdapter(client).requireConsoleActor();
     expect(actor.access.kind).toBe("org_admin");
+    // The notices read this (14zcqntr35f): learned at no extra cost.
+    expect(actor.secondFactorOn).toBe(false);
+  });
+
+  it("knows a session that passed a code has an app, without asking (14zcqntr35f)", async () => {
+    const { client, calls } = gateClient({ actor: row({ is_super_admin: true }) });
+    const actor = await new SupabaseAuthAdapter(client).requireConsoleActor();
+    expect(actor.secondFactorOn).toBe(true);
+    expect(calls).not.toContain("mfa.listFactors");
   });
 
   it("reads a failed factor lookup at the gate as an outage, never as no app", async () => {

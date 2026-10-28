@@ -9,6 +9,7 @@ export * from "./organizations";
 export * from "./enums";
 export * from "./ids";
 export * from "./invitations";
+export * from "./notices";
 export * from "./password-policy";
 export * from "./patients";
 export * from "./people";

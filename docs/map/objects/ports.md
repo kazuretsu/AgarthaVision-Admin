@@ -49,6 +49,9 @@ code, and one without an app on its password; the second-step members serve `/ve
 `Credentials` and `AcceptInvitationRequest` carry an optional `humanCheckToken`: the form's
 single-use Turnstile token, which the provider verifies (`docs/map/processes/human-check.md`).
 
+`ConsoleActor.secondFactorOn` says whether the account has an authenticator app, as the gate
+already learned it, at no extra call (`docs/map/processes/notices.md`).
+
 `requireConsoleActor()` returns the user together with their `ConsoleAccess`
 (`src/domain/access.ts:22`) — super admin, or org admin with their organization — and
 throws rather than returning a reduced view for anyone else. There is no partial console,

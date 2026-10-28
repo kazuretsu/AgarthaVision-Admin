@@ -24,6 +24,12 @@ export interface AuthenticatedUser {
 export interface ConsoleActor {
   user: AuthenticatedUser;
   access: ConsoleAccess;
+  /**
+   * The account has an authenticator app (14zcqntr31c), as the gate already learned it: a
+   * session that passed a code has one, and one admitted without a code has none, since an
+   * account with an app is held at `/verify`. No extra call. Feeds the notices (14zcqntr35f).
+   */
+  secondFactorOn: boolean;
 }
 
 export interface Credentials {

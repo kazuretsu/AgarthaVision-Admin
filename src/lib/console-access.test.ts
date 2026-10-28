@@ -65,7 +65,11 @@ describe("getConsoleActor (14zcqntk6h2)", () => {
 describe("requireRouteAccess — the authenticator code (14zcqntjnt0)", () => {
   it("refuses a session that has not entered its code with 401, serving nothing", async () => {
     requireConsoleActor.mockRejectedValue(
-      new SecondFactorRequiredError({ user, access: { kind: "super_admin" } }),
+      new SecondFactorRequiredError({
+        user,
+        access: { kind: "super_admin" },
+        secondFactorOn: true,
+      }),
     );
     const result = await requireRouteAccess(ANY_CONSOLE_USER);
     if (!("response" in result)) throw new Error("expected a response");

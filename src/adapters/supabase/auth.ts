@@ -213,10 +213,14 @@ export class SupabaseAuthAdapter implements AuthPort {
     };
   }
 
-  private toActor(user: AuthenticatedUser, facts: ActorFacts): ConsoleActor {
+  private toActor(
+    user: AuthenticatedUser,
+    facts: ActorFacts,
+    secondFactorOn: boolean,
+  ): ConsoleActor {
     const access = resolveConsoleAccess(facts.isSuperAdmin, facts.membership);
     if (!access) throw new NotAuthorizedError(user);
-    return { user, access };
+    return { user, access, secondFactorOn };
   }
 
   async getCurrentUser(): Promise<AuthenticatedUser | null> {
@@ -229,14 +233,13 @@ export class SupabaseAuthAdapter implements AuthPort {
     if (!identity) throw new NotAuthenticatedError();
     const { user, facts } = await this.userFor(identity);
     // Access first, so a medtech is told where to go and never asked for a code.
-    const actor = this.toActor(user, facts);
+    const passed = this.toActor(user, facts, true);
     // A passed session costs nothing more. Short of it, only an account with an app is held
     // back (14zcqntr31c), and whether it has one is asked of the auth server, never the cookie.
-    if (identity.secondFactorPassed) return actor;
-    const step = secondFactorStep({
-      sessionPassed: false,
-      hasAuthenticator: (await this.confirmedAuthenticator()) !== null,
-    });
+    if (identity.secondFactorPassed) return passed;
+    const hasAuthenticator = (await this.confirmedAuthenticator()) !== null;
+    const step = secondFactorStep({ sessionPassed: false, hasAuthenticator });
+    const actor = { ...passed, secondFactorOn: hasAuthenticator };
     if (!secondFactorAdmits(step)) throw new SecondFactorRequiredError(actor);
     return actor;
   }
@@ -249,8 +252,10 @@ export class SupabaseAuthAdapter implements AuthPort {
     const identity = await this.identity();
     if (!identity) throw new NotAuthenticatedError();
     const { user, facts } = await this.userFor(identity);
-    const actor = this.toActor(user, facts);
+    // Access first: a medtech is refused before the auth server is asked anything.
+    const refusedOrAdmitted = this.toActor(user, facts, false);
     const hasAuthenticator = (await this.confirmedAuthenticator()) !== null;
+    const actor = { ...refusedOrAdmitted, secondFactorOn: hasAuthenticator };
     const step = secondFactorStep({ sessionPassed: identity.secondFactorPassed, hasAuthenticator });
     return { actor, step, hasAuthenticator };
   }
@@ -335,7 +340,11 @@ export class SupabaseAuthAdapter implements AuthPort {
       id: data.user.id,
       email: data.user.email ?? null,
     });
-    return this.toActor(user, facts);
+    // The sign-in answer lists the account's factors, so this costs no call.
+    const secondFactorOn = (data.user.factors ?? []).some(
+      (factor) => factor.factor_type === "totp" && factor.status === "verified",
+    );
+    return this.toActor(user, facts, secondFactorOn);
   }
 
   async signOut(): Promise<void> {

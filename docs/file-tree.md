@@ -55,6 +55,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
 │       │   ├── super-admins.md        Invite, accept and revoke a super admin; always one left.
+│       │   ├── notices.md             The closable strip of notices across the console.
 │       │   ├── people-access.md       The People page; deactivate = ban the login, record, undo.
 │       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
 │       │   ├── research-export.md     Period → smears → CSV/JSON. The v2 column contract.
@@ -127,7 +128,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── loading/           Page-shaped skeletons (PageSkeletons) and LinkPending, the
     │                          spinner on a clicked link while its page decides 404.
     │   ├── assignments/       Who is assigned to a patient, with assign/remove/hand over.
-    │   ├── shell/             Sidebar nav (with who sees each entry), the user menu, the
+    │   ├── shell/             Sidebar nav (with who sees each entry), the user menu, NoticeBar
+    │   │                      (the notices strip), the
     │   │                      not-found page's way back to the visitor's section, and
     │   │                      ConsoleUnavailable, the outage message.
     │   ├── records/           Patient list (one page) and its skeleton, LPF table, field image
