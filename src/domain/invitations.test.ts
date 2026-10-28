@@ -86,10 +86,14 @@ describe("normaliseInvitee", () => {
 });
 
 describe("checkNewPassword", () => {
-  it("needs eight characters and a matching confirmation", () => {
-    expect(checkNewPassword("short", "short").ok).toBe(false);
+  it("needs a password and a matching confirmation", () => {
+    expect(checkNewPassword("", "").ok).toBe(false);
     expect(checkNewPassword("long-enough", "long-enougH").ok).toBe(false);
     expect(checkNewPassword("long-enough", "long-enough").ok).toBe(true);
+  });
+
+  it("leaves the strength rules to the provider, so an older account's password still signs in", () => {
+    expect(checkNewPassword("short", "short").ok).toBe(true);
   });
 
   it("refuses more than bcrypt's 72 bytes", () => {
