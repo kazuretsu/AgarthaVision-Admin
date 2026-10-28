@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import { HumanCheck, useHumanCheck } from "@/components/auth/HumanCheck";
+import { SessionEndedNotice } from "@/components/auth/SessionEndedNotice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,12 @@ export default function LoginPage() {
             }}
             className="flex flex-col gap-4"
           >
+            {state.error ? null : (
+              <Suspense fallback={null}>
+                <SessionEndedNotice />
+              </Suspense>
+            )}
+
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" name="email" autoComplete="username" required />

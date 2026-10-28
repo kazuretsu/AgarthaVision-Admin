@@ -51,6 +51,8 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "super_admin.invite_revoke": "Withdrew a super admin invitation",
   "super_admin.grant": "Became a super admin",
   "super_admin.revoke": "Revoked a super admin",
+  "account.sign_in_blocked": "Blocked a sign-in",
+  "account.sign_in_restored": "Restored a sign-in",
 };
 
 /**
@@ -83,6 +85,13 @@ export function auditActionLabel(action: string): string {
 function text(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
+
+/** Why a sign-in was blocked or restored (admin/0021), as the trail says it. */
+const SIGN_IN_CAUSES: Readonly<Record<string, string>> = {
+  "organization.deactivate": "their laboratory was deactivated",
+  "organization.reactivate": "their laboratory was reactivated",
+  "super_admin.revoke": "their super admin access was revoked",
+};
 
 /** One line saying what happened, from the entry's details. */
 export function describeAuditEntry(entry: AuditEntry): string {
@@ -145,6 +154,14 @@ export function describeAuditEntry(entry: AuditEntry): string {
       return `${text(d.email) ?? "Someone"} accepted an invitation and became a super admin`;
     case "super_admin.revoke":
       return `Revoked ${text(d.name) ?? "someone"}'s super admin access`;
+    case "account.sign_in_blocked":
+    case "account.sign_in_restored": {
+      const who = text(d.name) ?? "someone";
+      const why = SIGN_IN_CAUSES[text(d.cause) ?? ""];
+      return entry.action === "account.sign_in_blocked"
+        ? `Blocked ${who}'s sign-in, in the console and the mobile app${why ? `: ${why}` : ""}`
+        : `Restored ${who}'s sign-in${why ? `: ${why}` : ""}`;
+    }
     case "assignment.add":
     case "assignment.remove": {
       // The patient by record id only: super admins read this trail (constraint #14).

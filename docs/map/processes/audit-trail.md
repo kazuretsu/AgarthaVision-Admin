@@ -60,6 +60,8 @@ provider (`docs/map/processes/second-factor.md`).
 | `super_admin.invite_revoke`  | `console_revoke_super_admin_invitation`, no organization              |
 | `super_admin.grant`          | `console_accept_super_admin_invitation`, by the invitee               |
 | `super_admin.revoke`         | `console_revoke_super_admin`, no organization                         |
+| `account.sign_in_blocked`    | `console_record_sign_in_change` (`admin/0021`), before the ban; cause |
+| `account.sign_in_restored`   | the same, before the ban is lifted on a laboratory's reactivation     |
 
 ## Reading
 

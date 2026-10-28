@@ -2,6 +2,25 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Console sessions end after 12 hours or an idle hour; sign-in follows access
+
+Supabase's session limits are paid, so the console keeps its own in `src/proxy.ts`
+(14zcqntnqpd): a session ends 12 hours after sign-in (from the token's `amr` claim) or after an
+hour without a request, recorded in an httpOnly cookie signed with the new server-only
+**`CONSOLE_SESSION_SECRET`** (set it in Vercel, 32+ random characters; without it the idle limit
+is off). An edited cookie ends the session. The person lands on `/login` with "Your session
+ended. Sign in again." `CONSOLE_SESSION_MAX_HOURS` and `CONSOLE_SESSION_IDLE_MINUTES` change
+the limits. **Signing out of the console no longer signs the mobile app out**: `AuthPort.signOut`
+now ends this browser's session only (it was Supabase's global default). Deactivating a
+laboratory, or revoking a super admin, now bans everyone it leaves with no access anywhere, so
+the app on their phone is refused at its next refresh; reactivating the laboratory lifts it,
+and a revoked super admin who accepts a new invitation is unblocked. Each block and restore is
+recorded first, as `account.sign_in_blocked` / `account.sign_in_restored`. **Apply `admin/0021`
+by hand**; until then a laboratory status change or a revocation still happens but says the
+sign-in could not be changed. Sessions signed in over an hour before this deploys end at their
+next request (no activity cookie yet) (`docs/map/processes/admin-gate.md`,
+`docs/map/processes/people-access.md`).
+
 ## [feat] A super admin invites and revokes super admins from the console
 
 `/super-admins` (super admins only, in the sidebar) lists the active super admins and their

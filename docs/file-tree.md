@@ -64,7 +64,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
 │       └── effects/CONTEXT.md         Change-impact: touch X, open these cards.
 └── src/
-    ├── proxy.ts               Session refresh (Next 16 convention). NOT the auth gate.
+    ├── proxy.ts               Session refresh and the 12 h / 1 h session limits (Next 16
+    │                          convention). NOT the auth gate.
     ├── app/
     │   ├── layout.tsx         Root shell and metadata.
     │   ├── globals.css        Design tokens. The only file holding raw hex.
@@ -108,12 +109,14 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          the training zip's files, id checks.
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
-    │                          mail, account-access. No vendor types.
+    │                          mail, account-access, request-session (the proxy's view of a
+    │                          session). No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
     │   │                      paging.ts), reports and prevalence-rows (row mapping), admin-write, storage, auth,
     │   │                      onboarding (accepting an invitation), account-access (bans),
+    │   │                      request-session (the proxy's refresh, sign-in time, local sign-out),
     │   │                      errors (a migration not applied yet; the human-check token and refusal).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
@@ -139,6 +142,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
+        ├── session-activity.ts The signed last-activity cookie for the idle limit.
+        ├── sign-in-follows-access.ts Blocks or restores sign-in after an access change.
         ├── unavailable.ts     The outage message, and the digest that tells the boundaries.
         ├── read-scope.ts      The actor and the ReadScope their reads run in.
         ├── utils.ts           cn(): clsx + tailwind-merge.

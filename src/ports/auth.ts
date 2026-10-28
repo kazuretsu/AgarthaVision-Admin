@@ -111,6 +111,10 @@ export interface AuthPort {
    */
   signInWithPassword(credentials: Credentials): Promise<ConsoleActor>;
 
+  /**
+   * Ends this browser's session only (14zcqntnqpd). The account's other sessions, the mobile
+   * app's included, carry on: only losing access, or a password change, ends those.
+   */
   signOut(): Promise<void>;
 }
 

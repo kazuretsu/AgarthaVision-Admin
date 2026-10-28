@@ -95,6 +95,19 @@ export interface AdminWritePort {
    */
   recordAuthenticatorReset(userId: string): Promise<void>;
 
+  /**
+   * Records a sign-in change about to be made (admin/0021, 14zcqntnqpd) and returns the logins
+   * it applies to: with `block`, those of `userIds` left with no access anywhere (no active
+   * super admin grant, no active membership in an active laboratory); without, those with
+   * access again. Super admins only. Callers then block or allow exactly these, through
+   * {@link AccountAccessPort}; one that fails stays recorded as attempted.
+   */
+  recordSignInChange(
+    userIds: readonly string[],
+    block: boolean,
+    cause: string,
+  ): Promise<{ userId: string; accountId: string }[]>;
+
   /** Assigns a patient to an active medtech of its laboratory. Org admins only. */
   assignPatient(patientId: string, userId: string): Promise<void>;
   /**

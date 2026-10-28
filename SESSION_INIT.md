@@ -22,33 +22,34 @@ source of truth — when a card and the code disagree, the code wins and the car
 
 ## Where to go
 
-| Situation                                        | Open                                                                 |
-| ------------------------------------------------ | -------------------------------------------------------------------- |
-| Adding a feature or UI surface                   | `docs/features.md`, then the relevant `docs/map/objects/` card       |
-| Adding or swapping a data/storage/auth provider  | `docs/map/objects/provider-registry.md`, `docs/map/objects/ports.md` |
-| Touching anything under `src/adapters/`          | `docs/map/effects/CONTEXT.md`                                        |
-| Changing a domain entity or enum                 | `docs/map/objects/domain-model.md`, `docs/constraints.md` (#5, #7)   |
-| Changing what counts, LPF or session figures     | `docs/map/processes/lpf-session-summary.md`                          |
-| Changing the export columns or file format       | `docs/map/processes/research-export.md`                              |
-| Model training data, snapshots, the training zip | `docs/map/processes/training-data.md`                                |
-| The prevalence map, its boundaries or lookup     | `docs/map/processes/prevalence-map.md`                               |
-| Organizations, memberships or the audit log      | `docs/map/objects/organizations.md`, `docs/constraints.md` (#4, #7)  |
-| Changing which laboratory's records someone sees | `docs/map/processes/lab-scoping.md`                                  |
-| Changing who can reach a route                   | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
-| Inviting people, or how an account is made       | `docs/map/processes/invitations.md`, `docs/constraints.md` (#2)      |
-| Adding or revoking a super admin                 | `docs/map/processes/super-admins.md`                                 |
-| The human check (Turnstile) on sign-in forms     | `docs/map/processes/human-check.md`                                  |
-| Two-step sign-in (codes, Settings, resets)       | `docs/map/processes/second-factor.md`                                |
-| A laboratory's people, deactivating someone      | `docs/map/processes/people-access.md`                                |
-| Which medtechs see a patient (assignments)       | `docs/map/processes/patient-assignment.md`                           |
-| Adding or changing a UI component                | `docs/map/objects/ui-components.md`, `docs/constraints.md` (#15)     |
-| Loading sample images                            | `docs/map/processes/signed-image-url.md`                             |
-| Wondering what a command does                    | `docs/commands.md`                                                   |
-| Wondering which versions are installed           | `docs/stack.md`                                                      |
-| Wondering where a file lives                     | `docs/file-tree.md`                                                  |
-| A hook rejected your commit                      | `docs/constraints.md` (#8, #9), `docs/commands.md`                   |
-| Asking "may I do X?"                             | `docs/non-negotiables.md`                                            |
-| Asking "what changed?"                           | `docs/CHANGELOG.md`                                                  |
+| Situation                                         | Open                                                                 |
+| ------------------------------------------------- | -------------------------------------------------------------------- |
+| Adding a feature or UI surface                    | `docs/features.md`, then the relevant `docs/map/objects/` card       |
+| Adding or swapping a data/storage/auth provider   | `docs/map/objects/provider-registry.md`, `docs/map/objects/ports.md` |
+| Touching anything under `src/adapters/`           | `docs/map/effects/CONTEXT.md`                                        |
+| Changing a domain entity or enum                  | `docs/map/objects/domain-model.md`, `docs/constraints.md` (#5, #7)   |
+| Changing what counts, LPF or session figures      | `docs/map/processes/lpf-session-summary.md`                          |
+| Changing the export columns or file format        | `docs/map/processes/research-export.md`                              |
+| Model training data, snapshots, the training zip  | `docs/map/processes/training-data.md`                                |
+| The prevalence map, its boundaries or lookup      | `docs/map/processes/prevalence-map.md`                               |
+| Organizations, memberships or the audit log       | `docs/map/objects/organizations.md`, `docs/constraints.md` (#4, #7)  |
+| Changing which laboratory's records someone sees  | `docs/map/processes/lab-scoping.md`                                  |
+| Changing who can reach a route                    | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
+| Inviting people, or how an account is made        | `docs/map/processes/invitations.md`, `docs/constraints.md` (#2)      |
+| Adding or revoking a super admin                  | `docs/map/processes/super-admins.md`                                 |
+| Session limits, sign-out, who is signed out where | `docs/map/processes/admin-gate.md`                                   |
+| The human check (Turnstile) on sign-in forms      | `docs/map/processes/human-check.md`                                  |
+| Two-step sign-in (codes, Settings, resets)        | `docs/map/processes/second-factor.md`                                |
+| A laboratory's people, deactivating someone       | `docs/map/processes/people-access.md`                                |
+| Which medtechs see a patient (assignments)        | `docs/map/processes/patient-assignment.md`                           |
+| Adding or changing a UI component                 | `docs/map/objects/ui-components.md`, `docs/constraints.md` (#15)     |
+| Loading sample images                             | `docs/map/processes/signed-image-url.md`                             |
+| Wondering what a command does                     | `docs/commands.md`                                                   |
+| Wondering which versions are installed            | `docs/stack.md`                                                      |
+| Wondering where a file lives                      | `docs/file-tree.md`                                                  |
+| A hook rejected your commit                       | `docs/constraints.md` (#8, #9), `docs/commands.md`                   |
+| Asking "may I do X?"                              | `docs/non-negotiables.md`                                            |
+| Asking "what changed?"                            | `docs/CHANGELOG.md`                                                  |
 
 ## The 15 constraints
 

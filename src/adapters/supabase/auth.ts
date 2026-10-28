@@ -338,8 +338,12 @@ export class SupabaseAuthAdapter implements AuthPort {
     return this.toActor(user, facts);
   }
 
+  /**
+   * This browser's session only (14zcqntnqpd). supabase-js defaults to `global`, which also ends
+   * the mobile app's session on the same account; signing out of the console must not.
+   */
   async signOut(): Promise<void> {
-    await this.client.auth.signOut();
+    await this.client.auth.signOut({ scope: "local" });
   }
 }
 

@@ -17,6 +17,7 @@ export * from "./records";
 export * from "./research-export";
 export * from "./scope";
 export * from "./second-factor";
+export * from "./session-limits";
 export * from "./super-admins";
 export * from "./training-data";
 export * from "./training-export";

@@ -16,7 +16,7 @@ import { toSnapshotItemsPayload } from "./training-rows";
  * Supabase implementation of {@link AdminWritePort}.
  *
  * Each write is one call to a security-definer function (`admin/0001`, `0003`,
- * `0005`–`0009`, `0012`, `0017`–`0019`), run as the signed-in user. The function checks the caller,
+ * `0005`–`0009`, `0012`, `0017`–`0019`, `0021`), run as the signed-in user. The function checks the caller,
  * performs the write and appends the audit row in one transaction, so a write
  * without its audit entry
  * cannot happen. No table is written directly: the tables have no write policies.
@@ -132,6 +132,18 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
 
   async recordAuthenticatorReset(userId: string): Promise<void> {
     await this.call("console_record_authenticator_reset", { p_user: userId });
+  }
+
+  async recordSignInChange(
+    userIds: readonly string[],
+    block: boolean,
+    cause: string,
+  ): Promise<{ userId: string; accountId: string }[]> {
+    const rows = await this.call<{ user_id: string; account_id: string }[] | null>(
+      "console_record_sign_in_change",
+      { p_users: userIds, p_block: block, p_cause: cause },
+    );
+    return (rows ?? []).map((row) => ({ userId: row.user_id, accountId: row.account_id }));
   }
 
   async assignPatient(patientId: string, userId: string): Promise<void> {

@@ -6,6 +6,7 @@ import {
   type AcceptInvitationRequest,
   type OnboardingPort,
 } from "@/ports/onboarding";
+import { BAN_DURATION } from "./account-access";
 import { createRequestClient, createServiceClient } from "./client";
 import { humanCheckOptions, isFunctionNotFound, isHumanCheckRefusal } from "./errors";
 
@@ -31,6 +32,11 @@ import { humanCheckOptions, isFunctionNotFound, isHumanCheckRefusal } from "./er
  * The human check (14zcqntnqpc) is verified at step 3, the only call that takes it: the
  * service role's `createUser` is not subject to it. A refused check after step 2 leaves an
  * account that joined nothing; the next attempt finds it ("already registered") and signs in.
+ *
+ * An account whose sign-in was blocked when it lost access (a revoked super admin, 14zcqntnqpd)
+ * cannot sign in at step 3. A valid invitation means it has no access now, so its block is
+ * lifted for the attempt (`console_blocked_account_for_email`, admin/0021, service role) and
+ * put back if the password is wrong or the acceptance fails. Accepting is what restores it.
  */
 
 interface LinkRow {
@@ -130,15 +136,19 @@ export class SupabaseOnboardingAdapter implements OnboardingPort {
       );
     }
 
+    const restored = existing ? await this.liftBlock(link.email) : null;
+
     const signedIn = await this.client.auth.signInWithPassword({
       email: link.email,
       password,
       options: humanCheckOptions(humanCheckToken),
     });
     if (isHumanCheckRefusal(signedIn.error)) {
+      await this.restoreBlock(restored);
       throw new AcceptInvitationError("human_check_failed", signedIn.error);
     }
     if (signedIn.error || !signedIn.data.user) {
+      await this.restoreBlock(restored);
       throw new AcceptInvitationError(existing ? "wrong_password" : "failed", signedIn.error);
     }
 
@@ -149,11 +159,40 @@ export class SupabaseOnboardingAdapter implements OnboardingPort {
       { p_token: token, p_full_name: fullName },
     );
     if (error) {
-      // Leave no session behind for an account that joined nothing.
-      await this.client.auth.signOut();
+      // Leave no session behind for an account that joined nothing; this browser's only, so an
+      // existing account's phone stays signed in.
+      await this.client.auth.signOut({ scope: "local" });
+      await this.restoreBlock(restored);
       throw new AcceptInvitationError(acceptFailure(error), error);
     }
     return { role: link.role };
+  }
+
+  /**
+   * Lifts the block on the login for this email, if it has one, and returns its id to put the
+   * block back with on failure. Before `admin/0021` is applied, nothing is lifted.
+   */
+  private async liftBlock(email: string): Promise<string | null> {
+    const service = this.service();
+    const { data, error } = await service.rpc("console_blocked_account_for_email", {
+      p_email: email,
+    });
+    if (error && isFunctionNotFound(error)) return null;
+    if (error) throw new AcceptInvitationError("failed", error);
+    const accountId = typeof data === "string" ? data : null;
+    if (!accountId) return null;
+    const lifted = await service.auth.admin.updateUserById(accountId, { ban_duration: "none" });
+    if (lifted.error) throw new AcceptInvitationError("failed", lifted.error);
+    return accountId;
+  }
+
+  /** Puts back a block {@link liftBlock} lifted. Logged, never thrown: the refusal comes first. */
+  private async restoreBlock(accountId: string | null): Promise<void> {
+    if (!accountId) return;
+    const { error } = await this.service().auth.admin.updateUserById(accountId, {
+      ban_duration: BAN_DURATION,
+    });
+    if (error) console.error("Sign-in block not put back", error);
   }
 }
 
