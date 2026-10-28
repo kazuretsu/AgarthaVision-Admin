@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Map,
   Microscope,
+  Settings,
   Users,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -25,6 +26,7 @@ const ICONS = {
   people: Users,
   organizations: Building2,
   audit: History,
+  settings: Settings,
 } as const;
 
 /**

@@ -348,23 +348,51 @@ describe("SupabaseAuthAdapter — the authenticator code (14zcqntjnt0)", () => {
     error: null,
   });
 
-  it("refuses an admin whose session has only a password, without reading anything more", async () => {
+  it("refuses an admin with an app whose session has only a password", async () => {
     const { client, calls } = gateClient({
       claims: passwordOnly,
       actor: row({ is_super_admin: true }),
+      factors: factorList([{ id: "f-1" }]),
     });
     const refusal = await new SupabaseAuthAdapter(client).requireConsoleActor().catch((e) => e);
     expect(refusal).toBeInstanceOf(SecondFactorRequiredError);
     // Any caller that does not know the second step treats it as signed out.
     expect(refusal).toBeInstanceOf(NotAuthenticatedError);
     expect((refusal as SecondFactorRequiredError).actor.access).toEqual({ kind: "super_admin" });
-    expect(calls).toEqual(["auth.getClaims", "rpc.console_actor"]);
+    // Whether there is an app is asked of the auth server, never read from the cookie.
+    expect(calls).toEqual(["auth.getClaims", "rpc.console_actor", "mfa.listFactors"]);
   });
 
-  it("refuses an org admin the same way", async () => {
-    const { client } = gateClient({ claims: passwordOnly, actor: row(orgAdmin) });
+  it("refuses an org admin with an app the same way", async () => {
+    const { client } = gateClient({
+      claims: passwordOnly,
+      actor: row(orgAdmin),
+      factors: factorList([{ id: "f-1" }]),
+    });
     await expect(new SupabaseAuthAdapter(client).requireConsoleActor()).rejects.toBeInstanceOf(
       SecondFactorRequiredError,
+    );
+  });
+
+  it("admits an admin with no app on their password alone (14zcqntr31c)", async () => {
+    const { client } = gateClient({
+      claims: passwordOnly,
+      actor: row(orgAdmin),
+      // An abandoned set-up is not an app.
+      factors: factorList([], [{ id: "f-0", factor_type: "totp", status: "unverified" }]),
+    });
+    const actor = await new SupabaseAuthAdapter(client).requireConsoleActor();
+    expect(actor.access.kind).toBe("org_admin");
+  });
+
+  it("reads a failed factor lookup at the gate as an outage, never as no app", async () => {
+    const { client } = gateClient({
+      claims: passwordOnly,
+      actor: row(orgAdmin),
+      factors: { data: null, error: { status: 500 } },
+    });
+    await expect(new SupabaseAuthAdapter(client).requireConsoleActor()).rejects.toBeInstanceOf(
+      AuthUnavailableError,
     );
   });
 
@@ -375,14 +403,24 @@ describe("SupabaseAuthAdapter — the authenticator code (14zcqntjnt0)", () => {
     await expect(adapter.secondFactorStatus()).rejects.toBeInstanceOf(NotAuthorizedError);
   });
 
-  it("says a passed session has passed, without asking the auth server", async () => {
-    const { client, calls } = gateClient({ actor: row({ is_super_admin: true }) });
-    const { step } = await new SupabaseAuthAdapter(client).secondFactorStatus();
-    expect(step).toBe("passed");
-    expect(calls).not.toContain("mfa.listFactors");
+  it("says a passed session has passed, and whether the account still has an app", async () => {
+    const withApp = gateClient({
+      actor: row({ is_super_admin: true }),
+      factors: factorList([{ id: "f-1" }]),
+    });
+    expect(await new SupabaseAuthAdapter(withApp.client).secondFactorStatus()).toMatchObject({
+      step: "passed",
+      hasAuthenticator: true,
+    });
+    // Reset by a super admin after this session passed its code.
+    const reset = gateClient({ actor: row({ is_super_admin: true }), factors: factorList([]) });
+    expect(await new SupabaseAuthAdapter(reset.client).secondFactorStatus()).toMatchObject({
+      step: "passed",
+      hasAuthenticator: false,
+    });
   });
 
-  it("asks for the code when an app is confirmed, and for a set-up when none is", async () => {
+  it("asks for the code when an app is confirmed, and for nothing when none is", async () => {
     const withApp = gateClient({
       claims: passwordOnly,
       actor: row(orgAdmin),
@@ -397,7 +435,7 @@ describe("SupabaseAuthAdapter — the authenticator code (14zcqntjnt0)", () => {
       factors: factorList([], [{ id: "f-0", factor_type: "totp", status: "unverified" }]),
     });
     expect((await new SupabaseAuthAdapter(without.client).secondFactorStatus()).step).toBe(
-      "set_up",
+      "not_set_up",
     );
   });
 
@@ -477,5 +515,34 @@ describe("SupabaseAuthAdapter — the authenticator code (14zcqntjnt0)", () => {
       new SupabaseAuthAdapter(client).verifySecondFactor("123456"),
     ).rejects.toBeInstanceOf(SecondFactorError);
     expect(calls.some((call) => call.startsWith("mfa.verify"))).toBe(false);
+  });
+
+  it("turns the app off only after a current code from it", async () => {
+    const { client, calls } = gateClient({ factors: factorList([{ id: "f-1" }]) });
+    await new SupabaseAuthAdapter(client).turnOffSecondFactor("123456");
+    expect(
+      calls.filter((call) => call.startsWith("mfa.verify") || call.startsWith("mfa.unenroll")),
+    ).toEqual(["mfa.verify.f-1.123456", "mfa.unenroll.f-1"]);
+  });
+
+  it("keeps the app when the code is wrong", async () => {
+    const { client, calls } = gateClient({
+      factors: factorList([{ id: "f-1" }]),
+      verify: { error: { code: "mfa_verification_failed", status: 422 } },
+    });
+    const refusal = await new SupabaseAuthAdapter(client)
+      .turnOffSecondFactor("123456")
+      .catch((e) => e);
+    expect((refusal as SecondFactorError).reason).toBe("rejected");
+    expect(calls.some((call) => call.startsWith("mfa.unenroll"))).toBe(false);
+  });
+
+  it("has nothing to turn off without an app", async () => {
+    const { client, calls } = gateClient({ factors: factorList([]) });
+    await expect(
+      new SupabaseAuthAdapter(client).turnOffSecondFactor("123456"),
+    ).rejects.toBeInstanceOf(SecondFactorError);
+    expect(calls.some((call) => call.startsWith("mfa."))).toBe(true);
+    expect(calls.some((call) => call.startsWith("mfa.unenroll"))).toBe(false);
   });
 });

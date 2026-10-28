@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveConsoleAccess, type OrgAdminMembership } from "@/domain/access";
-import { secondFactorStep, type SecondFactorStep } from "@/domain/second-factor";
+import {
+  secondFactorAdmits,
+  secondFactorStep,
+  type SecondFactorStep,
+} from "@/domain/second-factor";
 import {
   AuthUnavailableError,
   AuthenticationFailedError,
@@ -226,20 +230,29 @@ export class SupabaseAuthAdapter implements AuthPort {
     const { user, facts } = await this.userFor(identity);
     // Access first, so a medtech is told where to go and never asked for a code.
     const actor = this.toActor(user, facts);
-    if (!identity.secondFactorPassed) throw new SecondFactorRequiredError(actor);
+    // A passed session costs nothing more. Short of it, only an account with an app is held
+    // back (14zcqntr31c), and whether it has one is asked of the auth server, never the cookie.
+    if (identity.secondFactorPassed) return actor;
+    const step = secondFactorStep({
+      sessionPassed: false,
+      hasAuthenticator: (await this.confirmedAuthenticator()) !== null,
+    });
+    if (!secondFactorAdmits(step)) throw new SecondFactorRequiredError(actor);
     return actor;
   }
 
-  async secondFactorStatus(): Promise<{ actor: ConsoleActor; step: SecondFactorStep }> {
+  async secondFactorStatus(): Promise<{
+    actor: ConsoleActor;
+    step: SecondFactorStep;
+    hasAuthenticator: boolean;
+  }> {
     const identity = await this.identity();
     if (!identity) throw new NotAuthenticatedError();
     const { user, facts } = await this.userFor(identity);
     const actor = this.toActor(user, facts);
-    if (identity.secondFactorPassed) {
-      return { actor, step: secondFactorStep({ sessionPassed: true, hasAuthenticator: true }) };
-    }
     const hasAuthenticator = (await this.confirmedAuthenticator()) !== null;
-    return { actor, step: secondFactorStep({ sessionPassed: false, hasAuthenticator }) };
+    const step = secondFactorStep({ sessionPassed: identity.secondFactorPassed, hasAuthenticator });
+    return { actor, step, hasAuthenticator };
   }
 
   /**
@@ -283,6 +296,16 @@ export class SupabaseAuthAdapter implements AuthPort {
     const factorId = await this.confirmedAuthenticator();
     if (!factorId) throw new SecondFactorError("failed");
     await this.verify(factorId, code);
+  }
+
+  async turnOffSecondFactor(code: string): Promise<void> {
+    const factorId = await this.confirmedAuthenticator();
+    if (!factorId) throw new SecondFactorError("failed");
+    await this.verify(factorId, code);
+    // The provider needs an `aal2` session to remove a confirmed app; the code just entered
+    // makes sure this one is. It then lowers the account's sessions to `aal1`.
+    const { error } = await this.client.auth.mfa.unenroll({ factorId });
+    if (error) throw new SecondFactorError(secondFactorFailure(error), error);
   }
 
   /**

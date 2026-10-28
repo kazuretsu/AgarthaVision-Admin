@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Two-step sign-in is each admin's choice, set up on a new Settings page
+
+An authenticator app is no longer forced at the first sign-in (14zcqntr31c). A correct password
+now goes to `/dashboard`, and so does accepting an org admin invitation. The gate
+(`requireConsoleActor`) still holds an admin who **has** an app to its code (`/verify`), but
+admits one without an app on their password: whether the account has one is asked of the auth
+server, never the cookie, at one call per request for a session that has not entered a code.
+The new `/settings` page (sidebar, every admin) shows two-step sign-in on or off, sets an app
+up (QR code, then its first code) and turns it off again after a current code
+(`AuthPort.turnOffSecondFactor`). `/verify` now only takes the code. During validation and demo
+this deviates from the app repo's privacy position (Position 6, MFA mandatory for admin
+accounts), resting on validation using synthetic patients only; it must be mandatory again
+before real patient data (`docs/map/processes/second-factor.md`). No migration and no Supabase
+setting.
+
 ## [feat] Super admins and org admins sign in with a code from an authenticator app
 
 A correct password now leads to `/verify`, not the console (14zcqntjnt0). The first time, the

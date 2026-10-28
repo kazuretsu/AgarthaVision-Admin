@@ -37,7 +37,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Changing who can reach a route                   | `docs/map/processes/admin-gate.md`, `docs/constraints.md` (#3)       |
 | Inviting people, or how an account is made       | `docs/map/processes/invitations.md`, `docs/constraints.md` (#2)      |
 | The human check (Turnstile) on sign-in forms     | `docs/map/processes/human-check.md`                                  |
-| Two-step sign-in (authenticator codes, resets)   | `docs/map/processes/second-factor.md`                                |
+| Two-step sign-in (codes, Settings, resets)       | `docs/map/processes/second-factor.md`                                |
 | A laboratory's people, deactivating someone      | `docs/map/processes/people-access.md`                                |
 | Which medtechs see a patient (assignments)       | `docs/map/processes/patient-assignment.md`                           |
 | Adding or changing a UI component                | `docs/map/objects/ui-components.md`, `docs/constraints.md` (#15)     |

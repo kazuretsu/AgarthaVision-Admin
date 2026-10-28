@@ -117,7 +117,7 @@ was clean.
 
 ## In the console
 
-- Org-admin detection: `orgAdminMembership` (`src/adapters/supabase/auth.ts:104`) reads
+- Org-admin detection: `orgAdminMembership` (`src/adapters/supabase/auth.ts:108`) reads
   the user's own membership; only an active `org_admin` in an active organization counts.
 - Writes go through `AdminWritePort` (`src/ports/admin-write.ts`), implemented by one RPC
   call per method (`src/adapters/supabase/admin-write.ts:46`), with SQLSTATEs mapped to

@@ -11,7 +11,15 @@ export interface NavItem {
   href: string;
   label: string;
   icon:
-    "dashboard" | "map" | "records" | "export" | "training" | "people" | "organizations" | "audit";
+    | "dashboard"
+    | "map"
+    | "records"
+    | "export"
+    | "training"
+    | "people"
+    | "organizations"
+    | "audit"
+    | "settings";
   visibleTo: readonly ConsoleAccessKind[];
 }
 
@@ -44,6 +52,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
     visibleTo: ["super_admin"],
   },
   { href: "/audit", label: "Audit trail", icon: "audit", visibleTo: ["super_admin", "org_admin"] },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: "settings",
+    visibleTo: ["super_admin", "org_admin"],
+  },
 ];
 
 export function navFor(kind: ConsoleAccessKind): NavItem[] {
