@@ -2,6 +2,20 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Failed sign-in and invitation attempts are limited
+
+The sign-in form and the invitation page call Supabase from the host's servers, so nothing
+limited password guessing through them (14zcqntnqp6). The console now counts failures itself
+and refuses the next attempt, before Supabase is called, after 5 wrong passwords for one email
+or 20 from one IP within 15 minutes, and on the invitation page also after 5 on one link: "Too
+many attempts. Try again in 15 minutes.", the same whether or not the email has an account.
+Failures are stored as SHA-256 hashes in `console_sign_in_attempts` (**`admin/0022`, apply by
+hand**), readable and writable by the service role only; nothing is deleted, old rows just
+stop counting. The client IP comes from `x-forwarded-for` on Vercel, or the header the new
+optional **`TRUSTED_IP_HEADER`** names elsewhere. If the counter is unreachable, attempts go
+ahead and the problem is logged (`AttemptLimitPort`, `src/lib/attempt-limit.ts`,
+`docs/map/processes/admin-gate.md`, `docs/map/processes/invitations.md`).
+
 ## [fix] The two-step sign-in notice can no longer be closed, and its button sits on the right
 
 The "Turn on two-step sign-in" notice (14zcqntr35f) loses its close button: it stays on every

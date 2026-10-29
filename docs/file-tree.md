@@ -113,13 +113,14 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
     │                          mail, account-access, request-session (the proxy's view of a
-    │                          session). No vendor types.
+    │                          session), attempt-limit (failed sign-ins). No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
     │   │                      paging.ts), reports and prevalence-rows (row mapping), admin-write, storage, auth,
     │   │                      onboarding (accepting an invitation), account-access (bans),
     │   │                      request-session (the proxy's refresh, sign-in time, local sign-out),
+    │   │                      attempt-limit (failed sign-in attempts, service role),
     │   │                      errors (a migration not applied yet; the human-check token and refusal;
     │   │                      a refused password change).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.

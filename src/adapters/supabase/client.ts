@@ -43,11 +43,13 @@ export async function createRequestClient(): Promise<SupabaseClient> {
 }
 
 /**
- * The one privileged client, for the one thing a signed-in user cannot do: make
- * the account an invitation is for (`auth.admin.createUser`). It bypasses RLS, so
- * nothing else may use it — `adapters/supabase/onboarding.ts` is its only caller,
- * and only after the invitation has been checked. Server-only: the key is read at
- * request time and never leaves the server. No session is kept or refreshed.
+ * The one privileged client, for what a signed-in user cannot do: make the account
+ * an invitation is for (`onboarding.ts`, only after the invitation has been
+ * checked), block a login or reset its authenticator app (`account-access.ts`,
+ * after the caller's rule was checked), and count failed sign-in attempts
+ * (`attempt-limit.ts`, a table no browser may touch). It bypasses RLS, so nothing
+ * else may use it. Server-only: the key is read at request time and never leaves
+ * the server. No session is kept or refreshed.
  */
 export function createServiceClient(): SupabaseClient {
   const { url } = publicConfig();

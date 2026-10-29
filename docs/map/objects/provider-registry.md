@@ -31,6 +31,7 @@ Selection reads one variable per port, defaulting to the first supported entry
 | `DB_PROVIDER`      | `getAdminWrites()`   | `supabase` — the writes live in the reads' database |
 | `AUTH_PROVIDER`    | `getOnboarding()`    | `supabase` — it makes the account in the auth store |
 | `AUTH_PROVIDER`    | `getAccountAccess()` | `supabase` — the login it blocks lives there        |
+| `DB_PROVIDER`      | `getAttemptLimit()`  | `supabase` — failed attempts are stored there       |
 | `MAIL_PROVIDER`    | `getMail()`          | `resend`                                            |
 
 An unrecognised value throws `UnknownProviderError` (`src/adapters/registry.ts:31`) rather

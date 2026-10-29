@@ -60,7 +60,7 @@ referrer.
    (both fields match, at most 72 bytes) and the name's length, so nothing it can refuse is
    left for after the account exists.
 2. `auth.admin.createUser` with the **invitation's** email, the chosen password and
-   `email_confirm: true` (`:96`) — one of the console's two uses of the service-role key
+   `email_confirm: true` (`:96`) — one of the console's uses of the service-role key
    (`createServiceClient`, `src/adapters/supabase/client.ts:52`). No `user_metadata` is
    written. If the email already has an account (a retry), that account is used.
    Supabase applies the password rules only to a new account: at least 12 characters with a
@@ -81,6 +81,16 @@ referrer.
    membership from the invitation row, fills `profiles.full_name`, marks the invitation
    accepted and writes the audit entry. If it refuses, the adapter signs out again.
 
+**Attempt limits (14zcqntnqp6).** For an email that already has an account, step 3 asks for
+that account's password, so the page is a second place to guess one. The action
+(`src/app/(auth)/invite/[token]/actions.ts`) reads the link first and, for a pending one, runs
+the acceptance under `withAttemptLimit` (`docs/map/processes/admin-gate.md`): a wrong password
+(`wrong_password`) is counted under the invitation's email, the client IP and the link. After
+5 on one link, 5 for the email (sign-in failures included) or 20 from the IP within 15
+minutes, the next attempt is refused before the account is touched or the provider called:
+"Too many attempts. Try again in 15 minutes." A link that is not pending is answered as before,
+with no password tried.
+
 An org admin goes on to `/verify` to set up their authenticator app before seeing anything
 (`docs/map/processes/second-factor.md`). A medtech is signed out and sent to `/invite/joined`,
 which tells them to sign in to the Android app.
@@ -100,6 +110,8 @@ which tells them to sign in to the Android app.
 - Deployment settings: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `MAIL_FROM`,
   `CONSOLE_URL` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (`.env.example`).
 - `supabase/tests/admin_0005_invitations.test.sql`.
+- The attempt limits: a new failure reason that is a wrong password must be counted in the
+  action (`isFailure`), or guessing there goes unlimited.
 
 **Does not hit**
 

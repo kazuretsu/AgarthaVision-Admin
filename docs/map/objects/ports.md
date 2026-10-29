@@ -7,7 +7,7 @@ commit: c5c0fbe
 
 The interfaces every feature depends on: `DatabasePort`, `AdminWritePort`, `StoragePort`,
 `AuthPort`, and, for invitations and medtech access, `OnboardingPort`, `MailPort` and
-`AccountAccessPort`.
+`AccountAccessPort`; for the sign-in attempt limits, `AttemptLimitPort`.
 
 ## Why this shape
 
@@ -35,6 +35,7 @@ express the intent.
 | `MailPort`           | `send`                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `src/ports/mail.ts`           |
 | `RequestSessionPort` | `session` (id, sign-in time), `endSession` (this browser only), `response` — for the proxy (`src/ports/request-session.ts`)                                                                                                                                                                                                                                                                                                                                                         |
 | `AccountAccessPort`  | `setSignInAllowed` — block or allow a login, deleting nothing; `hasAuthenticator`, `resetAuthenticator` — a login's authenticator app                                                                                                                                                                                                                                                                                                                                               | `src/ports/account-access.ts` |
+| `AttemptLimitPort`   | `countFailures` (since the window's start), `recordFailure` — failed sign-in and invitation attempts, server only; callers go through `withAttemptLimit`, which fails open                                                                                                                                                                                                                                                                                                          | `src/ports/attempt-limit.ts`  |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:115`), `StorageAccessError`

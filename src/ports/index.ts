@@ -4,6 +4,7 @@
  */
 export * from "./account-access";
 export * from "./admin-write";
+export * from "./attempt-limit";
 export * from "./auth";
 export * from "./db";
 export * from "./mail";

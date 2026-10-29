@@ -39,6 +39,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Adding or revoking a super admin                  | `docs/map/processes/super-admins.md`                                 |
 | Session limits, sign-out, who is signed out where | `docs/map/processes/admin-gate.md`                                   |
 | The human check (Turnstile) on sign-in forms      | `docs/map/processes/human-check.md`                                  |
+| Limits on failed sign-in or invitation attempts   | `docs/map/processes/admin-gate.md` (Attempt limits)                  |
 | Two-step sign-in (codes, Settings, resets)        | `docs/map/processes/second-factor.md`                                |
 | The notices strip, adding a notice                | `docs/map/processes/notices.md`                                      |
 | An admin's own name or password                   | `docs/map/processes/own-profile.md`                                  |
