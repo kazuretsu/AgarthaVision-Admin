@@ -51,6 +51,11 @@ laboratories and reads every laboratory's records de-identified (D19).
    (`self`), that the target holds one, and that more than one is active
    (`last_super_admin`). It sets `revoked_at` and `revoked_by`; the app's trigger allows that
    and nothing else. The revoked person's next request finds no access (`NotAuthorizedError`).
+   Then, unless they still belong to an active laboratory, their sign-in is blocked (a ban,
+   recorded first as `account.sign_in_blocked`; `admin/0021`, 14zcqntnqpd), so a phone signed in
+   to the app on that account is refused at its next refresh. Inviting them again works: the
+   block is lifted for the acceptance and stays lifted once it succeeds
+   (`docs/map/processes/people-access.md`).
 
 ## Guarantees
 

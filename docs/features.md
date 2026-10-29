@@ -79,6 +79,17 @@ is down or unreachable), nobody gets in and nobody is told they lack access: pag
 console can't reach its data, with a retry, and fail with a 500; downloads answer 503.
 `src/proxy.ts` refreshes tokens and is deliberately not the authorisation point.
 
+### Session limits, and sign-in that follows access (14zcqntnqpd)
+
+A console session ends 12 hours after sign-in, or after an hour with no request, and the person
+is sent to `/login` with "Your session ended. Sign in again." Both limits are set with
+environment variables; the idle one needs `CONSOLE_SESSION_SECRET`. Signing out of the
+console, or a limit ending it, no longer signs the same account out of the mobile app.
+Deactivating a laboratory, or revoking a super admin, blocks the sign-in of everyone left with
+no access anywhere, so the app on their phone stops too; reactivating the laboratory restores
+it. Each block and restore is in the audit trail (`admin/0021`,
+`docs/map/processes/admin-gate.md`, `docs/map/processes/people-access.md`).
+
 ### Two-step sign-in (14zcqntjnt0, 14zcqntr31c)
 
 Each super admin and org admin chooses whether to use an authenticator app. On `/settings` (in

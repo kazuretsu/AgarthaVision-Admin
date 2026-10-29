@@ -69,6 +69,11 @@ referrer.
    mirrors Supabase's setting and must change with it. The form lists the same rules under the
    password field and ticks them off as the person types; they do not disable the button,
    because an existing account signs in here with the password it already has.
+   An existing account whose sign-in was blocked when it lost access (a revoked super admin,
+   14zcqntnqpd) has the block lifted for this attempt (`console_blocked_account_for_email`,
+   `admin/0021`, service role only), and put back if the password is wrong or the acceptance
+   fails. A valid invitation means the account has no access now, so the brief lift opens
+   nothing.
 3. Signs in as that account, passing the form's human-check token
    (`docs/map/processes/human-check.md`; a refused one is `human_check_failed`), and calls `console_accept_invitation` as the invitee
    (`:313`), which checks the token, the expiry, the organization, that the signed-in email
