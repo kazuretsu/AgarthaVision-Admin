@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAdminWrites, getDatabase, getMail } from "@/adapters/registry";
+import { getAccountAccess, getAdminWrites, getDatabase, getMail } from "@/adapters/registry";
 import {
   canManageSuperAdmins,
   isOpenInvitation,
@@ -18,6 +18,7 @@ import {
   type ConsoleActor,
 } from "@/ports";
 import { getConsoleActor } from "@/lib/console-access";
+import { signInFollowsAccess } from "@/lib/sign-in-follows-access";
 import { MissingEnvironmentError } from "@/lib/env";
 import { invitationEmail } from "@/lib/invitation-email";
 import { consoleOrigin, invitationLink } from "@/lib/site-url";
@@ -241,5 +242,24 @@ export async function revokeSuperAdmin(
     return explain(cause);
   }
   revalidatePath(PAGE);
+
+  // Then sign-in follows (14zcqntnqpd): with no laboratory to fall back on, they are blocked,
+  // so the mobile app stops too. A new invitation, once accepted, lifts it.
+  try {
+    const { failed } = await signInFollowsAccess(
+      await getAdminWrites(),
+      await getAccountAccess(),
+      [userId],
+      true,
+      "super_admin.revoke",
+    );
+    if (failed > 0) throw new Error("The sign-in block was refused.");
+  } catch (cause) {
+    console.error("Sign-in not blocked after a super admin revocation", cause);
+    return {
+      error: `${name} is no longer a super admin, but their sign-in could not be blocked, so a session they already have may keep working until it expires.`,
+      done: null,
+    };
+  }
   return { error: null, done: `${name} is no longer a super admin.` };
 }

@@ -21,6 +21,8 @@ interface Script {
   createError?: { code?: string; message?: string } | null;
   signInError?: unknown;
   acceptError?: { code?: string; hint?: string } | null;
+  /** The blocked login `console_blocked_account_for_email` finds (admin/0021), if any. */
+  blockedAccount?: string | null;
 }
 
 /** The visitor's client and the service client, answering as scripted and recording calls. */
@@ -56,15 +58,23 @@ function clients(script: Script) {
             : { data: { user: { id: "u1" } }, error: null },
         );
       },
-      signOut() {
-        calls.push("signOut");
+      signOut(options?: { scope?: string }) {
+        calls.push(`signOut:${options?.scope ?? "global"}`);
         return Promise.resolve({ error: null });
       },
     },
   };
   const service = {
+    rpc(name: string) {
+      calls.push(`service:${name}`);
+      return Promise.resolve({ data: script.blockedAccount ?? null, error: null });
+    },
     auth: {
       admin: {
+        updateUserById(id: string, attributes: { ban_duration: string }) {
+          calls.push(`ban:${id}:${attributes.ban_duration}`);
+          return Promise.resolve({ data: {}, error: null });
+        },
         createUser(attributes: unknown) {
           calls.push("createUser");
           created.push(attributes);
@@ -219,6 +229,62 @@ describe("SupabaseOnboardingAdapter", () => {
     const failure = adapter.acceptInvitation(REQUEST);
     await expect(failure).rejects.toBeInstanceOf(AcceptInvitationError);
     await expect(failure).rejects.toMatchObject({ reason: "already_member" });
-    expect(calls.at(-1)).toBe("signOut");
+    // This browser's session only: an existing account's phone stays signed in (14zcqntnqpd).
+    expect(calls.at(-1)).toBe("signOut:local");
+  });
+});
+
+describe("SupabaseOnboardingAdapter — a login whose sign-in was blocked (14zcqntnqpd)", () => {
+  const EXISTING = { code: "email_exists" };
+
+  it("lifts the block for the attempt, and keeps it lifted once accepted", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: EXISTING,
+      blockedAccount: "acct-1",
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).resolves.toEqual({ role: "medtech" });
+    expect(calls).toContain("ban:acct-1:none");
+    expect(calls.indexOf("ban:acct-1:none")).toBeLessThan(calls.indexOf("signIn:ana@example.test"));
+    expect(calls.filter((call) => call.startsWith("ban:"))).toEqual(["ban:acct-1:none"]);
+  });
+
+  it("puts the block back when the password is wrong", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: EXISTING,
+      blockedAccount: "acct-1",
+      signInError: { message: "Invalid login credentials" },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "wrong_password",
+    });
+    expect(calls.filter((call) => call.startsWith("ban:"))).toEqual([
+      "ban:acct-1:none",
+      "ban:acct-1:876000h",
+    ]);
+  });
+
+  it("puts the block back when the database refuses the acceptance", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: EXISTING,
+      blockedAccount: "acct-1",
+      acceptError: { code: "23505", hint: "already_member" },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "already_member",
+    });
+    expect(calls.at(-1)).toBe("ban:acct-1:876000h");
+  });
+
+  it("touches no block for a login that has none, or a new account", async () => {
+    const existing = clients({ link: PENDING, createError: EXISTING });
+    await existing.adapter.acceptInvitation(REQUEST);
+    expect(existing.calls.some((call) => call.startsWith("ban:"))).toBe(false);
+
+    const fresh = clients({ link: PENDING });
+    await fresh.adapter.acceptInvitation(REQUEST);
+    expect(fresh.calls).not.toContain("service:console_blocked_account_for_email");
   });
 });

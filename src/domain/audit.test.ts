@@ -188,12 +188,52 @@ describe("assignment entries", () => {
   });
 });
 
+describe("describeAuditEntry for sign-in following access (admin/0021)", () => {
+  it("says whose sign-in changed and why", () => {
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "account.sign_in_blocked",
+          details: { name: "Ana", cause: "organization.deactivate" },
+        }),
+      ),
+    ).toBe(
+      "Blocked Ana's sign-in, in the console and the mobile app: their laboratory was deactivated",
+    );
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "account.sign_in_restored",
+          details: { name: "Ana", cause: "organization.reactivate" },
+        }),
+      ),
+    ).toBe("Restored Ana's sign-in: their laboratory was reactivated");
+    expect(
+      describeAuditEntry(entry({ action: "account.sign_in_blocked", details: { cause: "other" } })),
+    ).toBe("Blocked someone's sign-in, in the console and the mobile app");
+  });
+});
+
+describe("describeAuditEntry for an admin's own profile (admin/0020)", () => {
+  it("names the old and new name, and never anything about a password", () => {
+    expect(
+      describeAuditEntry(
+        entry({ action: "profile.rename", details: { name: "Ana Reyes", previous_name: "ana" } }),
+      ),
+    ).toBe("Changed their name from ana to Ana Reyes");
+    expect(describeAuditEntry(entry({ action: "profile.password_change", details: {} }))).toBe(
+      "Changed their password and signed out their other sessions",
+    );
+  });
+});
+
 describe("auditActionsFor", () => {
   it("offers an org admin no action they can never see", () => {
     const orgAdmin = auditActionsFor(false).map(([action]) => action);
     expect(orgAdmin).not.toContain("training.snapshot.create");
     expect(orgAdmin).not.toContain("super_admin.revoke");
     expect(orgAdmin).toContain("member.deactivate");
+    expect(orgAdmin).toContain("profile.password_change");
     expect(auditActionsFor(true).map(([action]) => action)).toContain("training.snapshot.download");
   });
 });

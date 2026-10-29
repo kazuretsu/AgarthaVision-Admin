@@ -95,6 +95,33 @@ export interface AdminWritePort {
    */
   recordAuthenticatorReset(userId: string): Promise<void>;
 
+  /**
+   * Records a sign-in change about to be made (admin/0021, 14zcqntnqpd) and returns the logins
+   * it applies to: with `block`, those of `userIds` left with no access anywhere (no active
+   * super admin grant, no active membership in an active laboratory); without, those with
+   * access again. Super admins only. Callers then block or allow exactly these, through
+   * {@link AccountAccessPort}; one that fails stays recorded as attempted.
+   */
+  recordSignInChange(
+    userIds: readonly string[],
+    block: boolean,
+    cause: string,
+  ): Promise<{ userId: string; accountId: string }[]>;
+
+  /**
+   * Sets the signed-in console user's own name (admin/0020, 14zcqntr35e): trimmed, inner spaces
+   * collapsed, 1 to 120 characters. Refused (`invalid`, hint `name_required` or `name_too_long`)
+   * for a bad name and (`forbidden`) for anyone but a super admin or an active org admin. The
+   * same name again changes and records nothing.
+   */
+  setOwnName(fullName: string): Promise<void>;
+
+  /**
+   * Records that the signed-in console user just changed their own password (admin/0020). Called
+   * after the provider accepted the change; nothing about the password is written.
+   */
+  recordOwnPasswordChange(): Promise<void>;
+
   /** Assigns a patient to an active medtech of its laboratory. Org admins only. */
   assignPatient(patientId: string, userId: string): Promise<void>;
   /**

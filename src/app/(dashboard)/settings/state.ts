@@ -17,3 +17,12 @@ export interface TurnOffState {
 }
 
 export const EMPTY_TURN_OFF_STATE: TurnOffState = { error: null };
+
+/** The name and password cards (14zcqntr35e). A password is never sent back to the form. */
+export interface ProfileFormState {
+  error: string | null;
+  /** Set after a successful change, for a short confirmation. */
+  done: string | null;
+}
+
+export const EMPTY_PROFILE_FORM: ProfileFormState = { error: null, done: null };

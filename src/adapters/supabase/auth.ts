@@ -11,6 +11,7 @@ import {
   HumanCheckFailedError,
   NotAuthenticatedError,
   NotAuthorizedError,
+  PasswordChangeError,
   SecondFactorError,
   SecondFactorRequiredError,
   type AuthPort,
@@ -25,6 +26,7 @@ import {
   humanCheckOptions,
   isFunctionNotFound,
   isHumanCheckRefusal,
+  passwordChangeFailure,
   secondFactorFailure,
 } from "./errors";
 
@@ -347,8 +349,29 @@ export class SupabaseAuthAdapter implements AuthPort {
     return this.toActor(user, facts, secondFactorOn);
   }
 
+  /**
+   * One request: Supabase Auth checks the current password and the rules, sets the new one, and
+   * ends the account's other sessions in the same transaction, keeping this one. It checks the
+   * current password only with "Require current password when changing password" on (Supabase
+   * Auth's `GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD`; see Supabase's "Password
+   * security" guide). Without it the field is ignored, so that setting is required.
+   * An account with an authenticator app needs an `aal2` session, which the console gate
+   * already ensures.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const { error } = await this.client.auth.updateUser({
+      password: newPassword,
+      current_password: currentPassword,
+    });
+    if (error) throw new PasswordChangeError(passwordChangeFailure(error), error);
+  }
+
+  /**
+   * This browser's session only (14zcqntnqpd). supabase-js defaults to `global`, which also ends
+   * the mobile app's session on the same account; signing out of the console must not.
+   */
   async signOut(): Promise<void> {
-    await this.client.auth.signOut();
+    await this.client.auth.signOut({ scope: "local" });
   }
 }
 

@@ -555,3 +555,19 @@ describe("SupabaseAuthAdapter — the authenticator code (14zcqntjnt0)", () => {
     expect(calls.some((call) => call.startsWith("mfa.unenroll"))).toBe(false);
   });
 });
+
+describe("SupabaseAuthAdapter — signing out (14zcqntnqpd)", () => {
+  it("ends this browser's session only, never the mobile app's on the same account", async () => {
+    const scopes: unknown[] = [];
+    const client = {
+      auth: {
+        signOut(options?: unknown) {
+          scopes.push(options);
+          return Promise.resolve({ error: null });
+        },
+      },
+    } as unknown as SupabaseClient;
+    await new SupabaseAuthAdapter(client).signOut();
+    expect(scopes).toEqual([{ scope: "local" }]);
+  });
+});

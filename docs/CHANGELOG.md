@@ -14,6 +14,39 @@ what the gate already knew, so no page pays an extra call: `ConsoleActor.secondF
 notice is one entry in `src/domain/notices.ts`. No migration, no setting
 (`docs/map/processes/notices.md`).
 
+## [feat] Console sessions end after 12 hours or an idle hour; sign-in follows access
+
+Supabase's session limits are paid, so the console keeps its own in `src/proxy.ts`
+(14zcqntnqpd): a session ends 12 hours after sign-in (from the token's `amr` claim) or after an
+hour without a request, recorded in an httpOnly cookie signed with the new server-only
+**`CONSOLE_SESSION_SECRET`** (set it in Vercel, 32+ random characters; without it the idle limit
+is off). An edited cookie ends the session. The person lands on `/login` with "Your session
+ended. Sign in again." `CONSOLE_SESSION_MAX_HOURS` and `CONSOLE_SESSION_IDLE_MINUTES` change
+the limits. **Signing out of the console no longer signs the mobile app out**: `AuthPort.signOut`
+now ends this browser's session only (it was Supabase's global default). Deactivating a
+laboratory, or revoking a super admin, now bans everyone it leaves with no access anywhere, so
+the app on their phone is refused at its next refresh; reactivating the laboratory lifts it,
+and a revoked super admin who accepts a new invitation is unblocked. Each block and restore is
+recorded first, as `account.sign_in_blocked` / `account.sign_in_restored`. **Apply `admin/0021`
+by hand**; until then a laboratory status change or a revocation still happens but says the
+sign-in could not be changed. Sessions signed in over an hour before this deploys end at their
+next request (no activity cookie yet) (`docs/map/processes/admin-gate.md`,
+`docs/map/processes/people-access.md`).
+
+## [feat] Admins change their own name and password on Settings
+
+`/settings` gains a Profile card (email shown; name editable) and a Password card (14zcqntr35e).
+The name is saved by `console_set_own_name`, which writes only the caller's own profile and
+records `profile.rename`. A password change asks for the current password, shows the rules as
+they are met, and **warns in a dialog first** that it signs out every other session, the mobile
+app's included; this session stays signed in. Supabase checks the current password, sets the
+new one and ends the other sessions in one request (`AuthPort.changePassword`), and the change
+is then recorded as `profile.password_change`, with nothing about the password. Every password
+field (`/settings`, `/login`, the invitation form) now has an eye button to show what was
+typed (shadcn `input-group`). **Apply `admin/0020` by hand**, and **turn on "Require current
+password when changing password"** in Supabase Auth: without it Supabase ignores the current
+password (`docs/map/processes/own-profile.md`).
+
 ## [feat] A super admin invites and revokes super admins from the console
 
 `/super-admins` (super admins only, in the sidebar) lists the active super admins and their

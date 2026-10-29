@@ -33,11 +33,12 @@ organization locks the person out on their next uncached page.
 
 ## Steps
 
-1. **Refresh.** `src/proxy.ts:50` calls `supabase.auth.getClaims()` on every matched
-   request. It verifies the access token locally and refreshes it only when it has
-   expired, which triggers the refresh-and-set-cookie cycle a Server Component cannot do.
-   It sends `Server-Timing: session;dur=…` (`:55`). **This is refresh only — it is not the
-   authorisation point.**
+1. **Refresh, and the session limits.** `src/proxy.ts` opens the request's session through
+   `RequestSessionPort` (`src/adapters/supabase/request-session.ts`), whose `getClaims()`
+   verifies the access token locally and refreshes it only when it has expired, which triggers
+   the refresh-and-set-cookie cycle a Server Component cannot do. It sends
+   `Server-Timing: session;dur=…`. It then applies the console's session limits (below).
+   **It never reads a role — it is not the authorisation point.**
 2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:124`) calls `getClaims()`,
    which checks the JWT's signature and expiry against the project's published signing key
    (ECC P-256, fetched once from `/auth/v1/.well-known/jwks.json` and cached ten minutes per
@@ -121,6 +122,33 @@ Tests: `src/adapters/supabase/auth.test.ts` (a failed `console_actor()`, `is_adm
 membership read; no row, no grant and no membership still no access),
 `src/lib/console-access.test.ts` (503, the digest), `src/lib/unavailable.test.ts`.
 
+## Session limits (14zcqntnqpd)
+
+Supabase's own session time-box and inactivity timeout are paid, so the console keeps its own,
+in `src/proxy.ts`, for every request that carries a session:
+
+- **12 hours from sign-in** (`CONSOLE_SESSION_MAX_HOURS`), however active. The sign-in time is
+  the earliest timestamp in the token's `amr` claim (`signedInAtFromClaims`), which Supabase
+  keeps across refreshes. A token without one is ended: its age cannot be checked.
+- **1 hour without a request** (`CONSOLE_SESSION_IDLE_MINUTES`). The last activity is the
+  httpOnly, SameSite=Lax cookie `av_console_activity` (`src/lib/session-activity.ts`):
+  `<session id>.<time>.<HMAC-SHA256>`, signed with `CONSOLE_SESSION_SECRET` (32+ characters,
+  server-only). An edited cookie ends the session. A missing one, or one from an earlier
+  session, counts as idle since sign-in, so deleting it never buys time. Without the secret the
+  idle limit is off and the 12 hours still hold. A browser's speculative prefetch is no
+  activity; the Next router's own prefetches cannot be told apart here (Next strips their
+  headers before the proxy) but only follow a page load or a hover.
+- **Ending** signs out **this browser only** (`scope: "local"`) and clears the cookies. A page
+  request goes to `/login?session=ended` ("Your session ended. Sign in again."); a server
+  action or download carries on signed out and answers as such; `/login` and `/invite/…` just
+  carry on. The rule is `sessionEnd` (`src/domain/session-limits.ts`).
+
+**Console and mobile app are separate sessions.** Signing out of the console, or a limit ending
+it, never touches the app's session on the same account (`AuthPort.signOut` is local scope; it
+was global, Supabase's default, and signed the phone out too). The app's session ends only
+when the account loses access (a ban, `docs/map/processes/people-access.md`) or its password
+changes.
+
 ## The browser's router cache (14zcqntkd0y)
 
 `next.config.ts:11` keeps a page the person already opened in the tab for 30 seconds
@@ -195,7 +223,7 @@ redirect.
 **Does not hit**
 
 - Row visibility. RLS decides what a query returns; this gate decides who may ask.
-- `src/proxy.ts`, which never reads a role.
+- `src/proxy.ts`, which never reads a role: it only refreshes and enforces the session limits.
 - Caching of data: there is none on the server. Every read runs as the signed-in user, so
   RLS decides; only the browser's 30-second router cache above re-shows a page.
 - `super_admins` and `is_admin()`, which the app owns. Granting and revoking are a separate

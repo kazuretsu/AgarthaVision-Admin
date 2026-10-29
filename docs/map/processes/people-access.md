@@ -105,6 +105,20 @@ expires (up to an hour, Supabase's default): RLS on clinical tables keys on the 
 the membership. **Nothing is deleted** — not the account, the profile, the patient links or
 any record (C8). Reactivating lifts the ban.
 
+## A laboratory deactivated, or a super admin revoked (`admin/0021`, 14zcqntnqpd)
+
+Deactivating a **laboratory** ends access for everyone in it, and revoking a **super admin**
+ends theirs, but neither banned anyone, so the mobile app kept refreshing. Now, after the change
+succeeds, `signInFollowsAccess` (`src/lib/sign-in-follows-access.ts`) asks
+`console_record_sign_in_change` which of those people are left with **no access anywhere** (no
+active super admin grant, no active membership in an active laboratory), which writes
+`account.sign_in_blocked` for each, then bans exactly those logins. Someone who keeps access,
+say a revoked super admin who is still an active lab member, is left alone. Reactivating a
+laboratory restores (`account.sign_in_restored`) those of its members who have access again; a
+member deactivated on their own stays blocked. A login the provider fails to change stays
+recorded as attempted, and the page says so. A revoked super admin who is invited again has
+their block lifted when they accept (`docs/map/processes/invitations.md`).
+
 ## Reset an authenticator app (14zcqntjnt0)
 
 A super admin viewing an org admin sees a "Two-step sign-in" card: whether an app is set up,
