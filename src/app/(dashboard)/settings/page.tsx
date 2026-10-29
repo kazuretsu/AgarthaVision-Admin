@@ -5,21 +5,22 @@ import { AuthUnavailableError, NotAuthenticatedError, NotAuthorizedError } from 
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { markUnavailable } from "@/lib/unavailable";
 import { AuthenticatorSetUp, AuthenticatorTurnOff } from "@/components/auth/SecondFactor";
+import { NameForm, PasswordForm } from "@/components/settings/ProfileForms";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
- * The signed-in admin's own settings (14zcqntr31c). For now one card: two-step sign-in, which
- * each admin turns on when they have an authenticator app, and off again with a code from it.
- * Nobody sees or changes anyone else's here; a super admin resets an org admin's app from that
- * person's People page.
+ * The signed-in admin's own settings: their name and password (14zcqntr35e), and two-step
+ * sign-in (14zcqntr31c), which each admin turns on when they have an authenticator app, and off
+ * again with a code from it. Nobody sees or changes anyone else's here; a super admin resets an
+ * org admin's app from that person's People page.
  */
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Settings · AgarthaVision Admin" };
 
 export default async function SettingsPage() {
-  await requirePageAccess(ANY_CONSOLE_USER);
+  const { user } = await requirePageAccess(ANY_CONSOLE_USER);
 
   let hasAuthenticator: boolean;
   try {
@@ -37,8 +38,33 @@ export default async function SettingsPage() {
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-[22px] font-bold text-stone-ink">Settings</h1>
-        <p className="text-[13px] text-stone-mid">How you sign in to the console.</p>
+        <p className="text-[13px] text-stone-mid">Your name, and how you sign in to the console.</p>
       </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+          <CardDescription>
+            The name the console shows for you, in the sidebar and the audit trail.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <NameForm email={user.email} fullName={user.fullName} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Password</CardTitle>
+          <CardDescription>
+            Enter your current password, then the new one. Changing it signs you out everywhere
+            else, including the AgarthaVision mobile app.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PasswordForm />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

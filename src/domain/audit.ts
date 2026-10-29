@@ -53,6 +53,8 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "super_admin.revoke": "Revoked a super admin",
   "account.sign_in_blocked": "Blocked a sign-in",
   "account.sign_in_restored": "Restored a sign-in",
+  "profile.rename": "Changed their name",
+  "profile.password_change": "Changed their password",
 };
 
 /**
@@ -162,6 +164,10 @@ export function describeAuditEntry(entry: AuditEntry): string {
         ? `Blocked ${who}'s sign-in, in the console and the mobile app${why ? `: ${why}` : ""}`
         : `Restored ${who}'s sign-in${why ? `: ${why}` : ""}`;
     }
+    case "profile.rename":
+      return `Changed their name from ${text(d.previous_name) ?? "no name"} to ${text(d.name) ?? "a new name"}`;
+    case "profile.password_change":
+      return "Changed their password and signed out their other sessions";
     case "assignment.add":
     case "assignment.remove": {
       // The patient by record id only: super admins read this trail (constraint #14).

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useActionState } from "react";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { HumanCheck, useHumanCheck } from "@/components/auth/HumanCheck";
 import { SessionEndedNotice } from "@/components/auth/SessionEndedNotice";
 import { Button } from "@/components/ui/button";
@@ -55,9 +56,8 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 name="password"
                 autoComplete="current-password"
                 required

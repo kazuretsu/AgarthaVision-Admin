@@ -36,32 +36,34 @@ read them, and an org admin's action filter does not offer them (`auditActionsFo
 authenticator reset (14zcqntjnt0) follows the same order: recorded, then reset at the auth
 provider (`docs/map/processes/second-factor.md`).
 
-| Action                       | Written by                                                            |
-| ---------------------------- | --------------------------------------------------------------------- |
-| `organization.create`        | `console_create_organization`                                         |
-| `organization.rename`        | `console_rename_organization`                                         |
-| `organization.deactivate`    | `console_set_organization_status`                                     |
-| `organization.reactivate`    | `console_set_organization_status`                                     |
-| `organization.backfill`      | `admin/0001`, once                                                    |
-| `export.research`            | `console_record_export`                                               |
-| `invitation.create`          | `console_invite`                                                      |
-| `invitation.resend`          | `console_resend_invitation`                                           |
-| `invitation.revoke`          | `console_revoke_invitation`                                           |
-| `invitation.accept`          | `console_accept_invitation`                                           |
-| `member.deactivate`          | `console_set_member_status`                                           |
-| `member.reactivate`          | `console_set_member_status`                                           |
-| `member.authenticator_reset` | `console_record_authenticator_reset` (`admin/0018`), before the reset |
-| `assignment.add`             | `console_assign_patient`                                              |
-| `assignment.remove`          | `console_unassign_patient`                                            |
-| `training.snapshot.create`   | `console_create_training_snapshot`                                    |
-| `training.snapshot.download` | `console_record_training_download`                                    |
-| `super_admin.invite`         | `console_invite_super_admin` (`admin/0019`), no organization          |
-| `super_admin.invite_resend`  | `console_resend_super_admin_invitation`, no organization              |
-| `super_admin.invite_revoke`  | `console_revoke_super_admin_invitation`, no organization              |
-| `super_admin.grant`          | `console_accept_super_admin_invitation`, by the invitee               |
-| `super_admin.revoke`         | `console_revoke_super_admin`, no organization                         |
-| `account.sign_in_blocked`    | `console_record_sign_in_change` (`admin/0021`), before the ban; cause |
-| `account.sign_in_restored`   | the same, before the ban is lifted on a laboratory's reactivation     |
+| Action                       | Written by                                                               |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| `organization.create`        | `console_create_organization`                                            |
+| `organization.rename`        | `console_rename_organization`                                            |
+| `organization.deactivate`    | `console_set_organization_status`                                        |
+| `organization.reactivate`    | `console_set_organization_status`                                        |
+| `organization.backfill`      | `admin/0001`, once                                                       |
+| `export.research`            | `console_record_export`                                                  |
+| `invitation.create`          | `console_invite`                                                         |
+| `invitation.resend`          | `console_resend_invitation`                                              |
+| `invitation.revoke`          | `console_revoke_invitation`                                              |
+| `invitation.accept`          | `console_accept_invitation`                                              |
+| `member.deactivate`          | `console_set_member_status`                                              |
+| `member.reactivate`          | `console_set_member_status`                                              |
+| `member.authenticator_reset` | `console_record_authenticator_reset` (`admin/0018`), before the reset    |
+| `assignment.add`             | `console_assign_patient`                                                 |
+| `assignment.remove`          | `console_unassign_patient`                                               |
+| `training.snapshot.create`   | `console_create_training_snapshot`                                       |
+| `training.snapshot.download` | `console_record_training_download`                                       |
+| `super_admin.invite`         | `console_invite_super_admin` (`admin/0019`), no organization             |
+| `super_admin.invite_resend`  | `console_resend_super_admin_invitation`, no organization                 |
+| `super_admin.invite_revoke`  | `console_revoke_super_admin_invitation`, no organization                 |
+| `super_admin.grant`          | `console_accept_super_admin_invitation`, by the invitee                  |
+| `super_admin.revoke`         | `console_revoke_super_admin`, no organization                            |
+| `account.sign_in_blocked`    | `console_record_sign_in_change` (`admin/0021`), before the ban; cause    |
+| `account.sign_in_restored`   | the same, before the ban is lifted on a laboratory's reactivation        |
+| `profile.rename`             | `console_set_own_name` (`admin/0020`), old and new name                  |
+| `profile.password_change`    | `console_record_own_password_change`, after Supabase accepts; no details |
 
 ## Reading
 

@@ -103,6 +103,15 @@ admin's app from their People page (lost phone), recorded in the audit trail bef
 the Android app and has an app set up is signed out of it each time they enter a code, until the
 app asks for the code too (`docs/map/processes/second-factor.md`).
 
+### Own name and password (14zcqntr35e)
+
+On `/settings` each super admin and org admin changes the name the console shows for them, and
+their password after entering the current one. Every password field (`/settings`, `/login`, the
+invitation form) has an eye button to show what was typed. A new password shows the rules as
+they are met. Before a password change, a dialog warns that it signs out every other session,
+including the mobile app; this one stays signed in. Both are recorded in the audit trail, never
+the password (`admin/0020`, `docs/map/processes/own-profile.md`).
+
 ### Organizations
 
 Super admins create, rename, deactivate and reactivate laboratory organizations at

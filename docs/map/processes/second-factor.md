@@ -46,7 +46,8 @@ cost money and are out of scope; so is MFA for medtechs, who never use the conso
    the gate tells them to use the app. `verifySecondFactor` challenges the confirmed app and
    checks the code. Codes are six digits; spaces are dropped (`readSecondFactorCode`).
 4. **Setting it up (`/settings`).** The Settings page (`src/app/(dashboard)/settings/`, every
-   admin, in the sidebar) shows "Two-step sign-in" on or off, read from the auth server, so an
+   admin, in the sidebar; its Profile and Password cards are `docs/map/processes/own-profile.md`)
+   shows "Two-step sign-in" on or off, read from the auth server, so an
    app reset since this session passed its code shows as off. "Set up authenticator app" calls
    `beginSecondFactorSetUp`. It clears any unconfirmed set-up left by an abandoned page, then
    enrols a TOTP factor with issuer `AgarthaVision Admin` and shows its QR code (an SVG data

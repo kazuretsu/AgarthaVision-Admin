@@ -24,6 +24,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 
 | Situation                                         | Open                                                                 |
 | ------------------------------------------------- | -------------------------------------------------------------------- |
+| ------------------------------------------------  | -------------------------------------------------------------------- |
 | Adding a feature or UI surface                    | `docs/features.md`, then the relevant `docs/map/objects/` card       |
 | Adding or swapping a data/storage/auth provider   | `docs/map/objects/provider-registry.md`, `docs/map/objects/ports.md` |
 | Touching anything under `src/adapters/`           | `docs/map/effects/CONTEXT.md`                                        |
@@ -40,6 +41,7 @@ source of truth — when a card and the code disagree, the code wins and the car
 | Session limits, sign-out, who is signed out where | `docs/map/processes/admin-gate.md`                                   |
 | The human check (Turnstile) on sign-in forms      | `docs/map/processes/human-check.md`                                  |
 | Two-step sign-in (codes, Settings, resets)        | `docs/map/processes/second-factor.md`                                |
+| An admin's own name or password                   | `docs/map/processes/own-profile.md`                                  |
 | A laboratory's people, deactivating someone       | `docs/map/processes/people-access.md`                                |
 | Which medtechs see a patient (assignments)        | `docs/map/processes/patient-assignment.md`                           |
 | Adding or changing a UI component                 | `docs/map/objects/ui-components.md`, `docs/constraints.md` (#15)     |

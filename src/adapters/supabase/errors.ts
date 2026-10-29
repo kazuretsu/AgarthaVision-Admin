@@ -1,4 +1,4 @@
-import type { SecondFactorFailure } from "@/ports/auth";
+import type { PasswordChangeFailure, SecondFactorFailure } from "@/ports/auth";
 
 /** PostgREST's and Postgres's "no such function": a migration not applied yet. */
 const FUNCTION_NOT_FOUND = new Set(["PGRST202", "42883"]);
@@ -26,5 +26,23 @@ export function secondFactorFailure(
 ): SecondFactorFailure {
   if (SECOND_FACTOR_REJECTED.has(error?.code ?? "")) return "rejected";
   if (error?.status === 429 || error?.code === "over_request_rate_limit") return "rate_limited";
+  return "failed";
+}
+
+/** Supabase Auth's codes for a refused password change (14zcqntr35e). */
+const PASSWORD_CHANGE_REFUSALS: Readonly<Record<string, PasswordChangeFailure>> = {
+  current_password_invalid: "wrong_current_password",
+  same_password: "same_password",
+  weak_password: "weak_password",
+  over_request_rate_limit: "rate_limited",
+};
+
+/** What a refused password change means, from Supabase Auth's error code and status. */
+export function passwordChangeFailure(
+  error: { code?: string; status?: number } | null | undefined,
+): PasswordChangeFailure {
+  const known = PASSWORD_CHANGE_REFUSALS[error?.code ?? ""];
+  if (known) return known;
+  if (error?.status === 429) return "rate_limited";
   return "failed";
 }

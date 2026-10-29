@@ -11,6 +11,7 @@ export * from "./ids";
 export * from "./invitations";
 export * from "./password-policy";
 export * from "./patients";
+export * from "./profile";
 export * from "./people";
 export * from "./prevalence-map";
 export * from "./records";
