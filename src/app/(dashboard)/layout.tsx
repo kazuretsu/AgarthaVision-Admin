@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { accessLabel } from "@/domain/access";
+import { isSnoozed, noticeCookieName, noticesFor } from "@/domain/notices";
 import { NotAuthenticatedError, NotAuthorizedError, SecondFactorRequiredError } from "@/ports/auth";
 import { MissingEnvironmentError } from "@/lib/env";
 import { getConsoleActor } from "@/lib/console-access";
 import { navFor } from "@/components/shell/nav";
+import { NoticeBar } from "@/components/shell/NoticeBar";
 import { SidebarNav } from "@/components/shell/SidebarNav";
 import { UserMenu } from "@/components/shell/UserMenu";
 import { Button } from "@/components/ui/button";
@@ -50,6 +53,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const items = navFor(actor.access.kind);
+  // The notices that apply, less those this admin closed within their snooze (14zcqntr35f).
+  const closed = await cookies();
+  const now = new Date().getTime();
+  const notices = noticesFor(actor.access, { secondFactorOn: actor.secondFactorOn }).filter(
+    (notice) =>
+      !isSnoozed(notice, closed.get(noticeCookieName(notice.id))?.value, actor.user.id, now),
+  );
   const organizationName = actor.access.kind === "org_admin" ? actor.access.organizationName : null;
 
   // Desktop only: super admins and organization admins work at a computer, and
@@ -80,6 +90,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             />
           </div>
         </header>
+        <NoticeBar notices={notices} userId={actor.user.id} />
         <div className="flex-1">{children}</div>
       </div>
     </div>
