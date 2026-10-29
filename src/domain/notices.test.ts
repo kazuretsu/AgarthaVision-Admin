@@ -19,10 +19,15 @@ describe("noticesFor", () => {
       expect(notices[0]).toMatchObject({
         tone: "warning",
         action: { label: "Set up now", href: "/settings" },
-        dismissible: true,
-        snoozeDays: 7,
+        dismissible: false,
       });
     }
+  });
+
+  it("cannot be closed: a close remembered from before still leaves it shown", () => {
+    const [notice] = noticesFor(ORG, { secondFactorOn: false });
+    expect(notice.dismissible).toBe(false);
+    expect(isSnoozed(notice, noticeDismissal("u1", now - DAY), "u1", now)).toBe(false);
   });
 
   it("shows nothing once an app is set up", () => {
@@ -46,7 +51,12 @@ describe("shownOn", () => {
 });
 
 describe("isSnoozed", () => {
-  const [notice] = noticesFor(ORG, { secondFactorOn: false });
+  // A closable notice for 7 days, as a later notice may be.
+  const notice = {
+    ...noticesFor(ORG, { secondFactorOn: false })[0],
+    dismissible: true,
+    snoozeDays: 7,
+  };
 
   it("hides a notice this admin closed within its 7 days", () => {
     expect(isSnoozed(notice, noticeDismissal("u1", now - 6 * DAY), "u1", now)).toBe(true);

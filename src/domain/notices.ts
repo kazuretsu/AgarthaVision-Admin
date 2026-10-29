@@ -44,8 +44,9 @@ const NOTICES: readonly NoticeRule[] = [
       message:
         "Your account can read patients' records. Add a code from an authenticator app to every sign-in, so a password alone cannot open it.",
       action: { label: "Set up now", href: "/settings" },
-      dismissible: true,
-      snoozeDays: 7,
+      // Not closable: the reminder stays until two-step sign-in is on.
+      dismissible: false,
+      snoozeDays: 0,
       hiddenOn: ["/settings"],
     },
     applies: (_access, facts) => !facts.secondFactorOn,

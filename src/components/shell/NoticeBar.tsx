@@ -11,7 +11,7 @@ import {
   type Notice,
   type NoticeTone,
 } from "@/domain/notices";
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 
 /**
@@ -53,11 +53,20 @@ export function NoticeBar({ notices, userId }: { notices: Notice[]; userId: stri
       {shown.map((notice) => {
         const Icon = ICON[notice.tone];
         return (
-          <Alert key={notice.id} variant={VARIANT[notice.tone]} role={roleFor(notice.tone)}>
+          <Alert
+            key={notice.id}
+            variant={VARIANT[notice.tone]}
+            role={roleFor(notice.tone)}
+            // One row: the icon, the words, and on the right the action (and a close button
+            // for a notice that has one).
+            className="items-center has-[>svg]:grid-cols-[auto_1fr_auto] *:[svg]:row-span-1 *:[svg]:translate-y-0"
+          >
             <Icon aria-hidden />
-            <AlertTitle>{notice.title}</AlertTitle>
-            <AlertDescription className="flex flex-col items-start gap-2 [&_a]:no-underline [&_p:not(:last-child)]:mb-0">
-              <p>{notice.message}</p>
+            <div className="min-w-0">
+              <AlertTitle>{notice.title}</AlertTitle>
+              <AlertDescription>{notice.message}</AlertDescription>
+            </div>
+            <div className="flex items-center gap-1">
               {notice.action ? (
                 <Link
                   href={notice.action.href}
@@ -66,9 +75,7 @@ export function NoticeBar({ notices, userId }: { notices: Notice[]; userId: stri
                   {notice.action.label}
                 </Link>
               ) : null}
-            </AlertDescription>
-            {notice.dismissible ? (
-              <AlertAction>
+              {notice.dismissible ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -78,8 +85,8 @@ export function NoticeBar({ notices, userId }: { notices: Notice[]; userId: stri
                 >
                   <X aria-hidden />
                 </Button>
-              </AlertAction>
-            ) : null}
+              ) : null}
+            </div>
           </Alert>
         );
       })}

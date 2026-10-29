@@ -105,9 +105,9 @@ app asks for the code too (`docs/map/processes/second-factor.md`).
 
 ### Notices (14zcqntr35f)
 
-A strip above every console page shows short notices for the signed-in admin, each closable.
-The first reminds an admin without an authenticator app to turn on two-step sign-in, with "Set
-up now" to `/settings` (not shown there). Closing it hides it for 7 days on that browser; it is
+A strip above every console page shows short notices for the signed-in admin, one row each
+with its action on the right. The first reminds an admin without an authenticator app to turn on
+two-step sign-in, with "Set up now" to `/settings` (not shown there). It cannot be closed; it is
 gone for good once an app is set up (`docs/map/processes/notices.md`).
 
 ### Own name and password (14zcqntr35e)
