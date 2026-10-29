@@ -51,6 +51,8 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "super_admin.invite_revoke": "Withdrew a super admin invitation",
   "super_admin.grant": "Became a super admin",
   "super_admin.revoke": "Revoked a super admin",
+  "profile.rename": "Changed their name",
+  "profile.password_change": "Changed their password",
 };
 
 /**
@@ -145,6 +147,10 @@ export function describeAuditEntry(entry: AuditEntry): string {
       return `${text(d.email) ?? "Someone"} accepted an invitation and became a super admin`;
     case "super_admin.revoke":
       return `Revoked ${text(d.name) ?? "someone"}'s super admin access`;
+    case "profile.rename":
+      return `Changed their name from ${text(d.previous_name) ?? "no name"} to ${text(d.name) ?? "a new name"}`;
+    case "profile.password_change":
+      return "Changed their password and signed out their other sessions";
     case "assignment.add":
     case "assignment.remove": {
       // The patient by record id only: super admins read this trail (constraint #14).

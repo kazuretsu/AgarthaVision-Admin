@@ -188,12 +188,26 @@ describe("assignment entries", () => {
   });
 });
 
+describe("describeAuditEntry for an admin's own profile (admin/0020)", () => {
+  it("names the old and new name, and never anything about a password", () => {
+    expect(
+      describeAuditEntry(
+        entry({ action: "profile.rename", details: { name: "Ana Reyes", previous_name: "ana" } }),
+      ),
+    ).toBe("Changed their name from ana to Ana Reyes");
+    expect(describeAuditEntry(entry({ action: "profile.password_change", details: {} }))).toBe(
+      "Changed their password and signed out their other sessions",
+    );
+  });
+});
+
 describe("auditActionsFor", () => {
   it("offers an org admin no action they can never see", () => {
     const orgAdmin = auditActionsFor(false).map(([action]) => action);
     expect(orgAdmin).not.toContain("training.snapshot.create");
     expect(orgAdmin).not.toContain("super_admin.revoke");
     expect(orgAdmin).toContain("member.deactivate");
+    expect(orgAdmin).toContain("profile.password_change");
     expect(auditActionsFor(true).map(([action]) => action)).toContain("training.snapshot.download");
   });
 });

@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-06
-commit: a62ef7a
+verified: 2026-10-28
+commit: efed466
 ---
 
 # UI components
@@ -57,6 +57,7 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   | `checkbox.tsx`      | `checkbox`      | `checkbox`         | hand-ported        |
   | `dropdown-menu.tsx` | `dropdown-menu` | `menu`             | hand-ported        |
   | `input.tsx`         | `input`         | `input`            | hand-ported        |
+  | `input-group.tsx`   | `input-group`   | none               | hand-ported        |
   | `label.tsx`         | `label`         | none               | hand-ported        |
   | `native-select.tsx` | `native-select` | none               | CLI (`shadcn add`) |
   | `pagination.tsx`    | `pagination`    | none               | hand-ported        |
@@ -73,6 +74,12 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
   `ui.shadcn.com`. Base UI renders a hidden input, so it submits with a plain GET form; the
   training data filter uses `uncheckedValue="0"` so an unticked option survives the round
   trip.
+- **`input-group`** was ported from the registry's `base` source with the `base-nova` style's
+  classes inlined, in 14zcqntr35e, where the CLI could not reach `ui.shadcn.com`. Adapted to
+  sit beside `Input`: the group draws the field (`h-9`, 8px corners, `border-stone-line`,
+  `bg-surface`, a maroon border on focus) and its input drops its own. Only the `inline-start`
+  and `inline-end` addon alignments are kept, and `InputGroupTextarea` is left out until
+  `textarea` is added. `PasswordInput` (`src/components/auth/`) composes it with an eye button.
 - **`breadcrumb`** was ported from the registry's `base` source with the `base-nova` style's
   classes inlined and lucide's chevron and ellipsis, in 14zcqntjnt3, where the CLI could not
   reach `ui.shadcn.com`. `BreadcrumbLink` takes `render={<Link …/>}` for a client navigation.
