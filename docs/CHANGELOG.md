@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] The two-step sign-in notice can no longer be closed, and its button sits on the right
+
+The "Turn on two-step sign-in" notice (14zcqntr35f) loses its close button: it stays on every
+console page but `/settings` until an authenticator app is set up, so admins are always
+reminded. A close made before this change no longer hides it. Each notice is now one row, the
+words on the left and "Set up now" on the right. Notices that can be closed stay possible for
+later ones (`dismissible` in `src/domain/notices.ts`) (`docs/map/processes/notices.md`).
+
 ## [feat] A notices strip across the console, starting with "turn on two-step sign-in"
 
 Every console page now has a strip of closable notices above the page (14zcqntr35f), built on

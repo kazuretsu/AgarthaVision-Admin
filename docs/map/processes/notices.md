@@ -8,7 +8,8 @@ commit: efed466
 Input: a signed-in super admin or org admin opening any console page → Movement: decide which
 notices apply from facts the server already has, drop those this admin closed within their
 snooze, hide any on the page its action opens → Output: a stack of shadcn alerts above the
-page content, each closable.
+page content, one row each: the words on the left, the action (and a close button, for a notice
+that can be closed) on the right.
 
 ## Why
 
@@ -40,16 +41,17 @@ to carry more notices later (maintenance windows, a deactivated laboratory).
 ## The first notice: "Turn on two-step sign-in"
 
 `second-factor-off`, warning: shown to an admin whose account has no authenticator app, on every
-console page except `/settings`; "Set up now" opens `/settings`. Closing hides it for 7 days on
-that browser; it comes back while the app is still off, and is gone for good once one is set
-up.
+console page except `/settings`; "Set up now", on the right, opens `/settings`. **It cannot be
+closed** (`dismissible: false`): the reminder stays until an app is set up, then is gone for
+good. A close cookie left from when it could be closed (7 days, at first) is ignored.
 
 ## Guarantees
 
 - **Not outside the console.** Only the `(dashboard)` layout renders it: never on `/login`,
   `/verify` or the invitation pages. A medtech never reaches the layout.
 - **Accessible.** `role="status"` for info and warning, `role="alert"` for danger; the icon is
-  hidden from screen readers; the close button is labelled ("Close “…” for 7 days").
+  hidden from screen readers; a closable notice's close button is labelled ("Close “…” for N
+  days").
 - **A preference, not a secret.** The cookie only hides a reminder; editing it hides a reminder
   sooner or longer, nothing else.
 
