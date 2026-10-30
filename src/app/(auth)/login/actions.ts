@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuth } from "@/adapters/registry";
+import { getAttemptLimit, getAuth } from "@/adapters/registry";
 import {
   AuthUnavailableError,
   AuthenticationFailedError,
@@ -10,7 +11,9 @@ import {
   NotAuthorizedError,
   type AuthPort,
 } from "@/ports/auth";
+import { TOO_MANY_ATTEMPTS } from "@/domain/attempt-limits";
 import { HUMAN_CHECK_FIELD, readHumanCheckToken } from "@/domain/human-check";
+import { TooManyAttemptsError, clientIp, withAttemptLimit } from "@/lib/attempt-limit";
 import { MissingEnvironmentError } from "@/lib/env";
 import { CONSOLE_UNAVAILABLE } from "@/lib/unavailable";
 import type { LoginState } from "./state";
@@ -36,6 +39,9 @@ const MEDTECH_NOTICE =
  * A medtech with correct credentials is signed straight back out. Leaving the
  * session in place would mean a valid cookie for a console they may not use, and
  * every later guard would have to remember to re-check.
+ *
+ * Under the attempt limits (14zcqntnqp6): after 5 wrong passwords for one email, or 20 from
+ * one IP, within 15 minutes, the next attempt is refused before the auth provider is called.
  */
 export async function signIn(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
@@ -48,9 +54,16 @@ export async function signIn(_previous: LoginState, formData: FormData): Promise
 
   let auth: AuthPort | null = null;
   try {
-    auth = await getAuth();
-    await auth.signInWithPassword({ email, password, humanCheckToken });
+    const signingIn = await getAuth();
+    auth = signingIn;
+    await withAttemptLimit(
+      getAttemptLimit,
+      { kind: "sign_in", email, ip: clientIp(await headers()), invitationToken: null },
+      () => signingIn.signInWithPassword({ email, password, humanCheckToken }),
+      (failure) => failure instanceof AuthenticationFailedError,
+    );
   } catch (cause) {
+    if (cause instanceof TooManyAttemptsError) return { error: TOO_MANY_ATTEMPTS };
     if (cause instanceof MissingEnvironmentError) {
       return { error: `Server is not configured: ${cause.variable} is not set.` };
     }

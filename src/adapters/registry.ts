@@ -1,6 +1,7 @@
 import type {
   AccountAccessPort,
   AdminWritePort,
+  AttemptLimitPort,
   AuthPort,
   DatabasePort,
   MailPort,
@@ -114,6 +115,19 @@ export async function getAdminWrites(): Promise<AdminWritePort> {
     case "supabase": {
       const { createSupabaseAdminWrite } = await import("./supabase/admin-write");
       return timedPort("write", await createSupabaseAdminWrite());
+    }
+  }
+}
+
+/**
+ * Failed sign-in and invitation attempts, for the attempt limits (14zcqntnqp6). Server-side
+ * only. Follows the database provider: the attempts are stored there.
+ */
+export async function getAttemptLimit(): Promise<AttemptLimitPort> {
+  switch (databaseProvider()) {
+    case "supabase": {
+      const { createSupabaseAttemptLimit } = await import("./supabase/attempt-limit");
+      return timedPort("attempts", createSupabaseAttemptLimit());
     }
   }
 }

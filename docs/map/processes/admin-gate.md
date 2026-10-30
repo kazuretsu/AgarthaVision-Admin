@@ -189,6 +189,35 @@ The form carries a Cloudflare Turnstile token (`docs/map/processes/human-check.m
 check gets its own message, "The security check expired or did not pass", never the
 credentials refusal: the provider checks the token before the password.
 
+## Attempt limits (14zcqntnqp6)
+
+The sign-in form is a server action, so Supabase's own per-IP limit sees the host's servers,
+never the person guessing. The console counts failed attempts itself
+(`src/lib/attempt-limit.ts`, `withAttemptLimit`) and refuses a new one **before the auth
+provider is called** once, within the last 15 minutes, there are:
+
+- 5 wrong passwords for one email, on the sign-in form and the invitation page together;
+- 20 from one client IP, for any emails;
+- 5 on one invitation link (`docs/map/processes/invitations.md`).
+
+The refusal is "Too many attempts. Try again in 15 minutes.", the same whether or not the
+email has an account. Only a wrong password counts (`AuthenticationFailedError`): a refused
+human check, a medtech's correct password or an outage do not. A success erases nothing; the
+window just moves past old failures, so nothing is ever deleted.
+
+- **Where:** `console_sign_in_attempts` (`admin/0022`), one row per failure with SHA-256 hashes
+  of the lower-cased email, the IP and, on the invitation page, the link token. Row level
+  security with no policies; only the server's service role reads, writes or counts
+  (`console_failed_attempts`), through `AttemptLimitPort` (`getAttemptLimit()`,
+  `src/adapters/supabase/attempt-limit.ts`). The limits are in `src/domain/attempt-limits.ts`.
+- **The client IP:** the first entry of the header `TRUSTED_IP_HEADER` names, by default
+  `x-forwarded-for`, which Vercel sets itself. On another host, set it to that host's header.
+  Without the header, attempts are limited by email (and link) only.
+- **Fails open:** if the counter cannot be read or written, the attempt goes ahead and the
+  problem is logged. Sign-in never depends on a counter.
+- **Not covered:** calling Supabase's `/auth/v1/token` directly with the public key skips the
+  console; the human check (`docs/map/processes/human-check.md`) covers that path.
+
 ## Outside the gate
 
 `/login`, `/verify` and `/invite/[token]` (with `/invite/joined`) render outside
@@ -212,7 +241,9 @@ redirect.
   `requireRouteAccess`.
 - `console_actor()` and `factsWithoutActor` must return the same facts;
   `supabase/tests/admin_0010_console_actor.test.sql`, `src/adapters/supabase/auth.test.ts`.
-- `src/app/(auth)/login/actions.ts`, which applies the same rule at sign-in.
+- `src/app/(auth)/login/actions.ts`, which applies the same rule at sign-in, under the attempt
+  limits (`src/lib/attempt-limit.ts`, `admin/0022`,
+  `supabase/tests/admin_0022_attempt_limits.test.sql`).
 - `src/app/(auth)/verify/`, the one place a session short of the second step is answered
   rather than refused (`docs/map/processes/second-factor.md`).
 - `src/app/error.tsx` and `src/app/(dashboard)/error.tsx`, which must keep telling an outage

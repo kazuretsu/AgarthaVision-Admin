@@ -90,6 +90,15 @@ no access anywhere, so the app on their phone stops too; reactivating the labora
 it. Each block and restore is in the audit trail (`admin/0021`,
 `docs/map/processes/admin-gate.md`, `docs/map/processes/people-access.md`).
 
+### Limits on sign-in and invitation attempts (14zcqntnqp6)
+
+After 5 wrong passwords for one email, or 20 from one IP, within 15 minutes, the sign-in form
+answers "Too many attempts. Try again in 15 minutes." without trying the password; the
+invitation page does the same, and also after 5 wrong passwords on one link. The message is the
+same whether or not the email has an account. Failures are stored as hashes, never deleted,
+and simply stop counting after 15 minutes. The IP header is set with `TRUSTED_IP_HEADER`
+(`admin/0022`, `docs/map/processes/admin-gate.md`).
+
 ### Two-step sign-in (14zcqntjnt0, 14zcqntr31c)
 
 Each super admin and org admin chooses whether to use an authenticator app. On `/settings` (in
