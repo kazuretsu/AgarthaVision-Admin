@@ -189,6 +189,12 @@ The form carries a Cloudflare Turnstile token (`docs/map/processes/human-check.m
 check gets its own message, "The security check expired or did not pass", never the
 credentials refusal: the provider checks the token before the password.
 
+A refused attempt leaves the email and password as typed, so a typo can be fixed in place
+(14zcqntr8m4). The form submits from `onSubmit` (`src/app/(auth)/login/page.tsx`) because React
+resets a form once its `action` finishes; the browser keeps the fields, and the password is
+never sent back to refill them. `action` stays for the server-rendered form, which then posts
+to the server action, so no credentials reach a URL.
+
 ## Attempt limits (14zcqntnqp6)
 
 The sign-in form is a server action, so Supabase's own per-IP limit sees the host's servers,

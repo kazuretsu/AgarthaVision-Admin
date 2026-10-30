@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] A failed sign-in keeps the email and password
+
+A wrong password, a refused security check or too many attempts cleared both fields on the
+sign-in form, because React resets a form once its action finishes (14zcqntr8m4). The form now
+submits from `onSubmit`, so the browser keeps what was typed and a typo can be fixed in place.
+The password is never sent back from the server to refill it
+(`src/app/(auth)/login/page.tsx`, `docs/map/processes/admin-gate.md`).
+
 ## [feat] Failed sign-in and invitation attempts are limited
 
 The sign-in form and the invitation page call Supabase from the host's servers, so nothing
