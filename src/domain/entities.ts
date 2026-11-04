@@ -16,7 +16,7 @@ export type Iso8601 = string;
 
 /** `public.profiles` — one row per authenticated user (`0001`). */
 export interface Profile {
-  /** PK, FK to `auth.users(id)`. */
+  /** PK. The person, not their login: `0011` dropped its FK to `auth.users(id)`. */
   id: string;
   /** Nullable. `handle_new_user()` never fills it. */
   fullName: string | null;
