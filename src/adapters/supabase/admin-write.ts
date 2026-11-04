@@ -183,25 +183,6 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
     });
   }
 
-  async sharePatient(
-    patientId: string,
-    targetOrganizationId: string,
-    reason: string,
-  ): Promise<string> {
-    return this.call<string>("console_share_patient", {
-      p_patient: patientId,
-      p_target_org: targetOrganizationId,
-      p_reason: reason,
-    });
-  }
-
-  async revokePatientShare(shareId: string, reason: string): Promise<void> {
-    await this.call("console_revoke_patient_share", {
-      p_share_id: shareId,
-      p_reason: reason,
-    });
-  }
-
   async createTrainingSnapshot({
     name,
     filter,

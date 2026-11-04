@@ -43,28 +43,6 @@ describe("describeAuditEntry", () => {
     ).toBe("Exported 1 smear as JSON, all time");
   });
 
-  it("describes patient shares and revokes", () => {
-    expect(
-      describeAuditEntry(
-        entry({
-          action: "patient.share",
-          targetId: "12345678-0000-4000-8000-000000000001",
-          details: { target_organization_name: "Lab Beta", reason: "Consultation" },
-        }),
-      ),
-    ).toBe("Shared patient 12345678 with Lab Beta: “Consultation”");
-
-    expect(
-      describeAuditEntry(
-        entry({
-          action: "patient.share_revoke",
-          targetId: "12345678-0000-4000-8000-000000000001",
-          details: { target_organization_name: "Lab Beta", reason: "Finished" },
-        }),
-      ),
-    ).toBe("Revoked share of patient 12345678 with Lab Beta: “Finished”");
-  });
-
   it("shows an unknown action as recorded rather than hiding it", () => {
     expect(describeAuditEntry(entry({ action: "member.invite" }))).toBe("member.invite");
     expect(auditActionLabel("member.invite")).toBe("member.invite");

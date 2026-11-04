@@ -2,17 +2,15 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
-## [feat] Share a patient with another laboratory
+## [revert] Sharing a patient with another laboratory is withdrawn
 
-The org admin who owns a patient (or a super admin) can now share the patient with another
-laboratory with a stated reason (14zcqntjntd). The receiving laboratory's admin can see the
-patient and assign their own active medtechs to it, while past smears from the sending laboratory
-remain restricted (the receiving laboratory sees the patient and their own new work only). The
-share can be revoked with a stated reason by the owning org admin or a super admin, immediately
-removing the receiving laboratory's access. Patient ownership is permanent and never changes.
-Every share and revocation, including its stated reason and the involved laboratories, is
-recorded in the audit trail (`admin/0023`, `src/domain/patient-shares.ts`,
-`src/components/patients/PatientSharesPanel.tsx`, `docs/features.md`).
+PR #47 (14zcqntjntd) is reverted until its access rules are fixed. Patient pages no longer
+show the Laboratory Referrals section, and nothing can be shared or revoked. The patient page
+reads only the owning laboratory's records again, as it did before. **`admin/0023` is undone
+by hand:** drop `patient_shares`, the eight read policies 0023 added and its four new
+functions, and restore `console_require_patient_admin` and `console_patient_assignments`
+(from `admin/0007`) and `console_unassign_patient` (from `admin/0008`). Run that only after
+this revert is deployed, because the #47 app reads `patient_shares` on every patient page.
 
 ## [fix] A failed sign-in keeps the email and password
 

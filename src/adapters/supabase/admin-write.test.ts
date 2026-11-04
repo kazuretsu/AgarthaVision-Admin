@@ -63,47 +63,6 @@ describe("SupabaseAdminWriteAdapter — a refusal's reason", () => {
       ],
     });
   });
-  it("sharePatient calls console_share_patient with arguments", async () => {
-    let calledFn = "";
-    let calledArgs: unknown = null;
-    const client = {
-      rpc: async (fn: string, args: unknown) => {
-        calledFn = fn;
-        calledArgs = args;
-        return { data: "share-123", error: null };
-      },
-    } as unknown as SupabaseClient;
-
-    const adapter = new SupabaseAdminWriteAdapter(client);
-    const id = await adapter.sharePatient("pat-1", "org-2", "Referral for testing");
-    expect(calledFn).toBe("console_share_patient");
-    expect(calledArgs).toEqual({
-      p_patient: "pat-1",
-      p_target_org: "org-2",
-      p_reason: "Referral for testing",
-    });
-    expect(id).toBe("share-123");
-  });
-
-  it("revokePatientShare calls console_revoke_patient_share with arguments", async () => {
-    let calledFn = "";
-    let calledArgs: unknown = null;
-    const client = {
-      rpc: async (fn: string, args: unknown) => {
-        calledFn = fn;
-        calledArgs = args;
-        return { data: null, error: null };
-      },
-    } as unknown as SupabaseClient;
-
-    const adapter = new SupabaseAdminWriteAdapter(client);
-    await adapter.revokePatientShare("share-123", "Finished referral");
-    expect(calledFn).toBe("console_revoke_patient_share");
-    expect(calledArgs).toEqual({
-      p_share_id: "share-123",
-      p_reason: "Finished referral",
-    });
-  });
 });
 
 describe("SupabaseAdminWriteAdapter — recording an authenticator reset (14zcqntjnt0)", () => {
