@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-28
-commit: 2e84353
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Admin gate
@@ -28,7 +28,7 @@ database policy calls, so the console and the database never disagree — and th
 membership and organization (`docs/map/objects/organizations.md`). `super_admins` itself is
 closed to every client. `profiles.role` is retired and the console never reads it. Only an
 active `org_admin` membership in an active organization counts (`orgAdminMembership`,
-`src/adapters/supabase/auth.ts:108`), so revoking a grant or deactivating a membership or an
+`src/adapters/supabase/auth.ts:112`), so revoking a grant or deactivating a membership or an
 organization locks the person out on their next uncached page.
 
 ## Steps
@@ -39,35 +39,38 @@ organization locks the person out on their next uncached page.
    the refresh-and-set-cookie cycle a Server Component cannot do. It sends
    `Server-Timing: session;dur=…`. It then applies the console's session limits (below).
    **It never reads a role — it is not the authorisation point.**
-2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:124`) calls `getClaims()`,
+2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:128`) calls `getClaims()`,
    which checks the JWT's signature and expiry against the project's published signing key
    (ECC P-256, fetched once from `/auth/v1/.well-known/jwks.json` and cached ten minutes per
    server instance): **no auth-server round trip**. A legacy shared-secret project falls back
    to asking the server. Never `getSession()`, which only decodes a cookie the browser can
    set.
-3. **Resolve the facts, in one call.** `facts` (`:137`) calls `console_actor()`: name,
+3. **Resolve the facts, in one call.** `facts` (`:141`) calls `console_actor()`: name,
    super-admin grant and membership. No row is no access at all. An **error** is not an
-   answer: it throws `AuthUnavailableError` (`:145`, below). If the function is not
-   installed yet (`PGRST202`/`42883`, `:143`), `factsWithoutActor` (`:169`) runs the three
+   answer: it throws `AuthUnavailableError` (`:149`, below). If the function is not
+   installed yet (`PGRST202`/`42883`, `:147`), `factsWithoutActor` (`:173`) runs the three
    reads it replaced (profile name and `is_admin()` in parallel, then the membership), so a
    deployment ahead of its migration keeps working; a failed `is_admin()` or membership
-   read throws the same way (`:174`, `:184`), a failed profile read only loses the name.
-4. **Resolve access.** `toActor` (`:216`) applies `resolveConsoleAccess`. No access throws
+   read throws the same way (`:178`, `:188`), a failed profile read only loses the name.
+4. **Resolve access.** `toActor` (`:220`) applies `resolveConsoleAccess`. No access throws
    `NotAuthorizedError`.
-5. **Check the second step (14zcqntjnt0, 14zcqntr31c).** `requireConsoleActor` (`:227`) then
+5. **Check the second step (14zcqntjnt0, 14zcqntr31c).** `requireConsoleActor` (`:235`) then
    admits a verified token that says `aal2` (the session passed an authenticator code) at no
    further cost. Short of it, it asks the auth server whether the account has an app: with one,
    `SecondFactorRequiredError`; without, the session is admitted on its password, since
    setting an app up is each admin's choice. Access comes first, so a medtech is told where to
-   go and never asked for a code.
+   go and never asked for a code. The actor it returns carries `secondFactorOn` (`:243-248`):
+   true for an `aal2` token without asking, else whether the account has an app. The notices
+   strip reads it (`docs/map/processes/notices.md`).
    `SecondFactorRequiredError` is a kind of `NotAuthenticatedError`: any caller that does not
    handle it treats the session as signed out and shows and writes nothing.
    `docs/map/processes/second-factor.md` has the rest.
 6. **Gate the segment.** The `(dashboard)` layout calls `getConsoleActor()`
-   (`src/app/(dashboard)/layout.tsx:29`): no code yet redirects to `/verify` (`:32`); no
-   session to `/login` (`:33`); no access renders `NoConsoleAccess` (`:34`, `:94`) — a message
-   and a sign-out button, no data, no navigation. An outage is thrown on, past the layout (see
-   below).
+   (`src/app/(dashboard)/layout.tsx:32`): no code yet redirects to `/verify` (`:35`); no
+   session to `/login` (`:36`); no access renders `NoConsoleAccess` (`:37`, `:105`) — a message
+   and a sign-out button, no data, no navigation. A missing environment variable renders
+   "Server not configured" with its name (`:38-50`). An outage is thrown on, past the layout
+   (see below).
 7. **Narrow a page.** A page for fewer than all console users calls `requirePageAccess`
    (`src/lib/console-access.ts:48`), which 404s anyone else (`:60`). It handles the
    layout's refusals itself (`:55-57`): no code yet redirects to `/verify`, no session to
@@ -108,7 +111,7 @@ revoked, and monitoring saw nothing wrong.
   action's own access check throws it on the same way.
 - **A route handler** answers 503 as JSON, no detail (`requireRouteAccess`).
 - **Sign-in** with the right password signs straight back out and says the console cannot
-  reach its data (`src/app/(auth)/login/actions.ts:63`), never the medtech notice.
+  reach its data (`src/app/(auth)/login/actions.ts:76-82`), never the medtech notice.
 - **No detail reaches the browser.** In production it gets the digest only; the boundaries
   recognise the outage by its prefix and show the part after it as the reference, which is
   also in the server log with the cause. If a future Next.js stopped keeping an error's own
@@ -157,14 +160,14 @@ request. The trade-off, chosen deliberately: a page seen in the last 30 seconds 
 without a server check, so a revoked admin is refused on their next page **not** in that
 cache — at most 30 seconds later. It never fetches anything new for them. Every server action
 that changes data calls `revalidatePath`, which empties the cache, so one's own changes show
-at once; signing out empties it too (`src/app/(auth)/login/actions.ts:85`), so Back after
+at once; signing out empties it too (`src/app/(auth)/login/actions.ts:98`), so Back after
 sign-out shows nothing of the console.
 
 ## Why the gate is in the layout
 
 Every route under `(dashboard)/` is protected the moment it is created; there is no
 per-page opt-in to forget. The layout is `force-dynamic`
-(`src/app/(dashboard)/layout.tsx:24`), but a client-side navigation between pages of the
+(`src/app/(dashboard)/layout.tsx:27`), but a client-side navigation between pages of the
 segment does not re-render it — only the page. So every page also calls
 `requirePageAccess(ANY_CONSOLE_USER)` (or narrower) before it reads anything; that call,
 cached per request, is what makes a revoked admin lose access on their next click rather
@@ -176,7 +179,7 @@ console, so a caller cannot forget to branch on a role and leak a cross-user que
 ## Sign-in
 
 A medtech with correct credentials is signed straight back out
-(`src/app/(auth)/login/actions.ts:57-59`) and shown where to go instead. That message
+(`src/app/(auth)/login/actions.ts:70-73`) and shown where to go instead. That message
 appears only after a correct password, so it tells a stranger nothing; bad credentials and
 an unknown email return the **same** generic refusal, so the form does not confirm which
 addresses are real accounts.
@@ -256,6 +259,8 @@ redirect.
   apart by its digest (`src/lib/unavailable.ts`).
 - `src/components/shell/nav.ts`, whose `visibleTo` must agree with each page's
   `requirePageAccess` call or a link leads to a 404.
+- The notices strip (`docs/map/processes/notices.md`), which reads the actor's
+  `secondFactorOn` in the layout (`src/app/(dashboard)/layout.tsx:59`).
 
 **Does not hit**
 

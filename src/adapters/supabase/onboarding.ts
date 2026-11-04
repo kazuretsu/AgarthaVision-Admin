@@ -18,7 +18,8 @@ import { humanCheckOptions, isFunctionNotFound, isHumanCheckRefusal } from "./er
  * 1. The link is looked up (`console_invitation_by_token`, admin/0005). Only a
  *    pending invitation goes further.
  * 2. The account is made for **the invitation's email**, never one the visitor
- *    typed, with the service-role client — the only use of it in the console. No
+ *    typed, with the service-role client (its other users are account-access, for bans
+ *    and authenticator resets, and attempt-limit, for failed sign-ins). No
  *    `user_metadata` is written: nothing about the account's access lives there.
  *    If the email already has an account (a retry after a failed step 3), that
  *    account is used instead, and no second one is made.

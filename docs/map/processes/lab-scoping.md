@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-05
-commit: cd4e670
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Lab scoping
@@ -26,9 +26,13 @@ the insert to fail and checks the patient is still saved.
 1. **The console.** Every clinical read on `DatabasePort` takes a `ReadScope`, and the type
    makes it required. `readScopeFor` (`src/domain/scope.ts:18`) holds an org admin to their
    own organization whatever the URL says, and lets a super admin see everything or narrow
-   to one organization (`?org=`). The adapter joins `patient_organizations!inner` and
-   filters on it (`src/adapters/supabase/database.ts:260`), so an out-of-scope patient,
-   session or sample is simply not found — a 404 on its page.
+   to one organization (`?org=`). The adapter joins `patient_organizations!inner`
+   (`OWNER`, `src/adapters/supabase/database.ts:298`) and filters on it in the patient list,
+   patient, session and smear reads (`:584`, `:639`, `:680`, `:769`; a sample is scoped
+   through its session), so an out-of-scope patient, session or sample is simply not found —
+   a 404 on its page. The dashboard and map figures are counted by database functions that
+   decide the scope again themselves, refusing an org admin another laboratory with 42501
+   (`console_dashboard_figures`, `admin/0011`; `console_area_prevalence`, `admin/0014`).
 2. **The database.** Additive SELECT policies (`0002`, from `:131`) let an org admin read
    their organization's patients, patient links, sessions, samples, detections,
    predictions, findings and reports, their members' profiles (`:164`), and their sample

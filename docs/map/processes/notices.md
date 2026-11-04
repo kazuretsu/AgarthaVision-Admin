@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-28
-commit: efed466
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Notices (14zcqntr35f)
@@ -24,19 +24,27 @@ to carry more notices later (maintenance windows, a deactivated laboratory).
    an optional `action` (label and href), `dismissible`, `snoozeDays` and `hiddenOn` (paths).
    `NoticeFacts` holds what a rule may read; today `secondFactorOn`.
 2. **The fact, at no extra cost.** `ConsoleActor.secondFactorOn` is what the gate already
-   learned: a session that passed a code (`aal2`) has an app; one admitted without a code has
-   none, since an account with an app is held at `/verify` (`src/adapters/supabase/auth.ts`). At
-   sign-in it is read from the factors the sign-in answer lists.
+   learned: a session whose token says `aal2` counts as having an app, with no call
+   (`src/adapters/supabase/auth.ts:243`); one admitted without a code has none, since an
+   account with an app is held at `/verify` (`:244-246`). At sign-in it is read from the
+   factors the sign-in answer lists. The `aal2` shortcut reads the token, not the account: an
+   app turned off, or reset by a super admin, still counts as on until that token next
+   refreshes.
 3. **Closed ones.** The `(dashboard)` layout (`src/app/(dashboard)/layout.tsx`) reads one cookie
    per notice, `av_notice_<id>` = `<user id>.<closed at, ms>`, and drops a notice this admin
    closed within its snooze (`isSnoozed`). Another admin's close on the same browser does not
    count.
 4. **The strip.** `NoticeBar` (`src/components/shell/NoticeBar.tsx`, client) stacks one shadcn
    `Alert` per notice between the header and the page. It hides a notice on its `hiddenOn`
-   paths (`usePathname`, since the layout does not re-render on a client navigation). Close
+   paths and the paths under them (`shownOn`; `usePathname`, since the layout does not re-render on a client navigation). Close
    writes the cookie with `Max-Age` = the snooze and removes the notice at once.
 5. **When the fact changes.** Turning an authenticator app on or off on `/settings` revalidates
-   the whole layout, so the notice goes or comes back on the next page.
+   the whole layout (`src/app/(dashboard)/settings/actions.ts:88`, `:121`). Turned on, the
+   notice is gone on the next page. Turned off, it does not come back at once: the code entered
+   to turn it off reissued this session's token as `aal2`, and the gate reads `aal2` as "has an
+   app" (step 2) until the token next refreshes, about an hour by default. The same applies after
+   a super admin resets the app. Meanwhile `/settings`, which asks the auth server, shows
+   two-step sign-in as off.
 
 ## The first notice: "Turn on two-step sign-in"
 

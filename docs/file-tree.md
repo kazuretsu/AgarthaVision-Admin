@@ -47,7 +47,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── domain-model.md        Entities and enums, mirrored from upstream migrations.
 │       │   ├── organizations.md       Labs, members, patient ownership, the audit log.
 │       │   ├── ports.md               The interfaces and their error types.
-│       │   └── provider-registry.md   How a backend is selected, and why lazily.
+│       │   ├── provider-registry.md   How a backend is selected, and why lazily.
+│       │   └── ui-components.md       The shadcn components on Base UI, and the rules for them.
 │       ├── processes/
 │       │   ├── lpf-session-summary.md What counts, and the LPF range, as the app does it.
 │       │   ├── dashboard-figures.md   Per-smear counting, and why not to sum the map's rows.
@@ -55,7 +56,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── audit-trail.md         What is recorded, by whom, and why exports fail closed.
 │       │   ├── invitations.md         Invite → email → set a password → membership. No sign-up.
 │       │   ├── super-admins.md        Invite, accept and revoke a super admin; always one left.
-│       │   ├── notices.md             The closable strip of notices across the console.
+│       │   ├── notices.md             The strip of notices across the console; it cannot be closed.
 │       │   ├── own-profile.md         An admin's own name and password; signed out elsewhere.
 │       │   ├── people-access.md       The People page; deactivate = ban the login, record, undo.
 │       │   ├── patient-assignment.md  Who sees a patient in the app; never nobody; access only.
@@ -63,6 +64,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
 │       │   ├── training-data.md       Filter → label rules → split → frozen snapshot → zip.
 │       │   ├── prevalence-map.md      Barangay → town → province → region, withheld under 5.
 │       │   ├── admin-gate.md          Refresh → identity → role. Where the gate lives.
+│       │   ├── second-factor.md       The optional authenticator app: set up, verify, turn off, reset.
+│       │   ├── human-check.md         Cloudflare Turnstile on the sign-in and invitation forms.
 │       │   └── signed-image-url.md    Why one adapter is privileged, and until when.
 │       └── effects/CONTEXT.md         Change-impact: touch X, open these cards.
 └── src/
@@ -117,7 +120,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
-    │   │                      paging.ts), reports and prevalence-rows (row mapping), admin-write, storage, auth,
+    │   │                      paging.ts), reports, prevalence-rows and training-rows (row mapping), admin-write, storage, auth,
     │   │                      onboarding (accepting an invitation), account-access (bans),
     │   │                      request-session (the proxy's refresh, sign-in time, local sign-out),
     │   │                      attempt-limit (failed sign-in attempts, service role),
@@ -133,7 +136,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter,
     │   │                      and the notice for an `org` that names no organization.
     │   ├── invitations/       Invite form, invitations table with re-send/revoke, accept form.
-    │   ├── people/            The people table (sortable, paged) and the deactivate form.
+    │   ├── people/            The people table (sortable, paged), the deactivate form, the
+    │   │                      offboard dialog (medtechs) and the authenticator reset form.
+    │   ├── super-admins/      Invite, re-send, withdraw and revoke forms; the invitations table.
     │   ├── loading/           Page-shaped skeletons (PageSkeletons) and LinkPending, the
     │                          spinner on a clicked link while its page decides 404.
     │   ├── assignments/       Who is assigned to a patient, with assign/remove/hand over.
@@ -151,6 +156,9 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
         ├── session-activity.ts The signed last-activity cookie for the idle limit.
+        ├── attempt-limit.ts   Runs a sign-in or invitation attempt under the attempt limits.
+        ├── second-factor-messages.ts What /verify and /settings say when a code is refused.
+        ├── timing.ts          One log line per access check, read or write, with its ms.
         ├── sign-in-follows-access.ts Blocks or restores sign-in after an access change.
         ├── unavailable.ts     The outage message, and the digest that tells the boundaries.
         ├── read-scope.ts      The actor and the ReadScope their reads run in.

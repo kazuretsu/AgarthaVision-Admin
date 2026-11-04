@@ -55,10 +55,12 @@ import {
  * as "no access". Only a read that succeeds and finds no grant and no membership is a
  * refusal. Either way, nobody gets in.
  *
- * 3. **Second step (14zcqntjnt0):** a console user's session must carry `aal2`, Supabase's
- *    mark that it passed an authenticator code — read from the same verified token, so it
- *    costs nothing. Short of that, {@link SecondFactorRequiredError}. Supabase answers a
- *    password sign-in with `aal1` and upgrades the session when a code is verified.
+ * 3. **Second step (14zcqntjnt0, optional since 14zcqntr31c):** a session that carries
+ *    `aal2`, Supabase's mark that it passed an authenticator code, is admitted from the same
+ *    verified token, so it costs nothing. An `aal1` session is admitted only when its account
+ *    has no confirmed authenticator app, which is asked of the auth server, never the cookie;
+ *    an account with one gets {@link SecondFactorRequiredError} until a code is verified.
+ *    Supabase answers a password sign-in with `aal1` and upgrades the session on a code.
  *
  * A medtech is a refusal, not a downgrade. There is no partial console:
  * `requireConsoleActor()` throws rather than returning a reduced view, so a

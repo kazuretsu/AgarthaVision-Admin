@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-14
-commit: a060ba1
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Research export

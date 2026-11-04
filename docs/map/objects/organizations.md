@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-15
-commit: 7ab22de
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Organizations
@@ -38,7 +38,7 @@ altered or dropped. `bun run test:db` proves the app still registers patients af
 | `patient_organizations`                                                 | `:67`                  | keyed by `patient_id` — the owning laboratory; filled for new patients by `admin/0002`       |
 | `admin_audit_log`                                                       | `:79`                  | actor, action, target, organization, details; **append-only**                                |
 | `console_org_admin_org(uid)`                                            | `:137`                 | the organization a user administers, or null; null if either side is deactivated             |
-| `console_member_org(uid)`                                               | `:154`                 | the organization a user belongs to, in any role                                              |
+| `console_member_org(uid)`                                               | `:154`                 | the organization a user belongs to, in any role; null if either side is deactivated          |
 | `console_write_audit(…)`                                                | `:176`                 | internal; no client may call it                                                              |
 | `console_create_organization` / `_rename_` / `_set_organization_status` | `:262`, `:286`, `:319` | super-admin writes, each auditing itself                                                     |
 
@@ -68,10 +68,16 @@ membership the invitation names. `organization_invitations` is read like the mem
 admin all, an org admin their organization's; its token hash by nobody.
 
 **Deactivating a member** (`admin/0006`, `admin/0009`, `docs/map/processes/people-access.md`)
-sets their membership's status and bans their login; nothing is deleted. An org admin
-deactivates their laboratory's medtechs; only a super admin deactivates an org admin, never the
-laboratory's last active one, and nobody is deactivated while they are a patient's only active
-member.
+sets their membership's status and bans their login; nothing is deleted. An active medtech
+leaves by **offboarding** (`admin/0017`): their org admin or a super admin hands each patient
+they alone cover to an active colleague and deactivates them in one transaction. Only a super
+admin deactivates an org admin, never the laboratory's last active one, and nobody is
+deactivated while they are a patient's only active member.
+
+**Deactivating a laboratory** (`console_set_organization_status`) ends access for everyone in
+it, and the console then blocks the sign-in of each member left with no access anywhere
+(`admin/0021`, `src/app/(dashboard)/organizations/actions.ts:116-131`); reactivating it
+restores those who have access again (`docs/map/processes/people-access.md`).
 
 **Resetting an org admin's authenticator app** (`admin/0018`,
 `docs/map/processes/second-factor.md`): super admins only, never their own; recorded as
@@ -117,14 +123,14 @@ was clean.
 
 ## In the console
 
-- Org-admin detection: `orgAdminMembership` (`src/adapters/supabase/auth.ts:108`) reads
+- Org-admin detection: `orgAdminMembership` (`src/adapters/supabase/auth.ts:112`) reads
   the user's own membership; only an active `org_admin` in an active organization counts.
 - Writes go through `AdminWritePort` (`src/ports/admin-write.ts`), implemented by one RPC
-  call per method (`src/adapters/supabase/admin-write.ts:46`), with SQLSTATEs mapped to
-  reasons a page can explain (`:24`).
+  call per method (`src/adapters/supabase/admin-write.ts:44`), with SQLSTATEs mapped to
+  reasons a page can explain (`:26`).
 - Pages: `/organizations` and `/organizations/[id]`, super admins only
   (`requirePageAccess(["super_admin"])`). Server actions re-check the rule before writing
-  (`src/app/(dashboard)/organizations/actions.ts:27`). A malformed organization id is a 404
+  (`src/app/(dashboard)/organizations/actions.ts:28`). A malformed organization id is a 404
   on the page and "no longer exists" from an action, never a database error.
 
 ## If you change this
@@ -132,6 +138,9 @@ was clean.
 **Hits**
 
 - Everything that scopes by organization: the gate, `admin/0002` scoping, the audit page.
+- Who keeps their sign-in (`admin/0021`) and who may write field data (the app's
+  `supabase/migrations/0018_writes_need_active_lab_member.sql`): both read an active
+  membership in an active laboratory, the rule of `console_member_org`.
 - The app, if a change ever touches an app-owned object — which must instead go to the app
   repo as its own migration.
 - `supabase/tests/admin_0001_organizations.test.sql`,

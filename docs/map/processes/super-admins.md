@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-28
-commit: 2e84353
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Super admins (14zcqntjwjg)
@@ -42,9 +42,10 @@ laboratories and reads every laboratory's records de-identified (D19).
    way (password rules, human check), then `console_accept_super_admin_invitation`, run as the
    invitee, checks the token, expiry and email, refuses a laboratory member
    (`already_member`), inserts their `super_admins` row with `granted_by` the inviter, fills
-   their name and marks the invitation accepted. **No laboratory membership.** They go on to
-   the console as a super admin, through the second step as any admin does
-   (`docs/map/processes/second-factor.md`).
+   their name and marks the invitation accepted. **No laboratory membership.** They go straight
+   on to `/dashboard` as a super admin (`src/app/(auth)/invite/[token]/actions.ts:109`); like
+   any admin, they may set up an authenticator app on `/settings`, and are asked for its code
+   only once they have one (`docs/map/processes/second-factor.md`).
 5. **Revoke.** `RevokeSuperAdminForm` behind a confirmation; `revokeSuperAdmin` checks
    `superAdminRevokeRefusal` first. `console_revoke_super_admin` locks every active grant, then
    checks the caller is **still** an active super admin, that it is not their own grant
@@ -94,6 +95,10 @@ rows and audit entries.
   what that person reads on their next request.
 - The accept page and onboarding adapter, shared with laboratory invitations.
 - `admin/0019`; the app's `super_admins` table and its trigger (`0014`).
+- The sign-in block after a revocation (`admin/0021`, `src/lib/sign-in-follows-access.ts`,
+  called from `src/app/(dashboard)/super-admins/actions.ts:249`) and its lifting on a new
+  acceptance: both read "access" as `is_admin()` or an active membership in an active
+  laboratory, so a change to either moves who is blocked.
 
 **Does not hit**
 
@@ -103,7 +108,9 @@ rows and audit entries.
 ## Tests
 
 `supabase/tests/admin_0019_super_admin_invitations.test.sql` (every refusal, the 72 hours,
-the audit entries, the last super admin), `src/domain/super-admins.test.ts`,
+the audit entries, the last super admin),
+`supabase/tests/admin_0021_sign_in_follows_access.test.sql` (who is blocked after a revocation),
+`src/domain/super-admins.test.ts`,
 `src/adapters/supabase/onboarding.test.ts`, `src/lib/invitation-email.test.ts`,
 `src/domain/audit.test.ts`, `src/components/shell/nav.test.ts`.
 

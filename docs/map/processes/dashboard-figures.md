@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-06
-commit: bcb2774
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Dashboard figures
@@ -20,7 +20,7 @@ does not dilute the denominator.
 
 ## Steps
 
-1. `dashboardTotals` (`src/adapters/supabase/database.ts:747`) makes **one** request,
+1. `dashboardTotals` (`src/adapters/supabase/database.ts:790`) makes **one** request,
    `console_dashboard_figures(organization, from, to)`
    (`supabase/migrations/admin/0011_dashboard_totals.sql`), whatever the period holds. The
    function decides the scope itself: a super admin all laboratories or one, an org admin
@@ -49,7 +49,7 @@ requires the function and `summariseDashboard` to give identical figures for eve
 period it tries. Change a counting rule in one and that test fails until the other matches.
 
 **Before `admin/0011` is applied**, `dashboardTotals` falls back to `listSmears` and
-`totalsOf` (`:766`), capped at the export's 20,000 sessions.
+`totalsOf` (`:809`), capped at the export's 20,000 sessions.
 
 ## Agreeing with the map
 

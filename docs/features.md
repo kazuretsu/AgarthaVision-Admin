@@ -57,9 +57,11 @@ the default. Adapters are imported lazily.
 
 The Supabase adapters implement the database, storage, auth and onboarding ports, and a
 Resend adapter the mail port. Database reads and storage signing run through the visitor's
-own session so RLS decides visibility. The service-role key is used for two things: making an
-invited person's account when they accept, and banning or unbanning a member's login, a
-medtech's or an org admin's.
+own session so RLS decides visibility. The service-role key is used for four things: making an
+invited person's account when they accept, banning or unbanning a member's login (a medtech's
+or an org admin's), removing an org admin's authenticator app when a super admin resets it, and
+counting failed sign-in and invitation attempts (`src/adapters/supabase/onboarding.ts`,
+`account-access.ts`, `attempt-limit.ts`).
 
 ### Authentication and the admin gate
 
@@ -177,14 +179,18 @@ organization admins, medtechs), sort by any column and page through 50 at a time
 URL. An org admin sees their own laboratory and invites medtechs from here; a super admin
 chooses any laboratory (also linked from its organization page).
 
-**Deactivate** (behind a confirmation) blocks the person's sign-in to the app and the console
-and deletes nothing; the app signs them out the next time it reaches the server. **Reactivate**
-restores it. An org admin deactivates their own laboratory's medtechs; a super admin deactivates
-anyone, org admins included (here, on a person's page, or in the organization's Members table).
-Nobody deactivates themselves. Two deactivations are refused, in the page and in the database:
-the laboratory's last active organization admin (their row says "Only organization admin"), and
-anyone who is a patient's only active member — their page marks those patients, to hand over
-first. Each change is in the audit trail.
+**Offboard** is how an active medtech leaves (14zcqntjnt5): their org admin or a super admin
+hands each patient the medtech is the only active member for to an active colleague of the same
+laboratory, and the medtech is deactivated in the same step (`admin/0017`). The handovers and
+the offboarding are each in the audit trail, and the console reminds them to collect the device.
+**Deactivate** (behind a confirmation) is the action for an org admin, and only a super admin
+takes it (here, on a person's page, or in the organization's Members table). Either way the
+person's sign-in to the app and the console is blocked and nothing is deleted; the app signs
+them out the next time it reaches the server. **Reactivate** restores a deactivated person of
+either role. Nobody deactivates or offboards themselves. Two deactivations are refused, in the
+page and in the database: the laboratory's last active organization admin (their row says "Only
+organization admin"), and anyone who is a patient's only active member — their page marks those
+patients, to hand over first. Each change is in the audit trail.
 
 ### Patient assignment
 

@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-06
-commit: 8c1c346
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Patient assignment
@@ -52,6 +52,11 @@ clinic's decision. An org admin may assign themselves.
 - **Deactivating cannot get around it.** A member who is a patient's only active member cannot
   be deactivated until the patient is handed over (`admin/0009`,
   `docs/map/processes/people-access.md`).
+- **Offboarding hands over in bulk.** Offboarding a medtech (`console_offboard_member`,
+  `supabase/migrations/admin/0017_offboard_medtech.sql:21`) is the other way links change: in
+  one transaction it links each patient they alone cover to an active member of the same
+  laboratory, removes their link, writes the same `assignment.add` / `assignment.remove`
+  entries, and refuses (`sole_cover`) if any such patient is left.
 - **Removing is access only.** It deletes the one link row. The patient, sessions, samples,
   reports and their `user_id` authors are untouched (C8); the session table still says who
   read each smear.
@@ -70,9 +75,9 @@ change leaves in place.
 
 ## Reads
 
-`console_patient_assignments` (`:35`) returns who is linked to one patient with their
+`console_patient_assignments` (`0007:35`) returns who is linked to one patient with their
 membership in its laboratory (a link from outside the laboratory shows "Not in this
-laboratory"). `console_member_patients` (`:67`) returns one member's patients in their
+laboratory"). `console_member_patients` (`0007:67`) returns one member's patients in their
 laboratory and withholds names from a super admin. Both refuse anyone else.
 
 ## If you change this
@@ -82,8 +87,11 @@ laboratory and withholds names from a super admin. Both refuse anyone else.
 - What the app shows each person, from their next sync.
 - `isCovering` / `canRemoveAssignment` and the function's "last active member" rule must agree,
   as must `assignableMembers` and `console_assign_patient`.
+- `console_offboard_member` (`admin/0017`), which writes links itself: it must keep the
+  same "active member of the patient's laboratory" rule.
 - `supabase/tests/admin_0007_patient_assignments.test.sql`,
-  `supabase/tests/admin_0008_member_fieldwork.test.sql`.
+  `supabase/tests/admin_0008_member_fieldwork.test.sql`,
+  `supabase/tests/admin_0017_offboard_medtech.test.sql`.
 
 **Does not hit**
 

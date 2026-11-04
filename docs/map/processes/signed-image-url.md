@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-05
-commit: d6f03d2
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Signed image URL
@@ -11,7 +11,7 @@ short-lived URL the browser can load, or "Image unavailable".
 ## Steps
 
 1. `signFrames` (`src/lib/signed-urls.ts:9`) asks the storage port for each key on a page.
-2. `createSignedUrl` (`src/adapters/supabase/storage.ts:36`) signs against the `samples`
+2. `createSignedUrl` (`src/adapters/supabase/storage.ts:27`) signs against the `samples`
    bucket with the **request-scoped client** — the visitor's own session — and a TTL
    (default 60s, `SUPABASE_SIGNED_URL_TTL_SECONDS`).
 3. A returned `error` or a missing `signedUrl` is a failure (`:40`). `signFrames` turns that
@@ -25,11 +25,18 @@ short-lived URL the browser can load, or "Image unavailable".
 ## Why no elevated key
 
 The app's `0001_init.sql` grants every admin read on the whole bucket (`"samples: admin read
-all"`, `bucket_id = 'samples' and public.is_admin(auth.uid())`). So a super admin's own
-session can sign any frame, and the Storage policy — not this console — decides what a user
-may see. Signing never uses the service-role key; the old path that signed with it (needed only
-while the legacy database lacked that policy) is gone. The key's uses now are making an
-invited person's account and banning a deactivated member's login
+all"`, `bucket_id = 'samples' and public.is_admin(auth.uid())`; since the app's `0014`,
+`is_admin` means an active super admin grant). So a super admin's own session can sign any
+frame. An org admin signs through the console's own Storage policy, which reads the sample
+id out of the key and allows only their laboratory's frames
+(`supabase/migrations/admin/0002_patient_scoping.sql:171`, `lab-scoping.md`). The Storage
+policy — not this console — decides what a user may see. Signing never uses the
+service-role key; the old path that signed with it (needed only while the legacy database
+lacked that policy) is gone. The key's uses now are accounts in onboarding — making an invited person's account, and lifting a blocked account's
+ban for its acceptance (`src/adapters/supabase/onboarding.ts:126`, `:176`);
+bans and authenticator resets in account-access
+(`src/adapters/supabase/account-access.ts:19`, `:37`); and failed sign-ins in attempt-limit
+(`src/adapters/supabase/attempt-limit.ts:22`, `:39`)
 (`docs/map/processes/invitations.md`, `docs/map/processes/people-access.md`).
 
 The same policy lets the training data download read a super admin's frames as bytes
@@ -46,8 +53,8 @@ time-limited URL. Object keys follow `{user_id}/{sample_id}.jpg`.
 **Hits**
 
 - Every records page that shows a frame.
-- The Storage policies upstream: a user without a read policy on an object gets "Image
-  unavailable", by design.
+- The Storage policies, the app repo's and `admin/0002`'s: a user without a read policy on an
+  object gets "Image unavailable", by design.
 
 **Does not hit**
 
@@ -56,5 +63,6 @@ time-limited URL. Object keys follow `{user_id}/{sample_id}.jpg`.
 
 ## See
 
-`src/adapters/supabase/storage.ts`, `src/lib/signed-urls.ts`, and upstream
+`src/adapters/supabase/storage.ts`, `src/lib/signed-urls.ts`,
+`supabase/migrations/admin/0002_patient_scoping.sql`, and the app repo's
 `supabase/migrations/0001_init.sql` (the Storage section).

@@ -55,22 +55,29 @@ admin. Hiding a sidebar link is presentation, not protection.
 for route handlers); `src/ports/auth.ts` (`requireConsoleActor()` is the only entry point
 features may call). `src/proxy.ts` refreshes the session and is not a gate. Which records
 an org admin may read is decided twice: by the `ReadScope` every clinical read requires
-(`src/domain/scope.ts`), and by the policies in `supabase/migrations/admin/0002`.
+(`src/domain/scope.ts`), and by the policies in `supabase/migrations/admin/0002_patient_scoping.sql`.
 
 ### 4. Read-mostly console
 
 The console reads clinical data. It does not create, edit, delete or re-validate
 patients, sessions, samples, detections or verdicts — that is the Android client's
-human-in-the-loop workflow. Its only writes are administrative (organizations, invitations and the
-memberships they create, a member's deactivation (medtech or org admin), patient assignments and
-training snapshots; shares later), each through a narrow port
-that records it in the audit trail (D2). An account is made only by accepting an
+human-in-the-loop workflow. Its only writes are administrative (organizations; invitations, to a
+laboratory or as a super admin, and the memberships they create; revoking a super admin; a
+member's deactivation or offboarding; an admin's own name; patient assignments; training
+snapshots; and the record of an export, a training download, an authenticator reset or a
+password change), each through a narrow port
+that records it in the audit trail (D2). Failed sign-in attempts are counted outside the audit
+trail, through `src/ports/attempt-limit.ts`. An account is made only by accepting an
 invitation, and its role and organization come from the stored invitation. Nothing is deleted: organizations and members are deactivated.
 
 **Enforced at:** `src/ports/db.ts` exposes query methods only — there is no `insert`,
 `update` or `delete` in it, so no feature can write clinical data. Administrative writes
-exist only on `src/ports/admin-write.ts`, and each is a security-definer function in
-`supabase/migrations/admin/` that audits itself; the tables have no write policies.
+exist only on `src/ports/admin-write.ts` (and accepting an invitation, on
+`src/ports/onboarding.ts`), and each is a security-definer function in
+`supabase/migrations/admin/` that audits itself; the tables have no write policies. The
+auth-provider changes some of them need (making an account, banning a login, removing an
+authenticator app, a new password) go through `src/ports/onboarding.ts`,
+`src/ports/account-access.ts` and `src/ports/auth.ts`.
 
 ### 5. Schema parity with AgarthaVision
 
@@ -81,8 +88,9 @@ does not invent them. Where Room and Postgres disagree on casing (detection verd
 lowercase in Room, UPPERCASE in Postgres), the adapter maps and the domain stays canonical.
 
 **Enforced at:** `src/domain/entities.ts` and `src/domain/enums.ts` carry per-field
-provenance comments; `src/adapters/supabase/db.ts` is the only place a Postgres row shape
-is named.
+provenance comments. The clinical tables' Postgres row shapes are named in
+`src/adapters/supabase/database.ts` and mapped to the domain there and in `reports.ts`,
+`prevalence-rows.ts` and `training-rows.ts`, beside it.
 
 ### 6. Validated data only in reports
 

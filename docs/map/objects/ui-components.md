@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-28
-commit: efed466
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # UI components
@@ -105,7 +105,7 @@ shadcn CLI from `components.json`. Every other component composes them (constrai
 - **Filters use `NativeSelect`.** The audit trail's person and action filters
   (`src/app/(dashboard)/audit/page.tsx`) and the super admin's organization filter
   (`src/components/organizations/OrganizationFilter.tsx`, on `/records`, `/dashboard`,
-  `/export` and `/audit`) submit with their page's GET form, so they stay native selects.
+  `/export`, `/audit` and `/map`) submit with their page's GET form, so they stay native selects.
 
 ## Connected to
 

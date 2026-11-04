@@ -365,8 +365,9 @@ export async function offboardMedtech(
 /**
  * Resets an org admin's authenticator app, for a lost phone (14zcqntjnt0). Super admins only,
  * never their own. Recorded first, then reset at the auth provider, as an export is recorded
- * before the file leaves: a reset nobody recorded must not happen. The person sets up a new app
- * at their next page in the console; nothing else about them changes.
+ * before the file leaves: a reset nobody recorded must not happen. With no app left, the person
+ * signs in with their password alone and may set up a new app on Settings, as two-step sign-in
+ * is each admin's choice (14zcqntr31c); nothing else about them changes.
  */
 export async function resetAuthenticator(
   _previous: MemberFormState,

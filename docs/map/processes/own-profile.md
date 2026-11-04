@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-28
-commit: efed466
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Own profile: name and password (14zcqntr35e)
@@ -67,6 +67,9 @@ beside two-step sign-in (`docs/map/processes/second-factor.md`).
 - A forgotten password: no reset-by-email flow in the console yet.
 - If recording fails after Supabase accepted the change, the password is changed without its
   entry; the page says so.
+- The console's attempt limits (`docs/map/processes/admin-gate.md`): a wrong current password
+  here is not counted. Only Supabase Auth's own rate limit applies, shown as "Too many
+  attempts. Wait a few minutes, then try again." (`src/app/(dashboard)/settings/actions.ts:166`).
 
 ## Consumes / produces
 

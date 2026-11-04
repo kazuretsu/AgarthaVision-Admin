@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-14
-commit: 2f55918
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Training data
@@ -103,7 +103,7 @@ privilege on them. The images are not copied: they are read from the bucket at d
 
 ## Limits
 
-At most 20,000 frames (`TRAINING_SNAPSHOT_LIMIT`, `src/domain/training-data.ts:45`), checked
+At most 20,000 frames (`TRAINING_SNAPSHOT_LIMIT`, `src/domain/training-data.ts:48`), checked
 in the action and the database, which keeps the zip under the format's 65,535 entries without
 ZIP64. The route allows 300 s (`maxDuration`). Frames average about 33 KB, so 20,000 come to
 about 660 MB; if a full snapshot runs into the host's limits, the fallback is a manifest with

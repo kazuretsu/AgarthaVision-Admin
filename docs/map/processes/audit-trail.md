@@ -1,6 +1,6 @@
 ---
-verified: 2026-09-30
-commit: f99fd4c
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Audit trail
@@ -25,14 +25,15 @@ commit. The table has no client write policy, and a trigger refuses UPDATE, DELE
 TRUNCATE for every role, the owner included.
 
 **Exports are audited before the file leaves.** The download route calls
-`recordExport` (`src/app/(dashboard)/export/download/route.ts:86`) with the row count,
-format, period and column version. If that fails, the route answers 403 or 503 and serves
-nothing: an unrecorded download of patient data must not happen. The function
+`recordExport` (`src/app/(dashboard)/export/download/route.ts:95`) with the row count,
+format, period and column version. If that fails, the route answers 403 or 503 (404 when
+the organization does not exist) and serves nothing: an unrecorded download of patient data must not happen. The function
 (`supabase/migrations/admin/0003_audit_exports.sql:13`) files an org admin's export under
 their own organization whatever the console passes (`:30`), so an entry cannot be misfiled.
 A training snapshot's download is recorded the same way, before the zip starts
-(`training-data.md`). Training entries are filed under no organization, so only super admins
-read them, and an org admin's action filter does not offer them (`auditActionsFor`). An
+(`training-data.md`). Training and super admin entries are filed under no organization, so
+only super admins read them, and an org admin's action filter offers neither
+(`auditActionsFor`, `src/domain/audit.ts:76`; the list at `:65`). An
 authenticator reset (14zcqntjnt0) follows the same order: recorded, then reset at the auth
 provider (`docs/map/processes/second-factor.md`).
 
@@ -51,8 +52,9 @@ provider (`docs/map/processes/second-factor.md`).
 | `member.deactivate`          | `console_set_member_status`                                              |
 | `member.reactivate`          | `console_set_member_status`                                              |
 | `member.authenticator_reset` | `console_record_authenticator_reset` (`admin/0018`), before the reset    |
-| `assignment.add`             | `console_assign_patient`                                                 |
-| `assignment.remove`          | `console_unassign_patient`                                               |
+| `member.offboard`            | `console_offboard_member` (`admin/0017`), after its handovers            |
+| `assignment.add`             | `console_assign_patient`; `console_offboard_member`, per handover        |
+| `assignment.remove`          | `console_unassign_patient`; `console_offboard_member`, per handover      |
 | `training.snapshot.create`   | `console_create_training_snapshot`                                       |
 | `training.snapshot.download` | `console_record_training_download`                                       |
 | `super_admin.invite`         | `console_invite_super_admin` (`admin/0019`), no organization             |
@@ -67,9 +69,9 @@ provider (`docs/map/processes/second-factor.md`).
 
 ## Reading
 
-`listAuditEntries` (`src/adapters/supabase/database.ts:672`) reads newest first, scoped like
+`listAuditEntries` (`src/adapters/supabase/database.ts:1026`) reads newest first, scoped like
 every other read: an org admin sees their organization's entries (and RLS agrees); a super
-admin sees all or one organization. `describeAuditEntry` (`src/domain/audit.ts:76`) turns an
+admin sees all or one organization. `describeAuditEntry` (`src/domain/audit.ts:99`) turns an
 entry into one line; an action this build does not know is shown as recorded, never hidden.
 The page caps at 500 entries and says so.
 
