@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [docs] The docs and map cards match the code on staging again
+
+An audit of `docs/` against the code found cards that had been edited without being re-checked,
+so their `verified:` stamps no longer meant anything (14zcqnttfjh). Every map card was
+re-checked against the code and its wrong claims, gaps and moved `path:line` citations fixed;
+`docs/map/effects/CONTEXT.md` now routes to every card; `docs/file-tree.md`,
+`docs/constraints.md` and `docs/features.md` (offboarding, the service-role key's four uses)
+match the tree. A new test, `src/lib/doc-citations.test.ts`, fails when a doc cites a file that
+does not exist or a line past its end. Four code comments that still described mandatory
+two-step sign-in, a single service-role use or the profile's dropped foreign key were
+corrected; no code changed.
+
 ## [revert] Sharing a patient with another laboratory is withdrawn
 
 PR #47 (14zcqntjntd) is reverted until its access rules are fixed. Patient pages no longer

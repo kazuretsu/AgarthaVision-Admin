@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-28
-commit: 2e84353
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Second factor (14zcqntjnt0, 14zcqntr31c)
@@ -60,8 +60,11 @@ cost money and are out of scope; so is MFA for medtechs, who never use the conso
    the code against the app, then removes the app (`mfa.unenroll`), which the provider allows
    only to an `aal2` session and follows by lowering the account's sessions to `aal1`. A code is
    asked even though the session already passed one, so a session left open on a shared
-   computer cannot turn it off. The next sign-in needs only the password. Changing phones is
-   turn off, then set up again.
+   computer cannot turn it off. The next sign-in needs only the password. This browser's access
+   token, just reissued as `aal2` by the code, keeps saying `aal2` until it next refreshes, so
+   until then the gate still counts the app as on (`src/adapters/supabase/auth.ts:243`); the
+   Settings card, read from the auth server, already says off. Changing phones is turn off,
+   then set up again.
 6. **Refusals.** `SecondFactorError` carries `rejected` (wrong or expired code: "That code
    didn't match…"), `rate_limited` (429: "Too many attempts…") or `failed`
    (`secondFactorFailure`, `src/adapters/supabase/errors.ts`). The words are shared by both
@@ -102,7 +105,7 @@ still opens what the app can reach.**
 A super admin opens an org admin's page (`/people/[userId]?org=…`). The "Two-step sign-in"
 card reads whether an app is set up (`hasAuthenticator`, service role,
 `src/adapters/supabase/account-access.ts`) and offers "Reset authenticator app" behind a
-confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:371`):
+confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:372`):
 
 1. checks `canResetSecondFactor` (`src/domain/second-factor.ts`): super admins only, for an
    org admin with a login, never themselves;
@@ -137,6 +140,9 @@ session, or an audit entry and a reset.
 - The Android app's sessions for org admins (above), until it asks for the code itself.
 - `admin/0018` and `src/domain/audit.ts` (`member.authenticator_reset`).
 - Every admin without an app: one auth-server call per request (above).
+- The "Turn on two-step sign-in" notice (`docs/map/processes/notices.md`), which shows from
+  the actor's `secondFactorOn`; set-up and turn-off revalidate the whole layout for it
+  (`src/app/(dashboard)/settings/actions.ts:88`, `:121`).
 - A provider swap: the rule (`secondFactorStep`, `secondFactorAdmits`, `canResetSecondFactor`)
   and the `/verify` and `/settings` pages stay; the adapter must report "this session passed a second factor" and "this account
   has an app", and must refuse a second app to a session that has not passed.

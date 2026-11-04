@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-14
-commit: 38a1777
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Prevalence map
@@ -21,7 +21,7 @@ cases; there are no points to plot, so it is a choropleth, not a heatmap.
    country. The period (`from`, `to`), a super admin's `org` and an isolated area (`isolate`)
    ride along in every link (`mapHref`, `:165`), so the back button and a shared link both
    work. Opening another level drops `isolate`.
-2. **Count.** `areaPrevalence` (`src/adapters/supabase/database.ts:792`) makes one request,
+2. **Count.** `areaPrevalence` (`src/adapters/supabase/database.ts:815`) makes one request,
    `console_area_prevalence(level, code, organization, from, to)` (`admin/0014`, the town
    level `admin/0015`). It returns the area, its parents' names for the breadcrumb, its own
    figure, and every area one level down **with its name, including those with no smear**;
@@ -99,7 +99,7 @@ cases; there are no points to plot, so it is a choropleth, not a heatmap.
   `scripts/vendor-maplibre.ts`; `src/lib/map/vendor.test.ts` fails if the copy and the
   package differ.
 - **Attribution** is shown under every map: "Administrative boundaries: OCHA Philippines
-  COD-AB, CC BY-IGO 3.0." (`BOUNDARY_ATTRIBUTION`, `:193`). The licence requires it wherever
+  COD-AB, CC BY-IGO 3.0." (`BOUNDARY_ATTRIBUTION`, `:267`). The licence requires it wherever
   the boundaries are shown.
 
 ## Accepted

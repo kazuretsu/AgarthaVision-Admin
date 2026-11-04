@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-06
-commit: 8c1c346
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # People and member access
@@ -12,14 +12,14 @@ the console, with nothing deleted.
 
 ## The page
 
-`/people` (`src/app/(dashboard)/people/page.tsx`; the sidebar's **People**, until 14zcqntkd0v
+`/people` (`src/app/(dashboard)/people/(list)/page.tsx`; the sidebar's **People**, until 14zcqntkd0v
 the Medtechs page) lists **everyone** in one laboratory — its org admins and its medtechs,
 since a role is a permission level and both do fieldwork — together with its **open
 invitations** of either role (`peopleRows`, `src/domain/people.ts:36`). Each row shows the name
 with the email beneath, the role (`rowRole`, `:63`), status (Active, Deactivated, Invited,
 Invite expired), joined date and how many of the laboratory's patients each is linked to. The
 signed-in person's own row is marked **You**. `/medtechs` and `/medtechs/[id]` redirect
-permanently to `/people` and `/people/[id]`, query string kept (`next.config.ts:8`).
+permanently to `/people` and `/people/[id]`, query string kept (`next.config.ts:15-19`).
 
 - **Who sees which laboratory.** An org admin sees their own, whatever `?org=` says. A super
   admin picks one (`?org=`); without a valid choice the page asks for one.
@@ -29,8 +29,10 @@ permanently to `/people` and `/people/[id]`, query string kept (`next.config.ts:
   role, status, joined or patients — org admins first by role; `email` still sorts for old
   links; blanks last either way, ties by name then email) and cut into pages of 50 in the
   page. A page past the end shows the last page.
-- **Actions** are only the ones the viewer may take: deactivate/reactivate on medtechs (below),
-  re-send/revoke on invitations the viewer may manage (`canManageInvitation`: an org admin,
+- **Actions** are only the ones the viewer may take (below): **Offboard** on an active medtech,
+  the only way one leaves (`MemberStatusForm`, `src/components/people/MemberStatusForm.tsx:47`);
+  **Deactivate** on an active org admin, for a super admin; **Reactivate** on a deactivated
+  member of either role; re-send/revoke on invitations the viewer may manage (`canManageInvitation`: an org admin,
   medtech invitations only; a super admin, any).
 - **Invite** (org admins) and **re-send / revoke** on invited rows are the invitation flow
   (`docs/map/processes/invitations.md`). Accepted and revoked invitations are listed below as
@@ -42,13 +44,14 @@ the email lives in the auth provider's table, which no client may read. It refus
 a super admin or that laboratory's org admin.
 
 A name opens `/people/[userId]` (a super admin's link carries `?org=`): their role, email,
-joined date, status (with deactivate/reactivate where the viewer may) and the laboratory's
+joined date, status (with offboard, deactivate or reactivate where the viewer may) and the laboratory's
 patients assigned to them (`docs/map/processes/patient-assignment.md`). It opens for a member
 of either role, since both do fieldwork (14zcqntkd0w); a patient's Assigned list links to it.
 Someone of another laboratory is a 404. For a viewer who could deactivate an active member, it
 also reads which of their patients only they cover (`listSoleCoverPatients`, through
 `console_member_sole_cover`, `supabase/migrations/admin/0009_org_admin_status.sql:61`, patient
-ids only) and marks them "Only active member", with a note to hand them over first.
+ids only) and marks them "Only active member", with a note to choose Offboard, which hands
+them over and deactivates in one step (`src/app/(dashboard)/people/[userId]/page.tsx:106-115`).
 
 ## Who may deactivate whom (`admin/0009`, 14zcqntkd0x)
 
@@ -61,12 +64,14 @@ Nobody changes their own status. Super admins make org admins (by invitation), s
 unmake them. `canChangeMemberStatus` (`src/domain/people.ts:182`) decides which rows show the
 action; the database function decides again. On the People page, on the person page and on the
 organization's Members table (`/organizations/[id]`, super admins), the action appears only
-where it is allowed.
+where it is allowed. For an active medtech that action is **Offboard** (below), which hands
+their patients over and deactivates them in one step; a plain **Deactivate** is offered only
+for an org admin, so only to a super admin.
 
 **Two deactivations are refused,** in the console before anything is touched and again in the
 database (SQLSTATE `23514`):
 
-- **The laboratory's last active org admin** (`isLastActiveOrgAdmin`, `:198`; hint
+- **The laboratory's last active org admin** (`isLastActiveOrgAdmin`, `:215`; hint
   `last_org_admin`). Without one, nobody there can invite medtechs or assign patients. Their row
   reads "Only organization admin" instead of a button. Invite the replacement first; to close a
   laboratory, deactivate the organization. The function locks the laboratory's org admin rows
@@ -75,13 +80,14 @@ database (SQLSTATE `23514`):
   keeps an active member of its laboratory" rule assignments follow
   (`docs/map/processes/patient-assignment.md`). The function locks the links of every patient
   the member is on — the rows assigning and removing lock — before counting. Hand the patients
-  over first; the person page lists them.
+  over first, or, for a medtech, Offboard, which does both; the person page lists them.
 
 Reactivating is never refused for either.
 
 ## Deactivate and reactivate
 
-`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:81`):
+`setMemberStatus` (`src/app/(dashboard)/people/actions.ts:81`), behind the page's Deactivate
+(an org admin) and Reactivate (either role) buttons:
 
 1. Reads the laboratory's people and finds the member; checks `canChangeMemberStatus` (above).
    A forged member id from elsewhere is "no longer in this laboratory". For a deactivation it
@@ -100,9 +106,13 @@ Reactivating is never refused for either.
 console or the app. A deactivated org admin is also no org admin to any check
 (`console_org_admin_org` reads active memberships), so their next console click shows the
 no-access page. The app treats a refused refresh as "deactivated" and signs out and wipes
-the phone (SE2 14zcqntjph8). A session already open keeps working until its access token
-expires (up to an hour, Supabase's default): RLS on clinical tables keys on the author, not
-the membership. **Nothing is deleted** — not the account, the profile, the patient links or
+the phone (SE2 14zcqntjph8). A session already open can still **read** until its access
+token expires (up to an hour, Supabase's default): RLS on clinical reads keys on the author,
+not the membership. It can no longer **write**: since the app's
+`supabase/migrations/0018_writes_need_active_lab_member.sql` (14zcqntnqpa), every field-data
+insert, update and delete, and every upload to the `samples` and `reports` buckets, needs an
+active member of an active laboratory, so the phone's next write is refused (42501,
+`not_active_lab_member`). **Nothing is deleted** — not the account, the profile, the patient links or
 any record (C8). Reactivating lifts the ban.
 
 ## A laboratory deactivated, or a super admin revoked (`admin/0021`, 14zcqntnqpd)
@@ -123,25 +133,30 @@ their block lifted when they accept (`docs/map/processes/invitations.md`).
 
 A super admin viewing an org admin sees a "Two-step sign-in" card: whether an app is set up,
 read from the auth provider, and "Reset authenticator app" behind a confirmation, for a lost
-phone. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:371`) records
-`member.authenticator_reset` first (`admin/0018`), then removes the login's factors; the org
-admin sets up a new app at their next sign-in. Org admins, medtechs' pages and one's own get no
+phone. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:372`) records
+`member.authenticator_reset` first (`admin/0018`), then removes the login's factors. With no app
+left, the org admin signs in on their password alone and may set up a new app on Settings:
+two-step sign-in is each admin's choice (14zcqntr31c). Org admins, medtechs' pages and one's own get no
 card (`canResetSecondFactor`). The whole flow: `docs/map/processes/second-factor.md`.
 
 ## Guided offboarding for medtechs (`admin/0017`, 14zcqntjnt5)
 
 When a medtech leaves the laboratory, their open work must not be stranded. Instead of
 having to hand over patients one by one on each patient's page before deactivating the
-member, the org admin chooses **Offboard** from the medtech's row or page:
+member, their org admin or a super admin chooses **Offboard** from the medtech's row or page.
+It is the only deactivation the console offers for an active medtech:
 
 1. Lists the patients where this medtech is the only active member assigned (`soleCover`).
 2. Asks who takes over: one active colleague for all patients, or selected per patient.
-3. Reminds the org admin to collect the mobile device or have the medtech signed out.
-4. On confirm, runs `offboardMedtech` (`src/app/(dashboard)/people/actions.ts`), which blocks
-   the login at the auth provider, calls `console_offboard_member` (`admin/0017`) to
+3. Reminds the admin to collect the mobile device or have the medtech signed out.
+4. On confirm, runs `offboardMedtech` (`src/app/(dashboard)/people/actions.ts:229`), which
+   refuses unless every such patient goes to an active colleague of the same laboratory, blocks
+   the login at the auth provider, then calls `console_offboard_member` (`admin/0017`) to
    reassign the patients and mark the membership deactivated in one transaction, and logs
    `member.offboard` together with `assignment.add` and `assignment.remove` entries in the
-   audit trail.
+   audit trail. If the function refuses, the block is undone. The function checks the caller
+   again (the medtech's own org admin or a super admin, never themselves) and the sole-cover
+   rule (`sole_cover`) after the handovers.
 5. Authorship on sessions, samples and reports remains unchanged under the leaver's name.
 
 ## If you change this
@@ -152,12 +167,17 @@ member, the org admin chooses **Offboard** from the medtech's row or page:
 - The cover rule must match `console_unassign_patient` (`admin/0008`): both count any active
   member of the patient's laboratory.
 - The app's sign-out-and-wipe depends on the ban being visible as a refused refresh.
+- `console_offboard_member` counts cover with the same `console_sole_cover_patient_ids`
+  (`admin/0009`) the deactivation check uses.
 - `supabase/tests/admin_0006_member_status.test.sql`,
-  `supabase/tests/admin_0009_org_admin_status.test.sql`.
+  `supabase/tests/admin_0009_org_admin_status.test.sql`,
+  `supabase/tests/admin_0017_offboard_medtech.test.sql`,
+  `supabase/tests/admin_0021_sign_in_follows_access.test.sql`.
 
 **Does not hit**
 
-- Clinical data, and anything the app owns: `admin/0006` adds two functions.
+- Clinical data, and anything the app owns: `admin/0006`, `0009`, `0017` and `0021` add
+  functions only.
 
 ## See
 

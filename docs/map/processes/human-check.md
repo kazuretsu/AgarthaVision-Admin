@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-16
-commit: 4be4bf5
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # Human check (14zcqntnqpc)
@@ -36,7 +36,15 @@ protection is on, Supabase refuses any sign-in without a valid token, from any c
    sign-in and `human_check_failed` on the invitation page; neither says anything about the
    password. On the invitation page the check is verified at the sign-in step, after
    `auth.admin.createUser` (the service role is not subject to it): a refused check leaves an
-   account that joined nothing, and the next attempt finds it and signs in.
+   account that joined nothing, and the next attempt finds it and signs in. An existing
+   account whose sign-in was blocked has the block lifted for the attempt and put back when
+   the check is refused (`src/adapters/supabase/onboarding.ts:140`, `:147-149`).
+5. **Attempt limits come first.** Both forms run under the console's attempt limits
+   (`docs/map/processes/admin-gate.md`): once a limit is reached, "Too many attempts" is
+   returned before the provider is called, so the token is never checked
+   (`src/lib/attempt-limit.ts:36`). A refused check is not a failed attempt: only a wrong
+   password counts (`src/app/(auth)/login/actions.ts:63`,
+   `src/app/(auth)/invite/[token]/actions.ts:83-84`).
 
 ## Settings
 
@@ -61,6 +69,8 @@ sent, which works only while Supabase's switch is off.
 **Hits**
 
 - The sign-in and invitation forms, and their server actions.
+- The attempt limits (`src/lib/attempt-limit.ts`): each form's failure test must keep a
+  refused check from counting as a wrong password.
 - A Content Security Policy, when the security headers ticket adds one: it must allow
   `https://challenges.cloudflare.com` in `script-src` and `frame-src`.
 - `src/adapters/supabase/auth.test.ts`, `onboarding.test.ts`, `src/domain/human-check.test.ts`.

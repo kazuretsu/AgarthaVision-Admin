@@ -1,6 +1,6 @@
 ---
-verified: 2026-10-05
-commit: 3869e44
+verified: 2026-11-05
+commit: 7e94643
 ---
 
 # LPF session summary
@@ -34,8 +34,8 @@ infection intensity. No surface in the console shows EPG.
 ## Steps
 
 1. The adapter reads a session with its samples and their detections, findings and
-   prediction ids (`sampleTree`, `src/adapters/supabase/database.ts:233`), or only what a
-   summary needs for a patient's session list (`sessionSummaryTree`, `:244`).
+   prediction ids (`sampleTree`, `src/adapters/supabase/database.ts:271`), or only what a
+   summary needs for a patient's session list (`sessionSummaryTree`, `:282`).
 2. `summariseSession` (`src/domain/clinical.ts:274`) keeps live samples, counts eggs per
    species, ranges the findings over the live field count, and decides positivity.
 3. `speciesRows` (`src/domain/clinical.ts:240`) joins the two halves for display. The LPF
@@ -59,9 +59,10 @@ infection intensity. No surface in the console shows EPG.
 
 `boxProvenance` (`src/domain/clinical.ts:320`) reads the table in the app's
 `0004_predictions.sql`: linked + box → **model** (or **redrawn** when `BOX_INCORRECT`);
-linked, no box → **no box**; unlinked + box → **added**. An unlinked row on a frame with no
+linked, no box → **no box**; unlinked + box → **added**; unlinked, no box → **no box** too
+(`unlocated`, an egg counted without a box). An unlinked row on a frame with no
 predictions at all and not a manual capture is **unknown** — a pre-`0004` row whose
-provenance could not be recovered — and is never guessed as "added".
+provenance could not be recovered — and is never guessed as "added" (`:334`).
 
 Boxes are drawn by `FieldImage` (`src/components/records/FieldImage.tsx`). `0004` says
 boxes are centre and size in source pixels, while `0001`'s comment says normalised `0..1`;
