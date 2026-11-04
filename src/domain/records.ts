@@ -38,6 +38,8 @@ export interface PatientRecord {
   patient: Patient;
   registeredBy: PersonRef;
   sessions: SessionListItem[];
+  /** Which laboratory owns the patient (D11). */
+  owningOrganization?: { id: string; name: string } | null;
 }
 
 /** One live field with everything recorded on it. */
