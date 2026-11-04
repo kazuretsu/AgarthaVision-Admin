@@ -44,6 +44,8 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "member.offboard": "Offboarded a medtech",
   "assignment.add": "Assigned a patient",
   "assignment.remove": "Removed a patient assignment",
+  "patient.share": "Shared a patient with another laboratory",
+  "patient.share_revoke": "Revoked a patient share",
   "training.snapshot.create": "Created a training snapshot",
   "training.snapshot.download": "Downloaded a training snapshot",
   "super_admin.invite": "Invited a super admin",
@@ -177,6 +179,15 @@ export function describeAuditEntry(entry: AuditEntry): string {
       return entry.action === "assignment.add"
         ? `Assigned ${patient} to ${member}`
         : `Removed ${patient} from ${member}`;
+    }
+    case "patient.share":
+    case "patient.share_revoke": {
+      const patient = entry.targetId ? `patient ${entry.targetId.slice(0, 8)}` : "a patient";
+      const targetOrg = text(d.target_organization_name) ?? "another laboratory";
+      const reason = text(d.reason) ? `: “${text(d.reason)}”` : "";
+      return entry.action === "patient.share"
+        ? `Shared ${patient} with ${targetOrg}${reason}`
+        : `Revoked share of ${patient} with ${targetOrg}${reason}`;
     }
     case "training.snapshot.create":
     case "training.snapshot.download": {

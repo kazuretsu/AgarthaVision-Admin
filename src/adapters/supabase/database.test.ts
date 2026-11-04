@@ -364,3 +364,43 @@ describe("SupabaseDatabaseAdapter — the map's town level (14zcqntjnt6)", () =>
     ).toBeNull();
   });
 });
+
+describe("SupabaseDatabaseAdapter.listPatientShares", () => {
+  it("maps console_patient_shares rpc output", async () => {
+    const rawShares = [
+      {
+        id: "share-1",
+        patient_id: "pat-1",
+        source_organization_id: "org-1",
+        source_organization_name: "Lab 1",
+        target_organization_id: "org-2",
+        target_organization_name: "Lab 2",
+        shared_by_name: "Admin User",
+        share_reason: "Referral",
+        shared_at: "2026-11-04T10:00:00Z",
+        revoked_by_name: null,
+        revocation_reason: null,
+        revoked_at: null,
+      },
+    ];
+    const { client, rpcs } = rpcClient({ data: rawShares, error: null });
+    const shares = await new SupabaseDatabaseAdapter(client).listPatientShares("pat-1");
+    expect(rpcs).toEqual([{ name: "console_patient_shares", args: { p_patient: "pat-1" } }]);
+    expect(shares).toEqual([
+      {
+        id: "share-1",
+        patientId: "pat-1",
+        sourceOrganizationId: "org-1",
+        sourceOrganizationName: "Lab 1",
+        targetOrganizationId: "org-2",
+        targetOrganizationName: "Lab 2",
+        sharedByName: "Admin User",
+        shareReason: "Referral",
+        sharedAt: "2026-11-04T10:00:00Z",
+        revokedByName: null,
+        revocationReason: null,
+        revokedAt: null,
+      },
+    ]);
+  });
+});

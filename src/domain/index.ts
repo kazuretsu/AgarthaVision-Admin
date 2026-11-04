@@ -11,6 +11,7 @@ export * from "./ids";
 export * from "./invitations";
 export * from "./notices";
 export * from "./password-policy";
+export * from "./patient-shares";
 export * from "./patients";
 export * from "./profile";
 export * from "./people";

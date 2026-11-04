@@ -33,6 +33,7 @@ import type {
   SuperAdminInvitation,
   MemberPatient,
   PatientAssignment,
+  PatientShare,
   Person,
   MembershipRole,
   OrganizationDetail,
@@ -629,22 +630,43 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
   ): Promise<PatientRecord | null> {
     const organizationId = scopedOrganization(scope);
     const sources = SOURCES[disclosure];
-    let request = this.client
+    const request = this.client
       .from(sources.patients)
       .select(
-        `${sources.patientColumns}, ${PATIENT_REGISTRAR}, ${embed("sessions", sources.sessions)} ( ${sessionSummaryTree(sources)} )${organizationId ? `, ${OWNER}` : ""}`,
+        `${sources.patientColumns}, ${PATIENT_REGISTRAR}, ${embed("sessions", sources.sessions)} ( ${sessionSummaryTree(sources)} ), patient_organizations ( organization_id, organizations ( id, name ) ), patient_shares ( id, target_organization_id, revoked_at )`,
       )
       .eq("id", patientId);
-    if (organizationId)
-      request = request.eq("patient_organizations.organization_id", organizationId);
 
     const { data, error } = await request.maybeSingle();
 
     if (error) throw new DatabaseReadError("getPatientRecord", error);
     if (!data) return null;
 
-    type Row = PatientRow & { sessions?: (SessionRow & { samples?: SampleRow[] })[] | null };
+    type Row = PatientRow & {
+      sessions?: (SessionRow & { samples?: SampleRow[] })[] | null;
+      patient_organizations?:
+        | { organization_id: string; organizations?: { id: string; name: string } | null }
+        | { organization_id: string; organizations?: { id: string; name: string } | null }[]
+        | null;
+      patient_shares?:
+        { id: string; target_organization_id: string; revoked_at: string | null }[] | null;
+    };
     const row = data as unknown as Row;
+    const po = Array.isArray(row.patient_organizations)
+      ? row.patient_organizations[0]
+      : row.patient_organizations;
+
+    if (organizationId) {
+      const isOwner = po?.organization_id === organizationId;
+      const isShared = (row.patient_shares ?? []).some(
+        (share) => share.target_organization_id === organizationId && share.revoked_at === null,
+      );
+      if (!isOwner && !isShared) return null;
+    }
+
+    const owningOrg =
+      po?.organizations ?? (po?.organization_id ? { id: po.organization_id, name: "" } : null);
+
     const sessions = (row.sessions ?? [])
       .map((session) => ({
         session: toSession(session, disclosure),
@@ -657,6 +679,7 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       patient: toPatient(row, disclosure),
       registeredBy: toPersonRef(row.profiles),
       sessions,
+      owningOrganization: owningOrg ? { id: owningOrg.id, name: owningOrg.name } : null,
     };
   }
 
@@ -928,6 +951,42 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
       role: row.role === "org_admin" || row.role === "medtech" ? row.role : null,
       status: row.status === null ? null : toStatus(row.status),
       linkedAt: row.linked_at,
+    }));
+  }
+
+  async listPatientShares(patientId: string): Promise<PatientShare[]> {
+    const { data, error } = await this.client.rpc("console_patient_shares", {
+      p_patient: patientId,
+    });
+    if (error) throw new DatabaseReadError("listPatientShares", error);
+
+    type Row = {
+      id: string;
+      patient_id: string;
+      source_organization_id: string;
+      source_organization_name: string;
+      target_organization_id: string;
+      target_organization_name: string;
+      shared_by_name: string | null;
+      share_reason: string;
+      shared_at: string;
+      revoked_by_name: string | null;
+      revocation_reason: string | null;
+      revoked_at: string | null;
+    };
+    return ((data as Row[] | null) ?? []).map((row) => ({
+      id: row.id,
+      patientId: row.patient_id,
+      sourceOrganizationId: row.source_organization_id,
+      sourceOrganizationName: row.source_organization_name,
+      targetOrganizationId: row.target_organization_id,
+      targetOrganizationName: row.target_organization_name,
+      sharedByName: row.shared_by_name,
+      shareReason: row.share_reason,
+      sharedAt: row.shared_at,
+      revokedByName: row.revoked_by_name,
+      revocationReason: row.revocation_reason,
+      revokedAt: row.revoked_at,
     }));
   }
 

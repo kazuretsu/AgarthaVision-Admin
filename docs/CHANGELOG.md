@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Share a patient with another laboratory
+
+The org admin who owns a patient (or a super admin) can now share the patient with another
+laboratory with a stated reason (14zcqntjntd). The receiving laboratory's admin can see the
+patient and assign their own active medtechs to it, while past smears from the sending laboratory
+remain restricted (the receiving laboratory sees the patient and their own new work only). The
+share can be revoked with a stated reason by the owning org admin or a super admin, immediately
+removing the receiving laboratory's access. Patient ownership is permanent and never changes.
+Every share and revocation, including its stated reason and the involved laboratories, is
+recorded in the audit trail (`admin/0023`, `src/domain/patient-shares.ts`,
+`src/components/patients/PatientSharesPanel.tsx`, `docs/features.md`).
+
 ## [fix] A failed sign-in keeps the email and password
 
 A wrong password, a refused security check or too many attempts cleared both fields on the

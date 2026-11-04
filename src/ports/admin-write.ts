@@ -143,6 +143,18 @@ export interface AdminWritePort {
   ): Promise<void>;
 
   /**
+   * Shares a patient with another laboratory (admin/0023). Owning org admins or super admins only.
+   * Stated reason required.
+   */
+  sharePatient(patientId: string, targetOrganizationId: string, reason: string): Promise<string>;
+
+  /**
+   * Revokes a patient share (admin/0023). Owning org admins or super admins only.
+   * Stated reason required.
+   */
+  revokePatientShare(shareId: string, reason: string): Promise<void>;
+
+  /**
    * Freezes a training snapshot and returns its id. Super admins only. Refused
    * (`invalid`, hint `stale`) when a frame is no longer live: preview again.
    */
