@@ -22,7 +22,6 @@ import { Fact } from "@/components/records/Fact";
 import { LpfInline } from "@/components/records/LpfTable";
 import { SessionResult } from "@/components/records/ResultBadge";
 import { AssignmentsPanel } from "@/components/assignments/AssignmentsPanel";
-import { PatientSharesPanel } from "@/components/patients/PatientSharesPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -68,10 +67,11 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
   if (!isUuid(patientId)) notFound();
   const { scope } = await scopeForRequest();
 
-  const db = await getDatabase();
   let record;
   try {
-    record = await db.getPatientRecord(patientId, scope, patientDisclosureFor(actor.access));
+    record = await (
+      await getDatabase()
+    ).getPatientRecord(patientId, scope, patientDisclosureFor(actor.access));
   } catch (cause) {
     if (cause instanceof MissingEnvironmentError) {
       return <DataUnavailable title="Patient" variable={cause.variable} />;
@@ -79,18 +79,6 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
     throw cause;
   }
   if (!record) notFound();
-
-  const [shares, organizations] = await Promise.all([
-    db.listPatientShares(patientId),
-    actor.access.kind === "org_admin" || actor.access.kind === "super_admin"
-      ? db.listOrganizations()
-      : Promise.resolve([]),
-  ]);
-
-  const isOwningOrganization =
-    actor.access.kind === "org_admin"
-      ? record.owningOrganization?.id === actor.access.organizationId
-      : actor.access.kind === "super_admin";
 
   const { patient, registeredBy, sessions } = record;
   const name = patientLabel(patient);
@@ -137,15 +125,6 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
       >
         <Assignments patientId={patient.id} access={actor.access} />
       </Suspense>
-
-      <PatientSharesPanel
-        patientId={patient.id}
-        shares={shares}
-        availableOrganizations={organizations}
-        access={actor.access}
-        isOwningOrganization={isOwningOrganization}
-        owningOrganizationName={record.owningOrganization?.name}
-      />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-stone-ink">Sessions</h2>

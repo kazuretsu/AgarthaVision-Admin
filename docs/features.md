@@ -199,18 +199,6 @@ role, is refused in the page and in the database. Removing an assignment removes
 access only: the patient, every record and who read each smear stay. A super admin sees who is
 assigned and nothing more. Each change is in the audit trail, naming the patient by record id.
 
-### Patient sharing and referrals
-
-A patient belongs to one organization permanently (D11). The owning organization's admin (or a
-super admin) can share a patient with another laboratory — for example when a patient is referred
-for secondary consultation or testing — with a mandatory stated reason (`admin/0023`,
-`14zcqntjntd`). The receiving laboratory's admin can then view the patient and assign their own
-active medtechs to it. The receiving laboratory sees the patient and their own new work only; past
-smears authored by the sending laboratory remain restricted. The owning org admin or super admin
-can revoke the share at any time with a stated reason, immediately terminating the receiving
-laboratory's access while deleting nothing. Every share and revocation action, along with its
-reason, is recorded in the audit trail.
-
 ### Laboratory scoping
 
 A patient belongs to the laboratory of the medtech who registered it, set by a database

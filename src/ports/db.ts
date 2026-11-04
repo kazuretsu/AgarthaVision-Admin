@@ -9,7 +9,6 @@ import type {
   MemberPatient,
   OrganizationDetail,
   PatientAssignment,
-  PatientShare,
   Person,
   OrganizationSummary,
   ReadScope,
@@ -173,12 +172,6 @@ export interface DatabasePort {
    * the caller may not read.
    */
   listPatientAssignments(patientId: string): Promise<PatientAssignment[]>;
-
-  /**
-   * Active and past referrals/shares for one patient (admin/0023).
-   * Owning org admin, receiving org admin, or super admin only.
-   */
-  listPatientShares(patientId: string): Promise<PatientShare[]>;
 
   /** The laboratory's patients one member is assigned to, newest link first. */
   listMemberPatients(userId: string): Promise<MemberPatient[]>;

@@ -26,19 +26,16 @@ describe("no hidden characters in the source", () => {
   });
 
   it("no tracked text file has one", () => {
-    const hasHidden = new RegExp(HIDDEN.source, "u");
-    const found = tracked.flatMap((path) => {
-      const content = readFileSync(path, "utf8");
-      if (!hasHidden.test(content)) return [];
-      return content
+    const found = tracked.flatMap((path) =>
+      readFileSync(path, "utf8")
         .split("\n")
         .flatMap((line, index) =>
           [...line.matchAll(HIDDEN)].map(
             ([character]) =>
               `${path}:${index + 1} U+${character.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`,
           ),
-        );
-    });
+        ),
+    );
     expect(found).toEqual([]);
-  }, 20_000);
+  });
 });
