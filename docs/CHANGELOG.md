@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [refactor] Member status and offboarding share sign-in rollback
+
+Deactivation, reactivation, and offboarding use `withSignInChange` to set sign-in before
+writing the membership change (14zcqnttqua). A sign-in failure prevents the write, while a
+missing login lets the write proceed on its own. If the write fails, the helper attempts to
+undo the sign-in change and logs any rollback failure while preserving the original write
+error. The actions keep their existing refusal messages (`docs/map/processes/people-access.md`).
+
 ## [docs] The docs and map cards match the code on staging again
 
 An audit of `docs/` against the code found cards that had been edited without being re-checked,

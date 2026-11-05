@@ -22,6 +22,7 @@ import {
 import { getConsoleActor } from "@/lib/console-access";
 import { MissingEnvironmentError } from "@/lib/env";
 import { personName } from "@/lib/format";
+import { withSignInChange } from "@/lib/with-sign-in-change";
 import type { MemberFormState } from "./state";
 
 /**
@@ -34,8 +35,7 @@ import type { MemberFormState } from "./state";
  *
  * Two halves, in this order: the login's sign-in is blocked (or allowed) at the
  * auth provider, then the membership's status is recorded by an audited database
- * function. If the record fails, the sign-in change is undone, so the page never
- * shows someone as active who cannot sign in, or deactivated who still can.
+ * function. If the record fails, the helper attempts to undo the sign-in change.
  * Nothing is deleted either way (C8).
  */
 
@@ -66,6 +66,19 @@ function soleCoverError(name: string, patients: number | null): MemberFormState 
     error: `${name} is the only active member on ${which}. Hand them over first: ${name}'s page lists them.`,
     done: null,
   };
+}
+
+function signInNotChanged(name: string, allowed: boolean): MemberFormState {
+  return {
+    error: `${name}'s sign-in could not be ${allowed ? "restored" : "blocked"}, so nothing changed. Try again.`,
+    done: null,
+  };
+}
+
+function writeRefused(cause: AdminWriteError, fallback: string): MemberFormState {
+  if (cause.reason === "forbidden") return NOT_PERMITTED;
+  if (cause.reason === "not_found") return NOT_FOUND;
+  return { error: fallback, done: null };
 }
 
 async function requireActor(): Promise<ConsoleActor | MemberFormState> {
@@ -121,47 +134,17 @@ export async function setMemberStatus(
     if (isLastActiveOrgAdmin(people, userId)) return lastOrgAdmin(name);
     if (soleCover.length > 0) return soleCoverError(name, soleCover.length);
   }
-  // A profile whose login was deleted (app 0011) has nothing to block; only the record moves.
-  if (person.accountId) {
-    try {
-      await (await getAccountAccess()).setSignInAllowed(person.accountId, allowed);
-    } catch (cause) {
-      if (cause instanceof AccountAccessError || cause instanceof MissingEnvironmentError) {
-        console.error("Sign-in setting not changed", cause);
-        return {
-          error: `${name}'s sign-in could not be ${allowed ? "restored" : "blocked"}, so nothing changed. Try again.`,
-          done: null,
-        };
-      }
-      throw cause;
-    }
-  }
-
   try {
-    await (await getAdminWrites()).setMemberStatus(userId, status);
+    const failed = await withSignInChange(person.accountId, allowed, getAccountAccess, async () =>
+      (await getAdminWrites()).setMemberStatus(userId, status),
+    );
+    if (failed) return signInNotChanged(name, allowed);
   } catch (cause) {
-    if (person.accountId) {
-      await (
-        await getAccountAccess()
-      )
-        .setSignInAllowed(person.accountId, !allowed)
-        .catch((undo) => console.error("Sign-in change not undone", undo));
-    }
-    if (cause instanceof AdminWriteError) {
-      // The database's own refusal, when something changed between the check above and now.
-      if (cause.hint === "last_org_admin") return lastOrgAdmin(name);
-      if (cause.hint === "sole_cover") return soleCoverError(name, null);
-      return {
-        error:
-          cause.reason === "forbidden"
-            ? NOT_PERMITTED.error
-            : cause.reason === "not_found"
-              ? NOT_FOUND.error
-              : "The change could not be saved. Try again.",
-        done: null,
-      };
-    }
-    throw cause;
+    if (!(cause instanceof AdminWriteError)) throw cause;
+    // The database's own refusal, when something changed between the check above and now.
+    if (cause.hint === "last_org_admin") return lastOrgAdmin(name);
+    if (cause.hint === "sole_cover") return soleCoverError(name, null);
+    return writeRefused(cause, "The change could not be saved. Try again.");
   }
 
   revalidatePath("/people");
@@ -306,44 +289,15 @@ export async function offboardMedtech(
     }
   }
 
-  if (person.accountId) {
-    try {
-      await (await getAccountAccess()).setSignInAllowed(person.accountId, false);
-    } catch (cause) {
-      if (cause instanceof AccountAccessError || cause instanceof MissingEnvironmentError) {
-        console.error("Sign-in setting not changed", cause);
-        return {
-          error: `${name}'s sign-in could not be blocked, so nothing changed. Try again.`,
-          done: null,
-        };
-      }
-      throw cause;
-    }
-  }
-
   try {
-    await (await getAdminWrites()).offboardMember(userId, reassignments);
+    const failed = await withSignInChange(person.accountId, false, getAccountAccess, async () =>
+      (await getAdminWrites()).offboardMember(userId, reassignments),
+    );
+    if (failed) return signInNotChanged(name, false);
   } catch (cause) {
-    if (person.accountId) {
-      await (
-        await getAccountAccess()
-      )
-        .setSignInAllowed(person.accountId, true)
-        .catch((undo) => console.error("Sign-in change not undone", undo));
-    }
-    if (cause instanceof AdminWriteError) {
-      if (cause.hint === "sole_cover") return soleCoverError(name, null);
-      return {
-        error:
-          cause.reason === "forbidden"
-            ? NOT_PERMITTED.error
-            : cause.reason === "not_found"
-              ? NOT_FOUND.error
-              : "The offboarding could not be saved. Try again.",
-        done: null,
-      };
-    }
-    throw cause;
+    if (!(cause instanceof AdminWriteError)) throw cause;
+    if (cause.hint === "sole_cover") return soleCoverError(name, null);
+    return writeRefused(cause, "The offboarding could not be saved. Try again.");
   }
 
   revalidatePath("/people");
