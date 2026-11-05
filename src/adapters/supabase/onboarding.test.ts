@@ -1,0 +1,290 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { describe, expect, it } from "vitest";
+import { AcceptInvitationError } from "@/ports/onboarding";
+import { SupabaseOnboardingAdapter, isInvitationToken } from "./onboarding";
+
+const TOKEN = "ab".repeat(32);
+
+const PENDING = {
+  email: "ana@example.test",
+  full_name: "Ana",
+  role: "medtech",
+  organization_name: "Lab A",
+  state: "pending",
+  expires_at: "2026-10-12T00:00:00Z",
+};
+
+interface Script {
+  link?: Record<string, unknown> | null;
+  /** What `console_super_admin_invitation_by_token` answers (admin/0019). */
+  superAdminLink?: Record<string, unknown> | null;
+  createError?: { code?: string; message?: string } | null;
+  signInError?: unknown;
+  acceptError?: { code?: string; hint?: string } | null;
+  /** The blocked login `console_blocked_account_for_email` finds (admin/0021), if any. */
+  blockedAccount?: string | null;
+}
+
+/** The visitor's client and the service client, answering as scripted and recording calls. */
+function clients(script: Script) {
+  const calls: string[] = [];
+  const created: unknown[] = [];
+  const signIns: unknown[] = [];
+  const visitor = {
+    rpc(name: string, args: Record<string, unknown>) {
+      calls.push(`rpc:${name}`);
+      if (name === "console_invitation_by_token") {
+        return Promise.resolve({ data: script.link ? [script.link] : [], error: null });
+      }
+      if (name === "console_super_admin_invitation_by_token") {
+        return Promise.resolve({
+          data: script.superAdminLink ? [script.superAdminLink] : [],
+          error: null,
+        });
+      }
+      return Promise.resolve({
+        data: [{ organization_id: "lab-a", role: "medtech" }],
+        error: script.acceptError ?? null,
+        args,
+      });
+    },
+    auth: {
+      signInWithPassword(credentials: { email: string }) {
+        calls.push(`signIn:${credentials.email}`);
+        signIns.push(credentials);
+        return Promise.resolve(
+          script.signInError
+            ? { data: { user: null }, error: script.signInError }
+            : { data: { user: { id: "u1" } }, error: null },
+        );
+      },
+      signOut(options?: { scope?: string }) {
+        calls.push(`signOut:${options?.scope ?? "global"}`);
+        return Promise.resolve({ error: null });
+      },
+    },
+  };
+  const service = {
+    rpc(name: string) {
+      calls.push(`service:${name}`);
+      return Promise.resolve({ data: script.blockedAccount ?? null, error: null });
+    },
+    auth: {
+      admin: {
+        updateUserById(id: string, attributes: { ban_duration: string }) {
+          calls.push(`ban:${id}:${attributes.ban_duration}`);
+          return Promise.resolve({ data: {}, error: null });
+        },
+        createUser(attributes: unknown) {
+          calls.push("createUser");
+          created.push(attributes);
+          return Promise.resolve({ data: {}, error: script.createError ?? null });
+        },
+      },
+    },
+  };
+  const adapter = new SupabaseOnboardingAdapter(
+    visitor as unknown as SupabaseClient,
+    () => service as unknown as SupabaseClient,
+  );
+  return { adapter, calls, created, signIns };
+}
+
+const REQUEST = { token: TOKEN, password: "long-enough", fullName: "Ana Cruz" };
+
+describe("isInvitationToken", () => {
+  it("accepts 64 lower-case hex characters only", () => {
+    expect(isInvitationToken(TOKEN)).toBe(true);
+    expect(isInvitationToken(TOKEN.toUpperCase())).toBe(false);
+    expect(isInvitationToken("ab")).toBe(false);
+    expect(isInvitationToken(`${TOKEN}'--`)).toBe(false);
+  });
+});
+
+describe("SupabaseOnboardingAdapter — super admin invitations (14zcqntjwjg)", () => {
+  const SUPER = {
+    email: "nova@example.test",
+    full_name: "Nova",
+    state: "pending",
+    expires_at: "2026-10-12T00:00:00Z",
+  };
+
+  it("finds a super admin link when no laboratory invitation has the token", async () => {
+    const { adapter } = clients({ link: null, superAdminLink: SUPER });
+    expect(await adapter.findInvitation(TOKEN)).toEqual({
+      email: "nova@example.test",
+      fullName: "Nova",
+      role: "super_admin",
+      organizationName: null,
+      state: "pending",
+      expiresAt: "2026-10-12T00:00:00Z",
+    });
+  });
+
+  it("names nothing when neither kind has the token", async () => {
+    const { adapter } = clients({ link: null, superAdminLink: null });
+    expect(await adapter.findInvitation(TOKEN)).toBeNull();
+  });
+
+  it("accepts it through the super admin function, never the laboratory one", async () => {
+    const { adapter, calls } = clients({ link: null, superAdminLink: SUPER });
+    await expect(adapter.acceptInvitation(REQUEST)).resolves.toEqual({ role: "super_admin" });
+    expect(calls).toContain("rpc:console_accept_super_admin_invitation");
+    expect(calls).not.toContain("rpc:console_accept_invitation");
+  });
+});
+
+describe("SupabaseOnboardingAdapter", () => {
+  it("does not ask the database about a malformed token", async () => {
+    const { adapter, calls } = clients({ link: PENDING });
+    expect(await adapter.findInvitation("nope")).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
+  it("makes the account for the invitation's email, confirmed, with no metadata", async () => {
+    const { adapter, calls, created } = clients({ link: PENDING });
+    await expect(adapter.acceptInvitation(REQUEST)).resolves.toEqual({ role: "medtech" });
+    expect(created).toEqual([
+      { email: "ana@example.test", password: "long-enough", email_confirm: true },
+    ]);
+    expect(calls).toEqual([
+      "rpc:console_invitation_by_token",
+      "createUser",
+      "signIn:ana@example.test",
+      "rpc:console_accept_invitation",
+    ]);
+  });
+
+  it("makes no account for a link that is not pending", async () => {
+    for (const state of ["expired", "revoked", "accepted", "unavailable"]) {
+      const { adapter, calls } = clients({ link: { ...PENDING, state } });
+      await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({ reason: state });
+      expect(calls).not.toContain("createUser");
+    }
+    const { adapter } = clients({ link: null });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "invalid_link",
+    });
+  });
+
+  it("uses the account already made for this email rather than a second one", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: {
+        code: "email_exists",
+        message: "A user with this email address has already been registered",
+      },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).resolves.toEqual({ role: "medtech" });
+    expect(calls).toContain("rpc:console_accept_invitation");
+  });
+
+  it("an existing account with another password is wrong_password", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: { code: "email_exists" },
+      signInError: { message: "Invalid login credentials" },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "wrong_password",
+    });
+    expect(calls).not.toContain("rpc:console_accept_invitation");
+  });
+
+  it("a password Supabase refuses is weak_password", async () => {
+    const { adapter } = clients({ link: PENDING, createError: { code: "weak_password" } });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "weak_password",
+    });
+  });
+
+  it("passes the form's human-check token to the sign-in, not to createUser", async () => {
+    const { adapter, created, signIns } = clients({ link: PENDING });
+    await adapter.acceptInvitation({ ...REQUEST, humanCheckToken: "0.token" });
+    expect(created).toEqual([
+      { email: "ana@example.test", password: "long-enough", email_confirm: true },
+    ]);
+    expect(signIns).toEqual([
+      { email: "ana@example.test", password: "long-enough", options: { captchaToken: "0.token" } },
+    ]);
+  });
+
+  it("a refused human check is human_check_failed, and joins nothing", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: { code: "email_exists" },
+      signInError: { code: "captcha_failed", message: "captcha protection" },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "human_check_failed",
+    });
+    expect(calls).not.toContain("rpc:console_accept_invitation");
+  });
+
+  it("signs out again when the database refuses the acceptance", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      acceptError: { code: "23505", hint: "already_member" },
+    });
+    const failure = adapter.acceptInvitation(REQUEST);
+    await expect(failure).rejects.toBeInstanceOf(AcceptInvitationError);
+    await expect(failure).rejects.toMatchObject({ reason: "already_member" });
+    // This browser's session only: an existing account's phone stays signed in (14zcqntnqpd).
+    expect(calls.at(-1)).toBe("signOut:local");
+  });
+});
+
+describe("SupabaseOnboardingAdapter — a login whose sign-in was blocked (14zcqntnqpd)", () => {
+  const EXISTING = { code: "email_exists" };
+
+  it("lifts the block for the attempt, and keeps it lifted once accepted", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: EXISTING,
+      blockedAccount: "acct-1",
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).resolves.toEqual({ role: "medtech" });
+    expect(calls).toContain("ban:acct-1:none");
+    expect(calls.indexOf("ban:acct-1:none")).toBeLessThan(calls.indexOf("signIn:ana@example.test"));
+    expect(calls.filter((call) => call.startsWith("ban:"))).toEqual(["ban:acct-1:none"]);
+  });
+
+  it("puts the block back when the password is wrong", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: EXISTING,
+      blockedAccount: "acct-1",
+      signInError: { message: "Invalid login credentials" },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "wrong_password",
+    });
+    expect(calls.filter((call) => call.startsWith("ban:"))).toEqual([
+      "ban:acct-1:none",
+      "ban:acct-1:876000h",
+    ]);
+  });
+
+  it("puts the block back when the database refuses the acceptance", async () => {
+    const { adapter, calls } = clients({
+      link: PENDING,
+      createError: EXISTING,
+      blockedAccount: "acct-1",
+      acceptError: { code: "23505", hint: "already_member" },
+    });
+    await expect(adapter.acceptInvitation(REQUEST)).rejects.toMatchObject({
+      reason: "already_member",
+    });
+    expect(calls.at(-1)).toBe("ban:acct-1:876000h");
+  });
+
+  it("touches no block for a login that has none, or a new account", async () => {
+    const existing = clients({ link: PENDING, createError: EXISTING });
+    await existing.adapter.acceptInvitation(REQUEST);
+    expect(existing.calls.some((call) => call.startsWith("ban:"))).toBe(false);
+
+    const fresh = clients({ link: PENDING });
+    await fresh.adapter.acceptInvitation(REQUEST);
+    expect(fresh.calls).not.toContain("service:console_blocked_account_for_email");
+  });
+});

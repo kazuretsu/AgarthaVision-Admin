@@ -1,0 +1,134 @@
+# Change impact
+
+If you touch X, open these cards. This index is a catalog, not a waterfall: it names where
+to look, and the card carries the reasoning. **If this table and a card disagree, the card
+is right and this table is stale.**
+
+| If you touch                                                                                                                        | Open                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/ports/*`                                                                                                                       | `../objects/ports.md` · `../../constraints.md` (#1, #4)                                                                                                                                                         |
+| `src/adapters/registry.ts`                                                                                                          | `../objects/provider-registry.md`                                                                                                                                                                               |
+| `src/adapters/supabase/database.ts`                                                                                                 | `../objects/domain-model.md` · `../objects/ports.md`                                                                                                                                                            |
+| `src/adapters/supabase/paging.ts`, any `.limit()`                                                                                   | `../processes/dashboard-figures.md` — one response stops at the server's row cap                                                                                                                                |
+| `src/adapters/supabase/storage.ts`                                                                                                  | `../processes/signed-image-url.md`                                                                                                                                                                              |
+| `src/adapters/supabase/auth.ts`                                                                                                     | `../processes/admin-gate.md` · `../../constraints.md` (#3)                                                                                                                                                      |
+| `src/domain/entities.ts`, `enums.ts`                                                                                                | `../objects/domain-model.md` · `../../constraints.md` (#5, #7)                                                                                                                                                  |
+| `src/domain/clinical.ts`, `patients.ts`                                                                                             | `../processes/lpf-session-summary.md` · `../../constraints.md` (#6)                                                                                                                                             |
+| `src/domain/dashboard.ts`, `src/components/dashboard/`                                                                              | `../processes/dashboard-figures.md`                                                                                                                                                                             |
+| `src/domain/research-export.ts`                                                                                                     | `../processes/research-export.md` — the column set is a contract (v2)                                                                                                                                           |
+| `src/domain/training-*.ts`, `src/lib/training-*.ts`, `training-data/`, `admin/0012`                                                 | `../processes/training-data.md` — the zip formats are a contract; changing the split rule moves patients                                                                                                        |
+| `src/domain/prevalence-map.ts`, `src/{components,lib}/map/`, `map/`, `public/geo/`, `admin/0014`–`15`                               | `../processes/prevalence-map.md` — the threshold lives in the database only; outlines and lookup change together                                                                                                |
+| `src/lib/period.ts`                                                                                                                 | `../processes/dashboard-figures.md` · `../processes/research-export.md` — shared period                                                                                                                         |
+| `src/app/(dashboard)/layout.tsx`                                                                                                    | `../processes/admin-gate.md`                                                                                                                                                                                    |
+| `src/proxy.ts`, `src/lib/session-activity.ts`, `src/domain/session-limits.ts`                                                       | `../processes/admin-gate.md` — session limits; never a role check                                                                                                                                               |
+| `src/lib/sign-in-follows-access.ts`, `admin/0021`                                                                                   | `../processes/people-access.md` — who is banned when access goes                                                                                                                                                |
+| `src/lib/attempt-limit.ts`, `src/domain/attempt-limits.ts`, `admin/0022`                                                            | `../processes/admin-gate.md` — attempt limits; fails open, counts wrong passwords only                                                                                                                          |
+| `src/domain/access.ts`, `src/lib/console-access.ts`                                                                                 | `../processes/admin-gate.md` · `../../constraints.md` (#3)                                                                                                                                                      |
+| `src/components/shell/nav.ts`                                                                                                       | `../processes/admin-gate.md` — `visibleTo` must match each page's `requirePageAccess`                                                                                                                           |
+| Any new route handler                                                                                                               | `../processes/admin-gate.md` — handlers do **not** inherit the layout's gate                                                                                                                                    |
+| `src/proxy.ts`                                                                                                                      | `../processes/admin-gate.md` — refresh only, never the authorisation point                                                                                                                                      |
+| `src/lib/palette.ts`, anything charting                                                                                             | No card: the rule is the file's header (`src/lib/palette.ts:1-13`) — re-run the palette validator                                                                                                               |
+| `supabase/migrations/admin/*`                                                                                                       | `../objects/organizations.md` · `../../constraints.md` (#7) — additive only; run `bun run test:db`                                                                                                              |
+| `src/domain/scope.ts`, `src/lib/read-scope.ts`, `supabase/migrations/admin/0002_*`                                                  | `../processes/lab-scoping.md` — the console filter and the policies must agree                                                                                                                                  |
+| `src/domain/audit.ts`, any new admin write                                                                                          | `../processes/audit-trail.md` — a write must audit itself; add its action                                                                                                                                       |
+| `src/ports/admin-write.ts`, `src/adapters/supabase/admin-write.ts`                                                                  | `../objects/organizations.md` — every write audits itself                                                                                                                                                       |
+| `src/domain/invitations.ts`, `src/adapters/supabase/onboarding.ts`, `invite/`                                                       | `../processes/invitations.md` — role and organization come from the stored invitation only                                                                                                                      |
+| `createServiceClient`, `SUPABASE_SERVICE_ROLE_KEY`                                                                                  | `../processes/invitations.md` · `../processes/people-access.md` · `../processes/admin-gate.md` · `../../constraints.md` (#2) — three callers (onboarding, account access, attempt limits), each after its check |
+| `src/domain/people.ts`, `people/`, `src/components/people/`, `admin/0006`, `admin/0009`, `admin/0017`                               | `../processes/people-access.md` — block sign-in first, record second, undo on failure; offboarding hands patients over first                                                                                    |
+| `src/domain/assignments.ts`, `assignments/`, `src/components/assignments/`, `admin/0007`, `admin/0008`                              | `../processes/patient-assignment.md` — never leave a patient without an active member of its laboratory                                                                                                         |
+| `src/domain/organizations.ts`, `organizations/`, `src/components/organizations/`, `admin/0001`, `admin/0016`                        | `../objects/organizations.md` — a laboratory name is cleaned in the database                                                                                                                                    |
+| `src/domain/second-factor.ts`, `src/lib/second-factor-messages.ts`, `verify/`, `src/components/auth/SecondFactor.tsx`, `admin/0018` | `../processes/second-factor.md` · `../processes/admin-gate.md` — a session with an app is admitted only after its code                                                                                          |
+| `src/domain/super-admins.ts`, `super-admins/`, `src/components/super-admins/`, `admin/0019`                                         | `../processes/super-admins.md` — never your own grant, never the last one                                                                                                                                       |
+| `src/domain/profile.ts`, `src/domain/password-policy.ts`, `settings/`, `src/components/settings/`, `admin/0020`                     | `../processes/own-profile.md` · `../processes/second-factor.md` — the caller's own account only                                                                                                                 |
+| `src/domain/human-check.ts`, `src/components/auth/HumanCheck.tsx`                                                                   | `../processes/human-check.md` — the provider verifies the token, not the console                                                                                                                                |
+| `src/domain/notices.ts`, `src/components/shell/NoticeBar.tsx`                                                                       | `../processes/notices.md`                                                                                                                                                                                       |
+| `src/adapters/resend/*`, `src/lib/invitation-email.ts`                                                                              | `../processes/invitations.md` — the email carries the link, never a password                                                                                                                                    |
+| `SESSION_INIT.md`                                                                                                                   | `../../constraints.md` (#13)                                                                                                                                                                                    |
+| `src/components/ui/*`, `components.json`, tokens in `globals.css`                                                                   | `../objects/ui-components.md` · `../../constraints.md` (#15) — add primitives with the shadcn CLI                                                                                                               |
+| `.husky/*`, `package.json` scripts                                                                                                  | `../../commands.md` · `../../constraints.md` (#9)                                                                                                                                                               |
+| `.env.example`                                                                                                                      | `../objects/provider-registry.md` · `../../stack.md` · `../../constraints.md` (#2, #12)                                                                                                                         |
+
+## The non-obvious breaks
+
+**A route handler is not behind the gate.** The `(dashboard)` layout guards pages that
+render inside it. A route handler under the same folder does not render inside it and
+inherits nothing. The export download (`src/app/(dashboard)/export/download/route.ts:36`) and
+the training snapshot download
+(`src/app/(dashboard)/training-data/snapshots/[snapshotId]/download/route.ts:29`) call
+`requireRouteAccess()` for exactly this reason; a new handler that forgets to is an open
+dataset.
+
+**A route-level `loading.tsx` turns every 404 under it into a 200.** It starts streaming the
+response before the page runs, so `notFound()` can only swap the content, not the status.
+Record pages therefore have none: the list's lives in `records/(list)/` (and People's in
+`people/(list)/`), and the detail pages read first and suspend only what comes after. A page
+admitting fewer kinds of user than the whole console (`requirePageAccess([...])`, e.g.
+`/organizations`) answers 404 to the rest and counts the same. Put a loading state for such a
+page inside it, below its not-found check, and let the clicked link show it is pending
+(`LinkPending`, `src/components/loading/`). `src/app/not-found-status.test.ts` fails if any
+page that can answer 404 sits under a loading file or suspends before its not-found check —
+and if any other `(dashboard)` page has **no** loading file above it, so a new page always gets
+a skeleton (14zcqntk6h5). The same holds for
+`redirect()`: under the records list's loading state it arrives in the browser (the router,
+or a meta refresh) rather than as a 307, which is fine for the list's page-past-the-end
+redirect but not for anything a non-browser client must follow. What a 404 shows is
+`(dashboard)/not-found.tsx`, inside the shell, worded the same for every reason (14zcqntk6h4).
+It renders after the page has decided, so it cannot change the status. A URL no route matches
+reaches `(dashboard)/[...missing]/page.tsx`, which only calls `notFound()`: the gate runs, then
+the same page. Every more specific route wins over it, and `public/` files are served before
+any route.
+
+**A `loading.tsx` does not show when only the query string changes.** A new search or page
+on the same route keeps the previous page on screen until the next one is ready. The records
+list wraps its table in a Suspense boundary keyed by its query (`PatientList`), as do People,
+the dashboard's figures, the audit trail's entries and the export's count, so the skeleton
+shows there; do the same for any list that pages or filters through the URL. The filter forms
+on the dashboard, audit trail and export are plain GET forms, so Apply reloads the document:
+the route's `loading.tsx` streams in once the server answers.
+
+**A page can be 30 seconds old in the browser.** `staleTimes.dynamic` (`next.config.ts`)
+re-shows a page opened in the last 30 seconds without asking the server
+(`../processes/admin-gate.md`). A server action that changes data must call `revalidatePath`
+(every one does), which empties that cache; a new kind of write that forgets to leaves its
+pages stale for up to 30 seconds.
+
+**`.limit()` above 1000 does nothing.** PostgREST cuts every response at `db-max-rows`
+(1000 on Supabase by default) and does not say so. A read that can exceed it goes through
+`readPages` (`src/adapters/supabase/paging.ts`); a "more than N" check on a single
+response's length can never fire. A list a person pages through instead reads one page with
+`.range()` and `count: "exact"` (`listPatients`); a range past the last row is refused
+(`PGRST103`) and loses the count, so the adapter asks for the count alone.
+
+**One dropped column fails the whole query.** The consolidated schema removed
+`samples.gps_*`, `sessions.notes`, `sessions.ended_at` and `reports.epg_per_species`.
+PostgREST rejects a select naming any of them, so every page on that query errors — this is
+how the console broke. Read `0001_init.sql` before adding a column to a select.
+
+**A report may have no session.** Since app `0015` a patient report carries `patient_id` and
+no `session_id`. Anything that finds a report through its session — a policy, a join, an
+embed — silently misses every patient report. `admin/0004` adds the patient path for org
+admins; a reports page or the verification page needs both paths too.
+
+**An ambiguous embed fails the whole query.** `patients` reaches `profiles` through
+`created_by` and through `patient_users`, so `profiles(...)` from `patients` must name
+`patients_created_by_fkey`. See `../objects/domain-model.md`.
+
+**The patient trigger runs inside the app's sync.** `console_assign_patient_organization`
+fires on every patient the app inserts. If it ever raised, patient sync would stop for every
+medtech. Its exception handler is load-bearing; `admin_0002` tests it. See
+`../processes/lab-scoping.md`.
+
+**What counts is cross-repo.** Every non-rejected detection on a live sample counts
+(`src/domain/clinical.ts:33`), matching the app's Session Detail and its PDF report, and
+the tests carry the app's own cases. Changing the rule here alone makes the console and the
+report a patient was handed disagree about the same smear.
+
+## What points into this tree from outside
+
+Nothing in this repo references these, so nothing here would break loudly if they changed:
+
+- **The AgarthaVision Android client and its Supabase project.** The real schema authority.
+  A migration there is a change here.
+- **ClickUp.** Task IDs appear in every commit subject; no code reads them.
+- **Downstream consumers of the research export.** The column labels are a contract
+  with analysts this repo cannot see.

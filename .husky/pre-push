@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+echo "🚀 [Husky] Running pre-push Next.js build check..."
+
+# Auto-detect bun if missing (default install path is not always on PATH in GUI git clients)
+if ! command -v bun >/dev/null 2>&1; then
+  if [ -d "$HOME/.bun/bin" ]; then
+    export PATH="$HOME/.bun/bin:$PATH"
+  fi
+fi
+
+run_bun() {
+  if command -v bun >/dev/null 2>&1; then
+    bun "$@"
+  else
+    npm "$@"
+  fi
+}
+
+# Run full production build
+run_bun run build || {
+  echo "❌ [Husky] Next.js build failed! Push to remote cancelled."
+  exit 1
+}
+
+echo "✅ [Husky] Pre-push build verified! Proceeding with push to remote..."

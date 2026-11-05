@@ -1,0 +1,44 @@
+/**
+ * The file-storage port.
+ *
+ * Sample frames live in a private bucket keyed `{user_id}/{sample_id}.jpg`. The
+ * console never exposes a bucket path to the browser: a page gets a short-lived
+ * signed URL minted server-side, and the training data download reads the bytes on
+ * the server and writes them into its zip under the sample id.
+ */
+
+export interface SignedUrl {
+  /** Time-limited URL the browser may load directly. */
+  url: string;
+  /** ISO-8601 instant after which the URL stops working. */
+  expiresAt: string;
+}
+
+export interface SignedUrlOptions {
+  /** Lifetime in seconds. Adapters apply a short default when omitted. */
+  expiresInSeconds?: number;
+}
+
+export interface StoragePort {
+  /**
+   * Mints a signed URL for one object key, as the signed-in user. Throws
+   * {@link StorageAccessError} when that user may not read the object.
+   */
+  createSignedUrl(objectKey: string, options?: SignedUrlOptions): Promise<SignedUrl>;
+
+  /**
+   * The object's bytes, read as the signed-in user, for a file the server builds
+   * (a training snapshot's zip). Throws {@link StorageAccessError} when that user
+   * may not read it or it is missing.
+   */
+  download(objectKey: string): Promise<Uint8Array>;
+}
+
+/** Thrown when the object is missing or unreadable, or signing failed. */
+export class StorageAccessError extends Error {
+  constructor(objectKey: string, cause?: unknown) {
+    super(`Could not read or sign object "${objectKey}".`);
+    this.name = "StorageAccessError";
+    this.cause = cause;
+  }
+}

@@ -1,0 +1,16 @@
+# The toolchain is LF-only: .prettierrc.json sets endOfLine "lf" and the .husky hooks are
+# shell scripts. Without this, a Windows checkout with core.autocrlf=true yields CRLF working
+# files that prettier rejects, which makes `bun run lint` — and so the pre-commit hook —
+# impossible to pass. The stored blobs are already LF, so this pins existing behaviour.
+* text=auto eol=lf
+
+bun.lock -text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

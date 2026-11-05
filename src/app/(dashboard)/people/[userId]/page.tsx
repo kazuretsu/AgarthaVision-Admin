@@ -1,0 +1,368 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { getAccountAccess, getDatabase } from "@/adapters/registry";
+import {
+  canChangeMemberStatus,
+  canResetSecondFactor,
+  isLastActiveOrgAdmin,
+  isUuid,
+  memberPatientLabel,
+  ROLE_LABEL,
+  type MemberPatient,
+} from "@/domain";
+import { AccountAccessError } from "@/ports/account-access";
+import { DatabaseReadError } from "@/ports/db";
+import { MissingEnvironmentError } from "@/lib/env";
+import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
+import { formatDate, personName } from "@/lib/format";
+import { pageCount, pageLinks, pageOffset, parsePage } from "@/lib/pagination";
+import { Breadcrumbs } from "@/components/records/Breadcrumbs";
+import { DataUnavailable } from "@/components/records/DataUnavailable";
+import { Fact } from "@/components/records/Fact";
+import { AuthenticatorResetForm } from "@/components/people/AuthenticatorResetForm";
+import { MemberStatusForm } from "@/components/people/MemberStatusForm";
+import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
+import { LinkPending } from "@/components/loading/LinkPending";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+/**
+ * One member of a laboratory — a medtech or an org admin, since both do fieldwork
+ * (14zcqntkd0w) — and the laboratory's patients assigned to them. An org admin
+ * opens their own laboratory's people; a super admin names the laboratory
+ * (`?org=`) and reads the patients de-identified. Assignments change on the
+ * patient's page.
+ *
+ * The person is read first, since a missing one is a 404; their patients then read
+ * inside a Suspense boundary below that check, so the header shows at once.
+ */
+export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 50;
+
+function param(value: string | string[] | undefined): string {
+  return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
+}
+
+/**
+ * The laboratory's patients assigned to this person, and — for someone who could
+ * deactivate them — which of those only they cover, to hand over first.
+ */
+async function AssignedPatients({
+  userId,
+  name,
+  orgQuery,
+  checkCover,
+  requestedPage,
+}: {
+  userId: string;
+  name: string;
+  /** The laboratory a super admin named, carried in page links; null for an org admin. */
+  orgQuery: string | null;
+  checkCover: boolean;
+  requestedPage: number;
+}) {
+  const db = await getDatabase();
+  const [patients, soleCover]: [MemberPatient[], Set<string>] = await Promise.all([
+    db.listMemberPatients(userId),
+    checkCover
+      ? db.listSoleCoverPatients(userId).then((ids) => new Set(ids))
+      : Promise.resolve(new Set<string>()),
+  ]);
+
+  const pages = pageCount(patients.length, PAGE_SIZE);
+  const page = Math.min(requestedPage, pages);
+  const shown = patients.slice(
+    pageOffset(page, PAGE_SIZE),
+    pageOffset(page, PAGE_SIZE) + PAGE_SIZE,
+  );
+  const pageHref = (n: number) =>
+    `/people/${userId}?${new URLSearchParams({
+      ...(orgQuery ? { org: orgQuery } : {}),
+      ...(n > 1 ? { page: String(n) } : {}),
+    }).toString()}`.replace(/\?$/, "");
+
+  return (
+    <>
+      {soleCover.size > 0 ? (
+        <p
+          role="note"
+          className="rounded-[12px] border border-stone-hair bg-warn-tint px-4 py-3 text-[13px] text-warn"
+        >
+          {name} is the only active member on {soleCover.size} patient
+          {soleCover.size === 1 ? "" : "s"}, marked below. Choose Offboard above to reassign{" "}
+          {soleCover.size === 1 ? "it" : "them"} and deactivate {name} in one flow: a patient always
+          keeps an active member of its laboratory.
+        </p>
+      ) : null}
+      {patients.length === 0 ? (
+        <p className="rounded-[12px] border border-stone-hair bg-surface p-6 text-[13px] text-stone-mid">
+          {name} is not assigned to any patient.
+        </p>
+      ) : (
+        <>
+          <Table className="min-w-[560px]">
+            <TableCaption>Patients assigned to {name}</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Patient</TableHead>
+                <TableHead>Barangay PSGC</TableHead>
+                <TableHead>Assigned</TableHead>
+                {soleCover.size > 0 ? <TableHead>Cover</TableHead> : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shown.map((patient) => (
+                <TableRow key={patient.patientId}>
+                  <TableCell>
+                    <Link
+                      href={`/records/patients/${patient.patientId}`}
+                      className="font-semibold text-stone-ink hover:text-maroon"
+                    >
+                      {memberPatientLabel(patient)}
+                      <LinkPending />
+                    </Link>
+                  </TableCell>
+                  <TableCell className="font-mono text-[12px]">
+                    {patient.psgcBarangayCode}
+                  </TableCell>
+                  <TableCell className="tnum">{formatDate(patient.linkedAt)}</TableCell>
+                  {soleCover.size > 0 ? (
+                    <TableCell>
+                      {soleCover.has(patient.patientId) ? (
+                        <Badge variant="warn">Only active member</Badge>
+                      ) : null}
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {pages > 1 ? (
+            <Pagination>
+              <PaginationContent>
+                {page > 1 ? (
+                  <PaginationItem>
+                    <PaginationPrevious href={pageHref(page - 1)} />
+                  </PaginationItem>
+                ) : null}
+                {pageLinks(page, pages).map((link, index) => (
+                  <PaginationItem key={link === "ellipsis" ? `gap-${index}` : link}>
+                    {link === "ellipsis" ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink href={pageHref(link)} isActive={link === page}>
+                        {link}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                {page < pages ? (
+                  <PaginationItem>
+                    <PaginationNext href={pageHref(page + 1)} />
+                  </PaginationItem>
+                ) : null}
+              </PaginationContent>
+            </Pagination>
+          ) : null}
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * An org admin's authenticator app, for a super admin (14zcqntjnt0): whether one is set up, and
+ * the reset for a lost phone. Read from the auth provider, so it streams in on its own.
+ */
+async function Authenticator({
+  accountId,
+  organizationId,
+  userId,
+  name,
+}: {
+  accountId: string;
+  organizationId: string;
+  userId: string;
+  name: string;
+}) {
+  let setUp: boolean | null;
+  try {
+    setUp = await (await getAccountAccess()).hasAuthenticator(accountId);
+  } catch (cause) {
+    if (!(cause instanceof AccountAccessError || cause instanceof MissingEnvironmentError)) {
+      throw cause;
+    }
+    console.error("Authenticator status not read", cause);
+    setUp = null;
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-[15px] font-semibold text-stone-ink">Two-step sign-in</h2>
+        <p className="text-[12px] text-stone-mid">
+          {setUp === null
+            ? "Whether an authenticator app is set up could not be read."
+            : setUp
+              ? `${name} signs in with a password and a code from an authenticator app.`
+              : `${name} has not set up an authenticator app yet; the console asks at their next sign-in.`}
+        </p>
+      </div>
+      <AuthenticatorResetForm
+        organizationId={organizationId}
+        userId={userId}
+        name={name}
+        resettable={setUp !== false}
+      />
+    </div>
+  );
+}
+
+export default async function PersonPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ userId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const actor = await requirePageAccess(ANY_CONSOLE_USER);
+  const { userId } = await params;
+  const query = await searchParams;
+  if (!isUuid(userId)) notFound();
+  const organizationId =
+    actor.access.kind === "org_admin" ? actor.access.organizationId : param(query.org);
+  if (!isUuid(organizationId)) notFound();
+
+  let people;
+  let person;
+  try {
+    people = await (await getDatabase()).listPeople(organizationId);
+    person = people.find((candidate) => candidate.userId === userId);
+    if (!person) notFound();
+  } catch (cause) {
+    if (cause instanceof MissingEnvironmentError) {
+      return <DataUnavailable title="Person" variable={cause.variable} />;
+    }
+    // A laboratory this user may not read names no one they may see.
+    if (cause instanceof DatabaseReadError) notFound();
+    throw cause;
+  }
+
+  const name = personName(person);
+  const orgQuery = actor.access.kind === "super_admin" ? `?org=${organizationId}` : "";
+  const changeable = canChangeMemberStatus(actor.access, actor.user.id, organizationId, person);
+  const resettable = canResetSecondFactor(actor.access, actor.user.id, person);
+  const requestedPage = parsePage(param(query.page));
+  const colleagues = people
+    .filter((candidate) => candidate.userId !== userId && candidate.status === "active")
+    .map((candidate) => ({
+      userId: candidate.userId,
+      fullName: candidate.fullName,
+      email: candidate.email,
+      role: candidate.role,
+    }));
+
+  return (
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8">
+      <Breadcrumbs items={[{ label: "People", href: `/people${orgQuery}` }, { label: name }]} />
+
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[22px] font-bold text-stone-ink">{name}</h1>
+          <Badge variant="neutral">{ROLE_LABEL[person.role]}</Badge>
+          {person.status === "active" ? (
+            <Badge variant="ok">Active</Badge>
+          ) : (
+            <Badge variant="neutral">Deactivated</Badge>
+          )}
+        </div>
+        {!changeable ? null : isLastActiveOrgAdmin(people, person.userId) ? (
+          <p className="max-w-72 text-right text-[12px] text-stone-mid">
+            The only active organization admin of this laboratory. Invite another before
+            deactivating them.
+          </p>
+        ) : (
+          <MemberStatusForm
+            organizationId={organizationId}
+            userId={person.userId}
+            name={name}
+            role={person.role}
+            status={person.status}
+            colleagues={colleagues}
+          />
+        )}
+      </header>
+
+      <Card>
+        <CardContent className="grid grid-cols-3 gap-4">
+          <Fact label="Email" value={person.email ?? "—"} />
+          <Fact label="Joined" value={formatDate(person.addedAt)} />
+          <Fact label="Assigned patients" value={String(person.assignedPatients)} mono />
+        </CardContent>
+      </Card>
+
+      {resettable && person.accountId ? (
+        <Card>
+          <CardContent>
+            <Suspense
+              fallback={<p className="text-[12px] text-stone-mid">Reading two-step sign-in…</p>}
+            >
+              <Authenticator
+                accountId={person.accountId}
+                organizationId={organizationId}
+                userId={person.userId}
+                name={name}
+              />
+            </Suspense>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[15px] font-semibold text-stone-ink">Assigned patients</h2>
+          <p className="text-[12px] text-stone-mid">
+            {actor.access.kind === "org_admin"
+              ? "To assign, remove or hand over a patient, open the patient."
+              : "Patients are named by record id."}
+          </p>
+        </div>
+        <Suspense
+          key={requestedPage}
+          fallback={
+            <Busy label="Loading assigned patients…">
+              <TableSkeleton rows={Math.min(Math.max(person.assignedPatients, 1), 6)} columns={3} />
+            </Busy>
+          }
+        >
+          <AssignedPatients
+            userId={userId}
+            name={name}
+            orgQuery={actor.access.kind === "super_admin" ? organizationId : null}
+            checkCover={changeable && person.status === "active"}
+            requestedPage={requestedPage}
+          />
+        </Suspense>
+      </section>
+    </main>
+  );
+}

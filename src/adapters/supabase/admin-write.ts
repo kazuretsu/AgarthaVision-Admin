@@ -1,0 +1,208 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { OrganizationStatus } from "@/domain/organizations";
+import {
+  AdminWriteError,
+  type AdminWriteFailure,
+  type AdminWritePort,
+  type InviteRequest,
+  type IssuedInvitation,
+  type SuperAdminInviteRequest,
+  type TrainingSnapshotRequest,
+} from "@/ports/admin-write";
+import { createRequestClient } from "./client";
+import { toSnapshotItemsPayload } from "./training-rows";
+
+/**
+ * Supabase implementation of {@link AdminWritePort}.
+ *
+ * Each write is one call to a security-definer function (`admin/0001`, `0003`,
+ * `0005`–`0009`, `0012`, `0017`–`0021`), run as the signed-in user. The function checks the caller,
+ * performs the write and appends the audit row in one transaction, so a write
+ * without its audit entry
+ * cannot happen. No table is written directly: the tables have no write policies.
+ */
+
+/** Postgres SQLSTATEs the functions raise, mapped to reasons a page can explain. */
+function reasonFor(code: string | undefined): AdminWriteFailure {
+  switch (code) {
+    case "42501":
+      return "forbidden";
+    case "23505":
+      return "conflict";
+    case "P0002":
+    // A reference to a row that does not exist, e.g. an export filed under an unknown organization.
+    case "23503":
+      return "not_found";
+    case "23514":
+    case "22023":
+      return "invalid";
+    default:
+      return "failed";
+  }
+}
+
+export class SupabaseAdminWriteAdapter implements AdminWritePort {
+  constructor(private readonly client: SupabaseClient) {}
+
+  private async call<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+    const { data, error } = await this.client.rpc(fn, args);
+    if (error) throw new AdminWriteError(reasonFor(error.code), fn, error, error.hint || null);
+    return data as T;
+  }
+
+  /** A set-returning function's single row. */
+  private async callOne<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+    const rows = await this.call<T[] | null>(fn, args);
+    const row = rows?.[0];
+    if (!row) throw new AdminWriteError("failed", fn);
+    return row;
+  }
+
+  async createOrganization(name: string): Promise<string> {
+    return this.call<string>("console_create_organization", { p_name: name });
+  }
+
+  async renameOrganization(organizationId: string, name: string): Promise<void> {
+    await this.call("console_rename_organization", { p_id: organizationId, p_name: name });
+  }
+
+  async setOrganizationStatus(organizationId: string, status: OrganizationStatus): Promise<void> {
+    await this.call("console_set_organization_status", { p_id: organizationId, p_status: status });
+  }
+
+  async recordExport(
+    organizationId: string | null,
+    details: Record<string, unknown>,
+  ): Promise<void> {
+    await this.call("console_record_export", {
+      p_organization_id: organizationId,
+      p_details: details,
+    });
+  }
+
+  async invite({ email, fullName, organizationId }: InviteRequest): Promise<IssuedInvitation> {
+    const row = await this.callOne<{ invitation_id: string; token: string; expires_at: string }>(
+      "console_invite",
+      { p_email: email, p_full_name: fullName, p_organization_id: organizationId },
+    );
+    return { invitationId: row.invitation_id, token: row.token, expiresAt: row.expires_at };
+  }
+
+  async resendInvitation(invitationId: string): Promise<Omit<IssuedInvitation, "invitationId">> {
+    const row = await this.callOne<{ token: string; expires_at: string }>(
+      "console_resend_invitation",
+      { p_id: invitationId },
+    );
+    return { token: row.token, expiresAt: row.expires_at };
+  }
+
+  async revokeInvitation(invitationId: string): Promise<void> {
+    await this.call("console_revoke_invitation", { p_id: invitationId });
+  }
+
+  async inviteSuperAdmin({ email, fullName }: SuperAdminInviteRequest): Promise<IssuedInvitation> {
+    const row = await this.callOne<{ invitation_id: string; token: string; expires_at: string }>(
+      "console_invite_super_admin",
+      { p_email: email, p_full_name: fullName },
+    );
+    return { invitationId: row.invitation_id, token: row.token, expiresAt: row.expires_at };
+  }
+
+  async resendSuperAdminInvitation(
+    invitationId: string,
+  ): Promise<Omit<IssuedInvitation, "invitationId">> {
+    const row = await this.callOne<{ token: string; expires_at: string }>(
+      "console_resend_super_admin_invitation",
+      { p_id: invitationId },
+    );
+    return { token: row.token, expiresAt: row.expires_at };
+  }
+
+  async revokeSuperAdminInvitation(invitationId: string): Promise<void> {
+    await this.call("console_revoke_super_admin_invitation", { p_id: invitationId });
+  }
+
+  async revokeSuperAdmin(userId: string): Promise<void> {
+    await this.call("console_revoke_super_admin", { p_user: userId });
+  }
+
+  async setMemberStatus(userId: string, status: OrganizationStatus): Promise<void> {
+    await this.call("console_set_member_status", { p_user: userId, p_status: status });
+  }
+
+  async recordAuthenticatorReset(userId: string): Promise<void> {
+    await this.call("console_record_authenticator_reset", { p_user: userId });
+  }
+
+  async recordSignInChange(
+    userIds: readonly string[],
+    block: boolean,
+    cause: string,
+  ): Promise<{ userId: string; accountId: string }[]> {
+    const rows = await this.call<{ user_id: string; account_id: string }[] | null>(
+      "console_record_sign_in_change",
+      { p_users: userIds, p_block: block, p_cause: cause },
+    );
+    return (rows ?? []).map((row) => ({ userId: row.user_id, accountId: row.account_id }));
+  }
+
+  async setOwnName(fullName: string): Promise<void> {
+    await this.call("console_set_own_name", { p_full_name: fullName });
+  }
+
+  async recordOwnPasswordChange(): Promise<void> {
+    await this.call("console_record_own_password_change", {});
+  }
+
+  async assignPatient(patientId: string, userId: string): Promise<void> {
+    await this.call("console_assign_patient", { p_patient: patientId, p_user: userId });
+  }
+
+  async unassignPatient(patientId: string, userId: string): Promise<void> {
+    await this.call("console_unassign_patient", { p_patient: patientId, p_user: userId });
+  }
+
+  async replaceAssignment(patientId: string, fromUserId: string, toUserId: string): Promise<void> {
+    await this.call("console_replace_assignment", {
+      p_patient: patientId,
+      p_from: fromUserId,
+      p_to: toUserId,
+    });
+  }
+
+  async offboardMember(
+    userId: string,
+    reassignments: Array<{ patientId: string; toUserId: string }>,
+  ): Promise<void> {
+    await this.call("console_offboard_member", {
+      p_user: userId,
+      p_reassignments: reassignments.map((r) => ({
+        patient_id: r.patientId,
+        to_user_id: r.toUserId,
+      })),
+    });
+  }
+
+  async createTrainingSnapshot({
+    name,
+    filter,
+    summary,
+    items,
+  }: TrainingSnapshotRequest): Promise<string> {
+    return this.call<string>("console_create_training_snapshot", {
+      p_name: name,
+      p_filter: filter,
+      p_summary: summary,
+      p_items: toSnapshotItemsPayload(items),
+    });
+  }
+
+  async recordTrainingDownload(snapshotId: string): Promise<void> {
+    await this.call("console_record_training_download", { p_id: snapshotId });
+  }
+}
+
+/** Builds the adapter against a request-scoped, session-carrying client. */
+export async function createSupabaseAdminWrite(): Promise<AdminWritePort> {
+  return new SupabaseAdminWriteAdapter(await createRequestClient());
+}

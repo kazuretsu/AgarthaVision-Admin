@@ -1,0 +1,1017 @@
+# Changelog
+
+Newest first. One entry per commit that changes behavior or contract.
+
+## [docs] The docs and map cards match the code on staging again
+
+An audit of `docs/` against the code found cards that had been edited without being re-checked,
+so their `verified:` stamps no longer meant anything (14zcqnttfjh). Every map card was
+re-checked against the code and its wrong claims, gaps and moved `path:line` citations fixed;
+`docs/map/effects/CONTEXT.md` now routes to every card; `docs/file-tree.md`,
+`docs/constraints.md` and `docs/features.md` (offboarding, the service-role key's four uses)
+match the tree. A new test, `src/lib/doc-citations.test.ts`, fails when a doc cites a file that
+does not exist or a line past its end. Four code comments that still described mandatory
+two-step sign-in, a single service-role use or the profile's dropped foreign key were
+corrected; no code changed.
+
+## [revert] Sharing a patient with another laboratory is withdrawn
+
+PR #47 (14zcqntjntd) is reverted until its access rules are fixed. Patient pages no longer
+show the Laboratory Referrals section, and nothing can be shared or revoked. The patient page
+reads only the owning laboratory's records again, as it did before. **`admin/0023` is undone
+by hand:** drop `patient_shares`, the eight read policies 0023 added and its four new
+functions, and restore `console_require_patient_admin` and `console_patient_assignments`
+(from `admin/0007`) and `console_unassign_patient` (from `admin/0008`). Run that only after
+this revert is deployed, because the #47 app reads `patient_shares` on every patient page.
+
+## [fix] A failed sign-in keeps the email and password
+
+A wrong password, a refused security check or too many attempts cleared both fields on the
+sign-in form, because React resets a form once its action finishes (14zcqntr8m4). The form now
+submits from `onSubmit`, so the browser keeps what was typed and a typo can be fixed in place.
+The password is never sent back from the server to refill it
+(`src/app/(auth)/login/page.tsx`, `docs/map/processes/admin-gate.md`).
+
+## [feat] Failed sign-in and invitation attempts are limited
+
+The sign-in form and the invitation page call Supabase from the host's servers, so nothing
+limited password guessing through them (14zcqntnqp6). The console now counts failures itself
+and refuses the next attempt, before Supabase is called, after 5 wrong passwords for one email
+or 20 from one IP within 15 minutes, and on the invitation page also after 5 on one link: "Too
+many attempts. Try again in 15 minutes.", the same whether or not the email has an account.
+Failures are stored as SHA-256 hashes in `console_sign_in_attempts` (**`admin/0022`, apply by
+hand**), readable and writable by the service role only; nothing is deleted, old rows just
+stop counting. The client IP comes from `x-forwarded-for` on Vercel, or the header the new
+optional **`TRUSTED_IP_HEADER`** names elsewhere. If the counter is unreachable, attempts go
+ahead and the problem is logged (`AttemptLimitPort`, `src/lib/attempt-limit.ts`,
+`docs/map/processes/admin-gate.md`, `docs/map/processes/invitations.md`).
+
+## [fix] The two-step sign-in notice can no longer be closed, and its button sits on the right
+
+The "Turn on two-step sign-in" notice (14zcqntr35f) loses its close button: it stays on every
+console page but `/settings` until an authenticator app is set up, so admins are always
+reminded. A close made before this change no longer hides it. Each notice is now one row, the
+words on the left and "Set up now" on the right. Notices that can be closed stay possible for
+later ones (`dismissible` in `src/domain/notices.ts`) (`docs/map/processes/notices.md`).
+
+## [feat] A notices strip across the console, starting with "turn on two-step sign-in"
+
+Every console page now has a strip of closable notices above the page (14zcqntr35f), built on
+shadcn `alert` (ported from the registry source; the CLI could not reach `ui.shadcn.com`, with
+a `warning` variant added). The first, "Turn on two-step sign-in", shows to any super admin or
+org admin without an authenticator app, everywhere but `/settings`, with "Set up now". Closing
+it hides it for 7 days on that browser (a cookie per notice, keyed by the admin); it comes back
+while the app is off and is gone once one is set up. Whether the account has an app comes from
+what the gate already knew, so no page pays an extra call: `ConsoleActor.secondFactorOn`. A
+notice is one entry in `src/domain/notices.ts`. No migration, no setting
+(`docs/map/processes/notices.md`).
+
+## [feat] Console sessions end after 12 hours or an idle hour; sign-in follows access
+
+Supabase's session limits are paid, so the console keeps its own in `src/proxy.ts`
+(14zcqntnqpd): a session ends 12 hours after sign-in (from the token's `amr` claim) or after an
+hour without a request, recorded in an httpOnly cookie signed with the new server-only
+**`CONSOLE_SESSION_SECRET`** (set it in Vercel, 32+ random characters; without it the idle limit
+is off). An edited cookie ends the session. The person lands on `/login` with "Your session
+ended. Sign in again." `CONSOLE_SESSION_MAX_HOURS` and `CONSOLE_SESSION_IDLE_MINUTES` change
+the limits. **Signing out of the console no longer signs the mobile app out**: `AuthPort.signOut`
+now ends this browser's session only (it was Supabase's global default). Deactivating a
+laboratory, or revoking a super admin, now bans everyone it leaves with no access anywhere, so
+the app on their phone is refused at its next refresh; reactivating the laboratory lifts it,
+and a revoked super admin who accepts a new invitation is unblocked. Each block and restore is
+recorded first, as `account.sign_in_blocked` / `account.sign_in_restored`. **Apply `admin/0021`
+by hand**; until then a laboratory status change or a revocation still happens but says the
+sign-in could not be changed. Sessions signed in over an hour before this deploys end at their
+next request (no activity cookie yet) (`docs/map/processes/admin-gate.md`,
+`docs/map/processes/people-access.md`).
+
+## [feat] Admins change their own name and password on Settings
+
+`/settings` gains a Profile card (email shown; name editable) and a Password card (14zcqntr35e).
+The name is saved by `console_set_own_name`, which writes only the caller's own profile and
+records `profile.rename`. A password change asks for the current password, shows the rules as
+they are met, and **warns in a dialog first** that it signs out every other session, the mobile
+app's included; this session stays signed in. Supabase checks the current password, sets the
+new one and ends the other sessions in one request (`AuthPort.changePassword`), and the change
+is then recorded as `profile.password_change`, with nothing about the password. Every password
+field (`/settings`, `/login`, the invitation form) now has an eye button to show what was
+typed (shadcn `input-group`). **Apply `admin/0020` by hand**, and **turn on "Require current
+password when changing password"** in Supabase Auth: without it Supabase ignores the current
+password (`docs/map/processes/own-profile.md`).
+
+## [feat] A super admin invites and revokes super admins from the console
+
+`/super-admins` (super admins only, in the sidebar) lists the active super admins and their
+invitations (14zcqntjwjg). A super admin invites another by email; the link works for 72 hours,
+can be re-sent or withdrawn, and opens `/invite/<token>`, where the invitee sets their own
+password and becomes a super admin with no laboratory membership. A super admin revokes
+another behind a confirmation; nobody revokes themselves, and the database locks every active
+grant first, so one always remains. Each invite, re-send, withdrawal, grant and revocation is
+in the audit trail with no organization. **Apply `admin/0019` by hand**: it adds
+`super_admin_invitations` and the `console_*super_admin*` functions; until then the page fails
+to read and a super admin link names nothing (`docs/map/processes/super-admins.md`).
+
+## [feat] Two-step sign-in is each admin's choice, set up on a new Settings page
+
+An authenticator app is no longer forced at the first sign-in (14zcqntr31c). A correct password
+now goes to `/dashboard`, and so does accepting an org admin invitation. The gate
+(`requireConsoleActor`) still holds an admin who **has** an app to its code (`/verify`), but
+admits one without an app on their password: whether the account has one is asked of the auth
+server, never the cookie, at one call per request for a session that has not entered a code.
+The new `/settings` page (sidebar, every admin) shows two-step sign-in on or off, sets an app
+up (QR code, then its first code) and turns it off again after a current code
+(`AuthPort.turnOffSecondFactor`). `/verify` now only takes the code. During validation and demo
+this deviates from the app repo's privacy position (Position 6, MFA mandatory for admin
+accounts), resting on validation using synthetic patients only; it must be mandatory again
+before real patient data (`docs/map/processes/second-factor.md`). No migration and no Supabase
+setting.
+
+## [fix] The invitation form shows the password rules Supabase actually applies
+
+`/invite/[token]` said "At least 8 characters", but Supabase requires 12 with a lowercase
+letter, an uppercase letter, a number and a symbol, so a password that followed the hint was
+refused with "Choose a stronger password: longer, and not a common one", which named no rule
+and mentioned leaked-password protection that is off (14zcqntr31d). The rules now live in
+`src/domain/password-policy.ts`, mirroring Supabase's setting (change both together). The form
+lists them under the field and ticks each off as it is met, and a refusal names the rule missed
+("Add a symbol."). The console no longer refuses a short password itself: an account that
+already exists signs in on the same form with the password it has, and only a new account is
+held to the rules, by Supabase.
+
+## [feat] Super admins and org admins sign in with a code from an authenticator app
+
+A correct password now leads to `/verify`, not the console (14zcqntjnt0). The first time, the
+admin sets up an authenticator app from a QR code (or typed key) and confirms it with a code;
+every later sign-in asks for the six-digit code. Until the session has passed it — Supabase's
+`aal2` on the verified token — every page redirects to `/verify`, downloads answer 401 and
+server actions refuse as signed out (`SecondFactorRequiredError`, a kind of
+`NotAuthenticatedError`). Medtechs are never asked. A super admin resets an org admin's app from
+their People page for a lost phone; `admin/0018` adds `console_record_authenticator_reset`,
+which writes `member.authenticator_reset` before the reset happens. **Apply `admin/0018` by
+hand** (already applied on live; it was numbered 0017 before PR #36 took that number); until
+then a reset is refused and nothing changes. Supabase's TOTP MFA is free and on by
+default: no setting to change. Every code entered makes Supabase end the account's
+password-only sessions, so an org admin who also uses the Android app is signed out of it
+until the app asks for the code too (`docs/map/processes/second-factor.md`).
+
+## [feat] Offboard a medtech and hand their patients to a colleague
+
+An org admin (or super admin) can offboard an active medtech in one guided action
+(`OffboardMedtechDialog`, 14zcqntjnt5) instead of two separate chores. The console lists the
+patients where that medtech is the only active member assigned, and allows choosing who takes
+over — one colleague for all, or selected per patient. On confirm, `offboardMedtech`
+(`src/app/(dashboard)/people/actions.ts`) blocks the medtech's sign-in and runs
+`console_offboard_member` (`supabase/migrations/admin/0017_offboard_medtech.sql`), which reassigns
+the patients to active colleagues in the same laboratory, verifies that no patient is left with no
+active member, sets the medtech's membership to deactivated, and writes `member.offboard` alongside
+`assignment.add` and `assignment.remove` entries to the audit trail. Reminds the admin to collect
+the mobile device or ensure it is signed out. Clinical authorship is untouched, and nothing is deleted.
+
+## [feat] Sign-in and accepting an invitation pass a Cloudflare Turnstile check
+
+`/login` and `/invite/[token]` show Turnstile (`src/components/auth/HumanCheck.tsx`) when the
+build has `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Submit waits for the check; each attempt uses its
+token once, and the widget runs again for the next. The token reaches Supabase as
+`captchaToken` through `Credentials.humanCheckToken` and `AcceptInvitationRequest.humanCheckToken`
+(14zcqntnqpc). A refused check (`captcha_failed`) says "The security check expired or did not
+pass", never that the password was wrong. Until Supabase's CAPTCHA protection is switched on,
+the token is sent and ignored; it is switched on last, after the mobile app's release that sends
+one is installed (`docs/map/processes/human-check.md`). Without a site key nothing changes.
+
+## [test] The db tests cover app 0018: field data is written only by an active laboratory member
+
+App `0018_writes_need_active_lab_member.sql` (14zcqntnqpa) refuses every write to field data and
+to the `samples` and `reports` buckets from an account that is not an active member of an active
+laboratory, with `not_active_lab_member` in the message, and moves the app's `TO public`
+policies to `TO authenticated`. `app_0018_writes_need_active_lab_member.test.sql` replays 16
+phone writes as an active medtech and an active org admin (allowed), as a deactivated medtech, a
+member of a deactivated laboratory and an account with no membership (each refused with the
+reason), and signed out (refused); a reactivated medtech writes again at once. `admin_0002`'s
+"creator with no organization" case now expects the refusal once 0018 is present, and the old
+"saved, unassigned" behaviour before it. The org admin's Deactivate now stops a medtech's writes
+at once, not only at their next sign-in.
+
+## [test] The db tests cover app 0017: signed-out visitors reach no app table or function
+
+App `0017_advisor_hardening.sql` (14zcqntnqxe) takes every right on the app's tables from
+`anon`, closes the app's functions to signed-out callers, and makes `is_admin(uuid)` answer a
+signed-in client only about themselves. `app_0017_advisor_hardening.test.sql` checks each grant,
+a signed-out read and RPC call, `is_admin()` from a client and from a security-definer caller,
+the console's gate, and the phone's write flow as a medtech. `admin_0004` now accepts a refused
+signed-out read of `reports` as well as an empty one, so it passes before and after 0017. The
+console's own code is unchanged: its fallback gate already asks `is_admin()` about the signed-in
+user only.
+
+## [fix] Two laboratory names that differ only by an invisible character are refused as duplicates
+
+A name with a zero-width space, a byte-order mark, a no-break space, full-width letters or
+another invisible or look-alike character used to pass the unique name check and look the
+same as an existing laboratory. A name is now cleaned before it is checked and stored: Unicode
+NFKC, invisible and control characters removed, spaces collapsed and trimmed. The console does
+it (`cleanName`), and so does the database (`console_clean_name`, `admin/0016`), whose create
+and rename functions store the cleaned name and whose new constraint `organizations_name_clean`
+refuses any other. A look-alike gets "Another organization already has that name." Until
+`admin/0016` is applied, the console already sends cleaned names; the database's own
+check comes with the migration.
+
+The character lists in `admin/0016` and its test are written as escapes, never as the raw
+characters, so the file pastes cleanly into the SQL editor and shows no hidden text on GitHub.
+`src/lib/hidden-characters.test.ts` now fails on any zero-width, bidirectional, line-separator
+or other hidden character in a tracked text file (vendored files aside); the export's UTF-8
+byte-order mark is written as an escape for the same reason.
+
+## [fix] When the database can't be reached, the console says so instead of "no access"
+
+A failed access read used to count as "no access", so during an outage every admin saw "This
+console is for super admins and organization admins" with a 200, as if they had been revoked.
+The gate now tells a failed read from one that finds nothing (`AuthUnavailableError`): a failed
+`console_actor()`, `is_admin()` or membership read still grants nothing, but every console page
+then says "The console can't reach its data right now", with a reference and Try again, and
+answers 500 (Next.js lets a page set no other failure status); the export and snapshot
+downloads answer 503; sign-in with the right password signs back out and says the same. No
+database detail reaches the browser. A medtech, a deactivated organization admin and a revoked
+super admin still see the "no access" screen.
+
+## [feat] The prevalence map opens a city to its barangays, and isolates one area
+
+A city or municipality on the map now opens (`?town=`): the town drawn alone with its own
+figure, and a table of its barangays with a smear examined, highest prevalence first, named
+from the 2Q 2026 PSGC (`scripts/geo/build-barangay-names.ts` →
+`src/lib/map/barangays/q2_2026/`). A barangay under 5 smears is "too few to report" and sorts
+last, and when it is the only one withheld, the shown barangay with the fewest smears is
+withheld with it, so its count cannot be had by subtracting the others from the town. A line
+counts the town's barangays with none. The figures come from
+`console_area_prevalence('town', …)`, replaced in place by `admin/0015` with one more level,
+so the barangays, the town and the province's map are one count; same period, same laboratory
+scoping, the same threshold. A 2023 Negros Island Region or Sulu barangay code is listed under
+its current code. At the country, a region or a province, any row of the table can isolate its
+area (`?isolate=`): drawn alone, the map fitted to it, until "Show all". Before `admin/0015` is
+applied, a town says which file to apply; the rest of the map is unchanged. Below 1400px wide
+the table sits under the map rather than beside it: at the console's narrowest, its columns had
+squeezed the map to a sliver.
+
+## [ux] A URL no route matches gets the console's 404 page
+
+`/recordsx`, `/records/nothing/here` or any other path no route matches used to show the
+framework's bare 404, outside the shell. `(dashboard)/[...missing]/page.tsx` catches them inside
+the console: the gate runs first (signed out goes to sign in), then the console's not-found page
+answers 404 with a way back to the visitor's section. Real routes, `public/` files (boundaries,
+the map worker) and the sign-in pages are unaffected.
+
+## [fix] Every page says so when `org` names no organization
+
+A super admin's `?org=` with a well-formed ID that names no organization used to show an empty
+dashboard, records list, audit trail, map or People page, as if that laboratory had done
+nothing; the organization filter even showed "All organizations". Each of those pages, and the
+export page, now shows "No organization has the ID in this link. Choose one from the list, or
+all organizations." in place of its figures or list (`namesUnknownOrganization`,
+`UnknownOrganizationNotice`). A malformed `org` is still all organizations, and org admins are
+still held to their own laboratory.
+
+## [ux] A console-styled "not found" page with a way back
+
+A page that answers 404 now shows `(dashboard)/not-found.tsx` inside the shell instead of the
+framework's "404 | This page could not be found.": "This page isn't available", one line saying
+it may not exist or may belong to another laboratory, and a button back to the visitor's
+section (`sectionFor`, `src/components/shell/nav.ts`): Records for a record, Organizations for
+an organization, the Prevalence map or People for theirs, the dashboard when the section is not
+the visitor's, as for an org admin's `/organizations` or `/training-data`. A malformed ID, an
+unknown ID and another laboratory's record render identically. The status stays 404. The
+sidebar's active-section check moved into the same helper (`inSection`).
+
+## [fix] Exporting an organization that does not exist says so
+
+A super admin's `/export/download?org=` with a well-formed ID that names no organization used to
+reach the audit write, fail on its foreign key, and answer 503 "The export could not be
+recorded", which read as an outage. It is now refused with 404 and "No organization has the ID
+in this link. Choose one from the list, or all organizations." before anything is read or
+recorded, and `/export?org=` shows the same sentence in place of the count and the download
+links. A foreign-key refusal (23503) from any console write now reads as `not_found` rather than
+a failure. Known organizations, all organizations, a malformed `org` and org admins export as
+before, each audited.
+
+## [fix] The super admin's audit trail fits the console at its narrowest width
+
+At 1024px a super admin's `/audit` table was wider than the page: the action badge never wrapped,
+and an email or a training snapshot name is one unbreakable word. The action now wraps inside
+its badge, and the Who, What happened and Organization cells break a long value where they must;
+Who keeps at least 112px so a name stays readable. The table fits at 1024px for both roles, with
+filters on and off, and nothing changes where everything already fit.
+
+## [feat] Prevalence map with Region → Province → City/Municipality drill-down
+
+A **Prevalence map** page (`/map`, super admins and org admins) shades the Philippines by the
+share of examined smears positive for STH, by where the patient lives, and drills from regions
+to a region's provinces to a province's cities and municipalities, with a breadcrumb back up.
+Each area's examined smears, positive smears and rate show when it is pointed at and in a table
+beside the map. Every figure comes from `console_area_prevalence()`, counted on the dashboard's
+rule, so the country's smears plus those not placed equal the dashboard's; an area with fewer
+than 5 smears is "too few to report", hatched, at every level, and different from an area with
+none. Scoped like the dashboard; a period filter. `admin/0014_prevalence_map.sql` adds the 2Q
+2026 area lookup (18 regions, 85 provinces, 1,642 towns, 82 aliases for 2023 codes in the
+Negros Island Region and Sulu) and the function, **apply it in the SQL editor**; until it is,
+the page says so. Boundaries are static files built from the app repo's `tools/geo` by
+`scripts/geo/build-map-data.ts`, attributed to OCHA COD-AB (CC BY-IGO 3.0) under the map.
+Adds `maplibre-gl` (no basemap, nothing fetched from another site) and the shadcn
+`breadcrumb`. The session-refresh proxy skips `/geo/` and `/vendor/`.
+
+## [feat] A training snapshot can keep frames with unboxed eggs, marked incomplete
+
+"Frames with unboxed eggs" on `/training-data`, off by default, keeps a frame whose only reason
+to be left out is an egg counted but never boxed. It goes in with the boxes it has, and the
+number of eggs it lacks is frozen with it: `incomplete` and `unboxed_eggs` in the manifest,
+`incomplete` on the COCO image, and an Incomplete frames column and section in the data card.
+Such a frame is never counted as background. The preview warns how many frames and eggs are
+incomplete. `admin/0013_training_unboxed_frames.sql` adds the column and replaces two functions,
+**apply it in the SQL editor**; until it is, the option is disabled with a note and the create
+action refuses it, so no frame is stored without its mark.
+
+## [feat] Super admins gather model training data as frozen, de-identified snapshots
+
+A **Training data** page (`/training-data`, super admins only; org admins get a 404) filters
+verified frames by period, laboratory, species and model version, previews what a snapshot
+would hold by the label rules, freezes it, and downloads it as a zip a YOLO or COCO training
+run reads: images and label files per split, `data.yaml`, COCO annotations, a manifest with
+each box's origin and the hard negatives, and a data card. Frames split by patient,
+deterministically. A frame with an egg counted but never boxed is left out whole rather than
+taught as background. Labels are stored as values, so a medtech re-opening a sample changes
+nothing in a snapshot; neither table can be changed or deleted. Nothing in the file names a
+patient, medtech, barangay or laboratory. Images are read as the signed-in super admin; no
+service-role key. Creating and downloading are audited, the download before a byte is
+served. `admin/0012_training_snapshots.sql`, **apply it in the SQL editor**; until it is, the
+page says so. The audit trail's action filter no longer offers an org admin actions they can
+never see. Adds `fflate` and the shadcn `checkbox`.
+
+## [enhancements] Dashboard and export totals are counted in the database, in one request
+
+The dashboard and the export page no longer download every session in the period, 1,000 rows
+at a time, to add them up. `console_dashboard_figures()` (`admin/0011_dashboard_totals.sql`,
+**apply it in the SQL editor**; until it is, the console counts the old way) returns the
+counts in one request of a few hundred bytes, scoped in the database: an org admin their own
+laboratory only, a super admin all or one. The console derives rates, shares and order from
+them (`figuresFromTotals`). `summariseDashboard` stays as the reference, and a database test
+runs both on one fixture and requires identical figures. With no row read there is no cap:
+the dashboard's "more than 5,000 sessions, figures partial" notice is gone, and the export
+page's count is exact. On 20,000 synthetic sessions an org admin's month went from 10.2 s to
+0.13 s, and all time from failing after 55 s to 0.28 s. The audit trail's person filter lists
+only the people who appear in the trail the reader can read (`console_audit_actors()`), not
+every profile.
+
+## [enhancements] A sidebar click makes one access round trip, and recent pages re-show at once
+
+The session is now verified locally with `getClaims()` against the project's ECC signing key,
+in `src/proxy.ts` and in the gate, instead of asking the auth server on every request, and
+the name, super-admin grant and membership come back in **one** call, `console_actor()`
+(`admin/0010_console_actor.sql`, **apply it in the SQL editor**; until it is, the console falls
+back to the three reads it replaces). A warm page now makes one round trip for access before
+its own reads; on a local stack with 300 ms per call, `/people` went from 1.6 s to 0.66 s. The
+browser keeps a page opened in the last 30 seconds (`staleTimes.dynamic`), so moving back and
+forth is instant; every write and sign-out empties it, and a revoked admin is refused on their
+next page not in it. Each request logs its access check and reads as
+`[timing] <operation> <ms>` (`CONSOLE_TIMING=off` silences them) and the proxy sends a
+`Server-Timing` header. No server-side data cache: every read still runs as the signed-in user.
+
+## [ux] Every console page shows that a click registered, in the shape of what is coming
+
+The dashboard, records list, People, export and audit trail now have a route-level skeleton of
+their own layout (header, filters, stat cards and charts, or table rows), so a sidebar click
+shows the new page's shape at once instead of leaving the previous page on screen. Their slow
+reads (figures, entries, count, table) moved into Suspense boundaries keyed by the query, so the
+header shows first and a client-side sort or page swaps only the table. `/organizations` (super
+admins only) keeps its real 404 for org admins: it has no route-level skeleton, shows its header
+and form at once and suspends the table. Pages that decide 404 first — patient, session, field,
+organization, person — keep their 404s; the clicked link (sidebar icon, list and table names)
+shows a spinner meanwhile (`LinkPending`, shadcn `spinner`), and a person's page shows its
+header before its patients. People's list moved into `people/(list)/` so its skeleton never
+covers `/people/[id]`. `not-found-status.test.ts` now also treats super-admin-only pages as 404
+pages and requires a loading state above every other dashboard page.
+
+## [feat] Deactivate and reactivate an org admin
+
+A super admin now deactivates and reactivates organization admins the way medtechs are: the
+login is banned (nothing deleted), the membership is recorded and audited ("Deactivated …
+(organization admin)"), and a deactivated org admin loses the console on their next click and
+the app's sign-in. `admin/0009_org_admin_status.sql` (**apply it in the SQL editor**, after
+`admin/0008`) replaces `console_set_member_status` and adds `console_member_sole_cover`. Rules,
+in the page and in the database: only a super admin changes an org admin (org admins still
+manage their laboratory's medtechs); nobody changes themselves; the laboratory's last active
+org admin cannot be deactivated (invite another first, or deactivate the organization); and
+nobody — either role — is deactivated while they are a patient's only active member, which
+closes the gap where deactivating a medtech could leave a patient with nobody. A person's page
+marks those patients to hand over first. Refusals are checked before the sign-in is touched.
+The actions appear on People, the person page and the organization's Members table.
+
+## [feat] An org admin sees everyone in their laboratory, org admins included
+
+The Medtechs page is now **People** (`/people`; `/medtechs` and `/medtechs/[id]` redirect
+permanently, query kept). It lists every member of the laboratory, org admins and medtechs,
+with the open invitations of either role. A **Role** column and a role filter (Everyone /
+Organization admins / Medtechs) join search, sort (now also by role) and paging in the URL; the
+email sits under the name. The signed-in person's own row is marked "You". Actions are
+unchanged: a row shows only what the viewer may do. No schema change: `console_organization_people`
+already returned everyone.
+
+## [fix] The confirmation after removing or handing over an assignment is shown
+
+Removing an assignment, handing one over, or assigning the last person left unmounted the form
+that made the change, so its success message was never seen. Success is now announced in one
+status line under the patient's Assigned heading, which stays put; errors still show beside the
+form, which a failed change leaves in place.
+
+## [feat] Org admins do fieldwork: assignable to patients and counted as cover
+
+A membership's role is now a permission level, not a job: an org admin can be assigned their
+laboratory's patients like a medtech. `admin/0008_member_fieldwork.sql` (**apply it in the SQL
+editor**, after `admin/0007`) replaces `console_assign_patient` and `console_unassign_patient`:
+any **active** member of the patient's laboratory, in either role, can be assigned, and the
+"a patient keeps someone" rule counts an active org admin, so a patient linked to an org admin
+and a medtech can lose the medtech. Deactivated members of either role are never assignable and
+never cover. Handing over follows both. The patient page's Assigned list and pickers show org
+admins with a Role column; `/medtechs/[id]` opens for an org admin too. New audit entries record
+`member_id`, `member` and `role` (older ones keep `medtech_id` / `medtech`, and both display).
+Wording says "member" or "person" where it now means either role. No app table or policy changes.
+
+## [feat] Assign a laboratory's patients to its medtechs
+
+A patient's page now shows its assigned medtechs, and the laboratory's org admin assigns, removes
+and hands over through `admin/0007_patient_assignments.sql` (**apply it in the SQL editor**):
+`console_assign_patient`, `console_unassign_patient` and `console_replace_assignment` add or
+remove the `patient_users` link the app's visibility resolves through, and audit it. Only an
+active medtech of the patient's own laboratory can be assigned; the last active medtech can only
+be handed over, never removed. Removing touches the link only, never the patient, a record or its
+author. `/medtechs/[id]` shows one medtech and the patients assigned to them (de-identified for a
+super admin, who reads assignments but does not change them). Audit lines name the patient by
+record id only.
+
+## [feat] Org admin manages the laboratory's medtechs
+
+`/medtechs` now lists a laboratory's medtechs with the medtechs it has invited: name, email,
+status, date joined and the number of its patients each is linked to, searchable, sortable and
+paged 50 at a time in the URL. An org admin sees their own laboratory; a super admin chooses one
+(the organization page links to it). **Deactivate** bans the medtech's login through the
+Supabase admin API, so they can no longer sign in or refresh a session (the app then signs
+them out and wipes the phone), and records the membership as deactivated with
+`console_set_member_status` (`admin/0006_member_status.sql`, **apply it in the SQL editor**);
+if the record fails, the ban is lifted again. **Reactivate** reverses both. Nothing is
+deleted. An org admin cannot deactivate themselves, another org admin, or anyone in another
+laboratory, in the console or in the database. Each change is audited. The people and their
+emails are read with `console_organization_people`, which only a super admin or that
+laboratory's org admin may call.
+
+## [feat] Invite people by email: they set their own password and join the right organization
+
+Accounts are made only by invitation. A super admin invites an organization admin from
+`/organizations/[id]`; an org admin invites a medtech from the new `/medtechs` page. The
+invitation (`admin/0005_invitations.sql`, **apply it in the SQL editor**) stores the email,
+role and organization, decided by the database from who is inviting, and a hash of a one-time
+link that works for 7 days. The console emails the link through Resend
+(`src/adapters/resend/mail.ts`). The invitee sets their own password on `/invite/<token>`:
+the console makes the account for the invited email with `auth.admin.createUser` (the
+service-role key's only use), signs them in, and `console_accept_invitation` adds the
+membership from the invitation row. Re-send mints a new link; revoke withdraws it. An email
+with an account or a live invitation is refused, so no second account is made. Every
+invite, re-send, revoke and acceptance is audited. New server-only settings:
+`RESEND_API_KEY`, and optionally `MAIL_FROM` and `CONSOLE_URL`.
+
+## [fix] An unread session shows no LPF result, not "No parasites found"
+
+A session with no live fields showed "Not read" as its result on a patient page, but "No
+parasites found" in its LPF column and 0 eggs, which reads as a negative smear. A session
+is now read once a live field exists (`isSessionRead`, `src/domain/clinical.ts`). Before
+that, the patient page shows a dash for LPF and eggs and only the Result column says "Not
+read"; the session page says "Not read" where the result badge goes, shows a dash for eggs
+counted, and its findings say no field has been examined, without the LPF footnote. The
+patient page's "Read" column, which showed when a session started, is now "Started", as on
+the session page, so an unread row no longer reads "Read … Not read". A read session with
+nothing found still says "No parasites found". The dashboard and the export already left
+unread sessions out, and are unchanged. The app's Session Detail still says "No parasites
+found" for a session with no fields (`SessionDetailScreen.kt::LpfHeroCard`); the console
+departs from it here on purpose.
+
+## [feat] Org admins read their laboratory's patient reports (app 0015)
+
+App `0015` lets a report belong to a patient instead of a session. `admin/0002` found an org
+admin's reports through the session, so every patient report was hidden from the laboratory
+that owns the patient. `admin/0004_patient_reports.sql` adds one permissive SELECT policy that
+finds a patient report through its patient (`console_admin_owns_patient`); session reports keep
+their path, and a report on another laboratory's patient stays invisible. It refuses to apply
+before `0015`. **Apply it in the SQL editor.**
+
+`Report` is now `SessionReport | PatientReport`, matching `reports_scope_check`, and gains
+`csvFilePath`. `toReport` (`src/adapters/supabase/reports.ts`) maps a row and skips an unknown
+type or a contradictory shape. No page reads reports yet. `admin_0004_patient_reports.test.sql`
+covers both laboratories' patient reports, the session report regression, super admins, a
+colleague medtech, a signed-out visitor and a deactivated laboratory.
+
+## [fix] Records tables fit the console at its narrowest width
+
+The shell is never narrower than 1024px, which leaves the page 734px of table. The records
+list and a patient's sessions table each asked for at least 760px, so at that width the
+last column (Eggs on the patient page) sat behind a sideways scroll. Both now ask for 720px,
+as the sample and audit tables already do; wider windows are unchanged.
+
+## [feat] Records show the estimated parasite burden next to the LPF descriptor
+
+The app's Session Detail writes each species seen as "Moderate · Moderate Burden"; the
+console wrote only "moderate", so the phone and the console read one smear two ways. The
+console now ports `LpfDensity.kt::ParasiteBurdenLevel.forDescriptor` as
+`parasiteBurdenLevel` in `src/domain/clinical.ts`: rare or few is low, moderate is moderate,
+numerous is high, and a species never seen has none. `formatLpfReading` writes the app's
+line. The session page's findings table and the patient page's session list show it; a
+species never seen, and a session never read, show nothing. The level is derived from the
+worst field on read, never stored, and is labelled "Burden", not a WHO or DOH tier or an
+infection intensity (PB-16). The research export is unchanged: its v2 columns are a
+contract.
+
+## [fix] Records list reaches every patient, a page at a time
+
+`/records` read one response of patients, which PostgREST stops at 1000 rows without saying
+so: a laboratory past that could not see or search its oldest patients. The list now reads
+50 at a time (`?page=`), says how many match in all ("Showing 51–100 of 1,234 patients"),
+and pages with shadcn's `pagination` (ported from the registry source, the twelfth
+component in `ui/`). Search, barangay and laboratory filters run in the database over every
+patient in scope and are kept in the page links; a page past the end goes to the last page.
+The list (`src/components/records/PatientList.tsx`) renders inside a Suspense boundary keyed by
+its query, so a new search or page shows `PatientListFallback`'s skeleton in its place while
+the search form stays on screen; without the key, the previous page stayed up with no sign
+the click registered.
+
+`DatabasePort.listPatients` takes `offset` and `limit` and returns a `PatientPage`
+(`items`, `total`). The adapter reads with `.range()` and an exact count, ordered by
+`created_at` then `id` so a patient sits on one page, and caps a page at the server's row
+cap. A range past the last row is refused (`PGRST103`) and loses the count, so the adapter
+then asks for the count alone with the same filters. A super admin's pages still come from
+the de-identified views and ignore a name search. Page arithmetic in `src/lib/pagination.ts`.
+
+## [fix] CLI components take the console's corners and field height
+
+The organization, person and action filters rendered as 32px pills beside 36px fields with
+8px corners. `globals.css` fixed `rounded-lg` at 16px, while shadcn components size their
+corners from a scale derived from `--radius`. `globals.css` now carries shadcn's scale
+(`--radius-sm` … `--radius-4xl`) with `--radius: 8px`, the console's field corner, and
+`shadcn.test.ts` fails if the scale stops deriving from it. `native-select` is adapted to the
+field height (`h-9`) and background (`bg-surface`), recorded on the components card. The
+dashboard legend's swatches (`rounded-sm`) go from near-circles to rounded squares.
+
+## [chore] The console's filters use shadcn's native select
+
+`bunx shadcn@latest add native-select` added `src/components/ui/native-select.tsx`. The audit
+trail's person and action filters and the organization filter render `NativeSelect` in place
+of a raw `<select>`, keeping their `name` and `defaultValue`, so the GET forms submit the same
+query strings. `SELECT_CLASS` is gone. With no raw element left outside `ui/`,
+`shadcn.test.ts` drops its known-exceptions list and the test that kept it shrinking. The CLI
+imported `cn` from an unrelated npm package; the import points at `@/lib/utils` and the
+package was not added.
+
+## [chore] Components come from shadcn, never from scratch
+
+New constraint #15. `components.json` configures the shadcn CLI for Base UI (`base-nova`) and
+this repo's paths, so `bunx shadcn@latest add <name>` installs a primitive into
+`src/components/ui/`; `shadcn info` reads the config back and recognises all ten existing
+components as installed. `src/app/globals.css` maps shadcn's token names (`card`, `muted`,
+`accent`, `border`, `input`, `ring`, `destructive`, …) onto the console's palette, so an added
+component renders in maroon and stone in both themes. Nothing used those names before;
+`muted` was a text grey and now means shadcn's subtle background.
+
+`src/components/ui/shadcn.test.ts` fails on a `ui/` file that is not a shadcn registry item, a
+`@base-ui/` import outside `ui/`, a raw `<button>`, `<select>`, `<textarea>`, `<table>` or
+visible `<input>` outside `ui/`, a `components.json` that stops pointing at Base UI, and a
+`globals.css` that takes the registry's `oklch()` theme. Two raw `<select>`s (audit filters,
+organization filter) are listed exceptions until `native-select` is added. New card
+`docs/map/objects/ui-components.md`, with the inventory; a routing row, an effects row, a rule
+in `AGENTS.example.md`, and constraint #14 now named in the router too.
+
+## [fix] A missing patient, session or field answers HTTP 404
+
+Record pages showed "This page could not be found" for a missing id, or for another
+laboratory's record, but with status 200: `records/loading.tsx` began streaming the response
+before the page could call `notFound()`. The list page and its loading state move into a
+`(list)` route group, so the loading state covers the list only. The session and sample pages
+read the record and decide 404 first, then sign their frames inside a Suspense boundary
+(`FramesFallback`), so the figures still show at once and the frames follow. A missing
+storage configuration now leaves the frames unavailable instead of replacing the page.
+`src/app/not-found-status.test.ts` fails if a page that calls `notFound()` is put back under a
+loading file. Both loading states use shadcn's `Skeleton` (`src/components/ui/skeleton.tsx`).
+
+Checked against a local build: a malformed id, an unknown patient, session or field, and Lab
+B's records opened by Lab A's org admin (with or without `?org=`) all answer 404; existing
+records answer 200, with the frames streamed after the figures. `staging` answered 200 to all
+of them.
+
+## [refactor] The console recognises super admins from the super_admins table
+
+The gate asks the app's `is_admin()` (app `0014`, D22) instead of reading `profiles.role`,
+so the console and every database policy give the same answer. `super_admins` is closed to
+clients; the security definer function is the one way to ask. An error from the call is no
+grant. `AuthenticatedUser.role` becomes `isSuperAdmin`, `resolveConsoleAccess` takes that
+boolean, and `Profile` no longer mirrors the retired `role`. Nothing changes on screen for
+anyone whose status didn't change; a revoked super admin is turned away on their next request.
+
+`bun run test:db` now needs an app checkout with `0014`. The helpers make a super admin with a
+`super_admins` row and leave `profiles.role` at its default, so a test that still depended on
+the column would fail. `app_0014_super_admin_gate.test.sql` covers an active grant with
+`role = 'medtech'`, a revoked one with `role = 'admin'`, a revoke taking effect, and the table
+staying out of a client's reach. A unit test pins the adapter on `is_admin()`. The profile
+delete step in `admin_0001` moves to a user with no grant: a super admin's grant now keeps
+their profile, and the test checks that too.
+
+## [security] A super admin's patient reads go through the de-identified views
+
+Every patient, session and sample read a super admin makes now comes from the app's
+`patients_deidentified`, `sessions_deidentified` and `samples_deidentified` views (app
+`0012`), embedded under the tables' names so pages are unchanged. That covers the records
+list, the patient, session and sample pages, and the dashboard's and export's barangay
+codes. The request never names a name, sex, birthdate, session label or note. App `0013`
+then removes a super admin's access to the tables, and the console works the same before and
+after it. Organization admins still read the tables, identified.
+
+Session labels and notes were already dropped for a super admin when a row is mapped
+(`toSession`, `toSample`, named by `sessionLabel`); now they are not requested either, so
+they never leave the database for one. A unit test pins that no super admin request names an
+identity column or a clinical table. `app_0013_deidentified_reads.test.sql` covers a super
+admin, an organization admin, a medtech, a colleague and an anonymous caller against the
+narrowed policy. Constraint #14 now names the database as the second line.
+
+## [fix] Audit trail: ignore a malformed person or action filter
+
+`?actor=` was checked against a loose pattern, so a 36-character string of hex digits and
+dashes in the wrong layout reached Postgres and the page was a 500. It is now checked with
+`isUuid`, as every record id is. `?action=` was checked with `in`, which also accepts
+inherited names such as `constructor`; it now has to be a listed action.
+
+## [fix] Organizations: 404 a malformed id, and test against the app's current schema
+
+`/organizations/abc` was a 500, because the id went straight to Postgres. It is now a 404,
+like the record pages, and the rename and status actions answer "no longer exists" for one.
+
+`bun run test:db` failed on the app's `development` branch, which is now at `0011`: `0007`
+calls `storage.filename()`, which the stubs lacked. The stub is added. Since `0011`, a
+profile outlives its login, so deleting a login no longer clears `admin_audit_log.actor_id`.
+The test now checks both paths: the login goes and, where `0011` is applied, the entries
+keep their actor; the profile goes and they keep their label. The organizations card's
+offboarding rule says the same. No migration changes; `admin/0001`–`0003` apply on the
+app's `0001`–`0006` and on `0001`–`0011`, and the tests pass on both.
+
+## [fix] Records: a super admin sees no session label either
+
+A session label is pre-filled on the phone from the patient's initials and barangay, and a
+medtech may type anything over it, so it named patients to super admins on the patient,
+session and field pages. For a de-identified reader the adapter now drops the label, and
+the medtech's note with it, when it maps the row (`toSession`, `toSample`). Before, the note
+reached the server and was only hidden at render. `sessionLabel` names their session
+"Session" plus the first eight characters of its id.
+
+## [fix] A page turns a signed-out or revoked visitor away itself
+
+A client-side navigation re-renders the page but not the `(dashboard)` layout, so the
+page's `requirePageAccess()` is the only check that runs. It let the layout's two refusals
+escape as errors, and a session that ended or an access revoked since the last click
+landed on the "could not be loaded" boundary. It now redirects a signed-out visitor to
+`/login` and gives a revoked one a 404, as a full load would.
+
+## [fix] Audit trail lays out for a desktop
+
+The audit page drops its phone padding breakpoint like every other console page. Entries
+name organizations, people who acted and export periods, never a patient, so the trail
+needs no de-identification of its own. The map cards' line references point at the
+current code again.
+
+## [fix] Audit trail page repeats the access check
+
+`/audit` now calls `requirePageAccess()` like every other console page, so a revoked admin
+loses it on their next client-side navigation. Route line references in the export, audit,
+scoping and gate cards are brought up to date with the audited download route.
+
+## [feat] Audit trail: see who did what in the console, and every export
+
+`/audit` lists every administrative change and every export, newest first, with who, when,
+the action and one line describing it; filters for person, action, date and — for super
+admins — organization. Org admins read only their organization's entries, in the console's
+own query and in RLS. An action the build does not recognise is shown as recorded.
+
+`admin/0003_audit_exports.sql` adds `console_record_export`, which files an org admin's
+export under their own organization whatever is passed. The export route now records each
+download before serving it and refuses to serve the file if the entry cannot be written.
+SQL tests cover the misfiling attempt, a medtech's refusal, and that org admins can neither
+edit, delete nor read another laboratory's entries.
+
+## [fix] Lab scoping keeps patients de-identified for a super admin who narrows
+
+Every patient read now takes both the read scope and the patient disclosure. Narrowing to
+one laboratory with `?org=` changes which rows a super admin reads, never which columns: an
+organization admin sees their own laboratory's patients identified, and a super admin sees
+any laboratory's de-identified. The lab-scoping card says so.
+
+## [fix] Lab scoping: a malformed `?org=` is ignored
+
+`readScopeFor` uses the strict `isUuid` check, so a super admin's `?org=` of 36 dashes is
+treated as no filter rather than sent to Postgres, which rejected it with a 500.
+
+## [feat] A laboratory's patients and records stay inside that laboratory
+
+`admin/0002_patient_scoping.sql`, additive only. A trigger on the app's `patients` insert
+files each new patient under its creator's organization, permanently; it catches every
+error, so a creator with no organization leaves the patient unassigned and nothing can
+ever fail the app's sync (R4). Permissive SELECT policies let an org admin read their
+organization's patients, links, sessions, samples, detections, predictions, findings,
+reports, members' profiles and sample frames — and nothing else. The frame policy reads the
+sample id from the `{user_id}/{sample_id}.jpg` key and requires the stored path to match.
+
+The console enforces the same boundary itself (D7): every clinical read now requires a
+`ReadScope`, derived by `readScopeFor` from who is asking, and the adapter inner-joins the
+owning organization. An org admin is held to their own laboratory whatever the URL says and
+gets a 404 on anything outside it. Super admins can narrow the records, dashboard and export
+to one organization. SQL tests cover ownership at creation, the no-organization case, the
+trigger surviving a forced failure, and cross-organization refusal on every table.
+
+## [fix] Organizations: tier names, desktop layout, and leaving keeps the author
+
+Organization pages say Organization admin where they said Org admin, and lay out for a
+desktop. The organizations card now states the offboarding rule: a member who leaves is
+deactivated, never deleted, so their profile and their authorship of every record stay.
+
+## [feat] Laboratory organizations, managed by super admins, with an append-only audit log
+
+The first schema this repo owns (D4): `supabase/migrations/admin/0001_organizations.sql`,
+additive only. Organizations; memberships keyed by user, so a user belongs to one laboratory
+and "org admin" is a role on the membership; `patient_organizations`, the owning laboratory
+of each patient; and `admin_audit_log`. Reads are RLS policies scoped to the super admin or
+the reader's own organization. Writes have no table policy: each is a security-definer
+function that checks the caller and appends the audit row in the same transaction. The
+audit log refuses UPDATE, DELETE and TRUNCATE for every role, allowing only the foreign
+key's own set-null when an actor's profile is deleted, so user deletion still works. A
+backfill puts every existing medtech and patient in one "Starting laboratory".
+
+The console gains `AdminWritePort` (D2), checks `canManageOrganizations` before every write,
+and gives super admins `/organizations` to create, rename, deactivate (with confirmation)
+and reactivate. The gate now recognises org admins from their own membership, and a
+deactivated membership or organization locks them out on their next request.
+
+`bun run test:db` applies the app's migrations and ours to a throwaway local Postgres and
+runs `supabase/tests/`: the backfill, super-admin-only writes, scoped reads, the audit log's
+immutability, and that a medtech still registers a patient afterwards.
+
+## [fix] Export page lays out for a desktop
+
+The export page drops its phone padding breakpoint, as every other console page did. The
+file itself is unchanged: it carries no names, sex or birthdates, so it is already the
+de-identified view a super admin may take.
+
+## [fix] Research export: the 20,000 refusal works, and the count matches the file
+
+The refusal could never fire: one PostgREST response stops at 1000 rows, so a busy period
+downloaded the newest 1000 sessions as if they were all. `listSmears` now pages (see the
+dashboard fix), the download asks for `RESEARCH_EXPORT_LIMIT + 1`, and the export page reads
+with the same limit, so its "N smears examined" matches the file and a period the download
+would refuse is flagged first. A failed read is a 502 or 503 with no database detail instead
+of a bare 500. CSVs carry a UTF-8 byte-order mark so Excel keeps the en dash in `0–2 LPF`,
+and an open-ended file is named for today in Manila rather than in UTC.
+
+## [feat] Research export in LPF, one row per smear, with no names or birthdates
+
+The SRS research matrix exported AI and validated EPG per sample; EPG was retracted with
+it. `/export` now shows how many smears a period holds and downloads one row per examined
+smear, as CSV or JSON: session and patient record IDs, Manila date, barangay PSGC code,
+fields examined, result, eggs counted, and for each of the three species its LPF min, max,
+descriptor and eggs, plus other species in one cell. The rows come from the same
+`SessionSummary` the records browser shows. The column set is version 2 and the version is
+in the file name. CSV cells that would run as a spreadsheet formula are neutralised. A
+period over 20,000 sessions is refused rather than silently cut short.
+
+This removes the last of EPG: `epg.ts`, the record filters, the sample-level
+`SampleRecord`, `listSampleRecords` and the old `/records/export` route are deleted with
+their tests, and so are the EPG and research-matrix cards. Exports are not yet written to
+the audit trail, which does not exist yet.
+
+## [fix] Dashboard lays out for a desktop
+
+The summary cards sit in one row of five and the trend shares its row with the species mix
+at every width, instead of stacking below 1024px. The console is desktop only.
+
+## [fix] Dashboard: read every session in the period, not the newest 1000
+
+`.limit(5000)` could not raise PostgREST's response cap (`db-max-rows`, 1000 by default on
+Supabase), so "All time" and any busy period quietly counted only the newest 1000 sessions,
+and the "figures are partial" notice could never appear. `listSmears` now reads in pages
+(`readPages`, `src/adapters/supabase/paging.ts`) with `id` as a tie-break so pages cannot
+overlap, and the page asks for 5,001 so a period over 5,000 is detected.
+
+## [feat] Dashboard counted per smear in LPF terms, matching the app and the map
+
+The dashboard showed an EPG trend and a WHO light/moderate/heavy split — both retracted for
+direct smear. It now counts smears: one session is one smear, examined once a live field
+was verified, positive when a live field carries a counted detection. That is the rule in
+`barangay_prevalence()`, so the dashboard and the map count the same thing. Cards: patients
+with a smear read, smears examined, positive smears and rate, fields verified. A weekly bar
+chart (inline SVG, with a table view) and species bars showing the share of positive smears
+carrying each species. A from/to period in Manila dates lives in the URL; a period over
+5,000 sessions says its figures are partial.
+
+The severity bands, the EPG trend, the distribution-by-egg and the EPG summary are deleted,
+with their tests. `epg.ts` keeps only what the export still needs.
+
+## [fix] Records: super admins see patients de-identified
+
+A patient's name, sex and birthdate now reach only an organization admin of the patient's
+own laboratory. Each clinic controls its patients' data under RA 10173 and AgarthaVision
+processes it for them; a super admin runs the platform and needs no patient's identity.
+`patientDisclosureFor` decides it, every patient read in `DatabasePort` takes the result,
+and the Supabase adapter leaves the identity columns out of a de-identified request, so
+they never leave the database for a super admin. A name search is ignored for them, the
+medtech's free-text note is withheld, and a patient is named by the start of their record
+id. `Patient` carries the identity fields under `identity`, `null` when withheld.
+
+Record pages also drop their phone breakpoints, as the shell did.
+
+## [fix] Records: one row per species, and a bad id is a 404
+
+The LPF table joined ranges and egg counts on their raw keys. Ranges are keyed by the stored
+finding species (as the app groups them) and counts by the canonical name, so a finding
+stored as `ascaris_lumbricoides` split one species into a range-only row and a count-only
+row. `speciesRows` now joins on `canonicalSpecies` without recomputing any range, and the
+session page's field cards name species the way the sample page does.
+
+A patient, session or sample id that is not a well-formed uuid now 404s before any read;
+Postgres used to reject it and the page failed with a 500. Each detail page repeats the
+access check, and `records/loading.tsx` shows that a click registered while a session's
+frames are read and signed.
+
+## [feat] Browse records as patient → session → sample, in LPF as the app reports them
+
+The console was broken: every sample query still selected `samples.gps_*`, which the
+consolidated schema dropped, so the dashboard and records pages failed outright. The
+domain now mirrors the app's `0001`–`0006` on `development` — patients, sessions owned by
+patients, `deleted_at` on samples, `prediction_id` and `stage` on detections, per-field
+species findings — and the records page became a browser: patients, a patient's sessions,
+a session's findings and fields, and one field's frame and detections.
+
+Figures follow the app, not a local rule: every detection except `FALSE_POSITIVE` counts; a
+sample deleted as a duplicate appears nowhere and counts toward nothing; each species gets a
+min–max eggs-per-field range with a rare/few/moderate/numerous descriptor, never a mean,
+never EPG. `src/domain/clinical.test.ts` carries every case from the app's
+`LpfAggregationTest`. Each detection says whether its box is the model's, redrawn or added,
+and a frame with no stored predictions says "unknown" rather than guessing.
+
+Frames are signed with the visitor's own session: `0001` already grants admins read on the
+whole bucket, so the service-role path is gone and nothing reads that key. The dashboard
+works again but still shows EPG, and the EPG export route remains without a link; both move
+to LPF in their own changes.
+
+## [fix] Desktop-only console, and the three tiers named as the product names them
+
+Super admins and organization admins use the console at a computer; medtechs use the mobile
+app. The shell no longer folds its sidebar into a row under the header below 768px: the
+sidebar and the organization name are always shown, the shell holds a 1024px minimum width
+and a narrower window scrolls sideways. Grids keep their desktop columns.
+
+The tiers are named Super admin, Organization admin and Medtech wherever a person reads
+them. The refusal shown after a correct password no longer assumes the person is a medtech:
+a deactivated organization admin sees it too, so it says who the console is for and who
+to ask.
+
+## [feat] Console shell with role-aware navigation, shadcn on Base UI and dark mode
+
+The console now knows three people instead of one. A super admin (`profiles.role =
+'admin'`) sees everything; an org admin will see their own laboratory once memberships
+exist; a medtech is refused. The rule is `resolveConsoleAccess` in `src/domain/access.ts`,
+plain TypeScript so it holds under any provider (D7). `AuthPort.requireAdmin()` became
+`requireConsoleActor()`, which returns the user with their access. Every page calls
+`requirePageAccess()`, which 404s anyone it does not admit — a hidden sidebar link is never
+the protection, and a client-side navigation does not re-render the layout, so the page's
+call is what re-reads access. Route handlers use `requireRouteAccess()`. An `error.tsx`
+under `(dashboard)/` replaces the bare framework error page with a retry.
+
+A medtech who signs in with the right password is signed back out and told to use the
+Android app. That message only appears after a correct password, so it confirms nothing to
+a stranger; wrong passwords and unknown emails still share one reply.
+
+The frame is a sidebar, a header naming the scope, and a user menu with theme and sign out.
+Components are shadcn-style files under `src/components/ui/` written on Base UI (D1); no
+Radix package is installed, and the shadcn registry is not used. Colours became two layers:
+the raw `--av-*` palette, and semantic tokens that a `dark` class swaps, so existing
+components are correct in both themes without `dark:` classes. `/` now redirects to the
+dashboard.
+
+## [docs] Add a keep-the-docs-aligned rule to AGENTS.example.md
+
+A "Project shelf — keep it current" section, ported from the app repo's `AGENTS.example.md`
+and adjusted to this repo: cards cite `path:line` rather than symbols, the router's "Where to
+go" table stands in for the app repo's object and process indexes, and the changelog and
+`docs/features.md` are part of the same change (#10). It is plain instructions for any agent or
+member, so keeping the shelf current no longer depends on a skill only some of the team has.
+
+It introduces `verified:` / `commit:` / `status: stale` frontmatter. No card here has
+frontmatter yet; each gains it the first time someone touches it, rather than in a sweep that
+would stamp cards as verified without re-checking them.
+
+## [ci] Align the commit-msg hook with the app repo and add agent config templates
+
+The subject format gains a colon — `[type][ClickUp-ID][Lastname]: Task title` — and the
+type list widens from eight to twelve (`enhancements security ui ux uiux` added, the never-used
+`style` dropped). Merge, revert, fixup and squash subjects are now skipped, because git writes
+those itself and the old regex rejected them. This is the AgarthaVision app repo's C9 hook
+verbatim, so one subject line works in both repos.
+
+Every type in this repo's history (`feat docs ci chore`) survives the change; only the colon
+is newly required, so existing commits stay valid history while new ones take the new shape.
+
+Also adds the `.mcp.json` / `AGENTS.md` local-config pattern: the real files are gitignored and
+the tracked `.mcp.example.json` and `AGENTS.example.md` are the templates to copy from.
+
+## [docs] Complete ICM system map with object, process, and effect cards
+
+Three object cards (domain model, ports, provider registry) and four process cards (EPG
+aggregation, research-matrix export, admin gate, signed image URL), each citing
+`path:line` into `src/`. The change-impact index names four non-obvious breaks: a route
+handler does not inherit the layout's gate; an admin can read every row and no image until
+the upstream Storage policy is applied; three `0002` renames bite silently; and what
+counts toward EPG is a cross-repo agreement with the Android client.
+
+Every citation in the cards was resolved against the file it names before this commit.
+
+## [feat] Add detailed records table with filters and research matrix export
+
+Filters live in the query string, so a view is shareable and the export reuses the page's
+exact query. Parsing is defensive: a blank field is absent rather than a filter for empty
+text, a non-numeric bound is dropped instead of becoming NaN, zero is a real bound, and
+undeclared enum values are discarded.
+
+The table shows AI EPG beside validated EPG — the gap between them is what this console
+exists to expose. Export runs in a route handler and repeats `requireAdmin()`, because a
+handler does not render inside the `(dashboard)` layout and inherits no gate. Exports are
+validated-only unless explicitly asked otherwise, and that link is labelled a working
+file rather than a report.
+
+## [feat] Build admin dashboard with summary cards and EPG trend chart
+
+Summary cards, per-species EPG trend, parasite distribution, intensity split and EPG
+statistics — all counting validated records only, via the domain functions, so the
+dashboard and an export cannot disagree about a period.
+
+The chart palette was validated rather than chosen by eye: it passes the lightness band,
+chroma floor, CVD separation and normal-vision floor, and warns that two slots fall under
+3:1 contrast. That warning is answered with a legend, direct labels and a table view, so
+identity never rests on color alone. Days with no validated sample are omitted from the
+trend rather than plotted as zero.
+
+## [feat] Add Supabase Auth behind auth port with admin role gate
+
+Identity from Supabase Auth, role from `profiles.role` read server-side on every request.
+`getUser()` over `getSession()`, because the latter only decodes a browser-settable
+cookie. A missing profile resolves to `medtech`, not admin. The gate sits in the
+`(dashboard)` layout so new pages are protected on creation. A medtech who signs in
+successfully is signed straight back out rather than left holding a usable cookie, and
+both failure modes return one message so the form cannot confirm real accounts.
+
+`src/proxy.ts` refreshes tokens using Next 16's proxy convention. Login state moved to its
+own module: a `"use server"` file may export only async functions.
+
+## [feat] Implement Supabase database and storage adapters
+
+Database reads run as the visitor, so RLS decides visibility; the adapter never elevates
+and adds no `user_id` predicate of its own. Only date and owner bounds are pushed to SQL —
+confidence, EPG and processing time are derived, so filtering them in the domain keeps one
+definition rather than restating the rules in a second language.
+
+Storage signs URLs with the service-role key. That is forced, not convenient: upstream
+`0003_storage_rls.sql` scopes bucket reads to the uploader's own folder with no admin
+exception, so an admin session cannot read another medtech's frames. The adapter
+authorises nothing itself and callers must pass the admin gate first.
+
+`registry.ts` is the only module naming a provider. Unknown values throw rather than
+falling back.
+
+## [feat] Define domain model and provider port interfaces
+
+`src/domain/` now mirrors the upstream Postgres schema after migration `0008`, with
+per-field provenance comments. Added the pure logic the console reports on: EPG at the DOH
+multiplier of 24 counting `CONFIRMED` detections only, species-specific severity bands, the
+six fixed research-matrix columns with CSV and JSON serialisation, and the record filters.
+51 unit tests cover it; none needs a live Supabase.
+
+`src/ports/` defines `DatabasePort`, `StoragePort` and `AuthPort` with no vendor type in
+any signature. The database port exposes reads only — the read-mostly constraint is
+enforced by the absence of a mutation verb, not by a comment.
+
+Two judgement calls worth recording. First, `WRONG_CLASS` and `BOX_INCORRECT` detections
+are real eggs but do not count toward EPG, because the Android client's session reports
+count `CONFIRMED` only and the two surfaces must not disagree about the same smear.
+Second, Phase 1 has no per-sample validation-state column and `validation_records` is a
+Phase 2 ghost, so validation status is derived from `verified_at` and `needs_reannotation`;
+that derivation is documented on the enum.
+
+## [ci] Configure Husky git hooks for typecheck, test, and build verification
+
+Ported the Android repo's hook discipline to the Next.js toolchain. `pre-commit` gates on
+four numbered steps — typecheck, unit tests, production build, eslint plus prettier — each
+with its own failure message and non-zero exit. `pre-push` repeats the full build.
+`commit-msg` enforces `[type][ClickUp-ID][Lastname] Task title` and prints the expected
+format on rejection. `run_bun()` mirrors the sibling's `run_gradle()`. Added
+`lint-staged.config.js` and `commitlint.config.js` with a `scope-enum` for this repo's
+areas.
+
+## [chore] Scaffold Next.js admin console with TypeScript and Tailwind
+
+Next.js 16 App Router, React 19, TypeScript `strict`, Tailwind v4, ESLint, Prettier,
+Vitest. Design tokens mirror the Android client's palette. `.env.example` carries variable
+names with empty values; `.env.local` is gitignored.

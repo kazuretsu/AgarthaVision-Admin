@@ -1,0 +1,169 @@
+import type {
+  AccountAccessPort,
+  AdminWritePort,
+  AttemptLimitPort,
+  AuthPort,
+  DatabasePort,
+  MailPort,
+  OnboardingPort,
+  StoragePort,
+} from "@/ports";
+import { optionalEnv } from "@/lib/env";
+import { timedPort } from "@/lib/timing";
+
+/**
+ * Provider registry — the one place a concrete backend is named.
+ *
+ * Feature code asks for a port and gets whichever implementation the environment
+ * selects. Adding a provider means adding a branch here plus its adapter; no
+ * caller changes, because no caller ever knew which provider it was talking to.
+ *
+ * Adapters are imported lazily. A future S3 or Postgres adapter must not drag
+ * its SDK into the bundle of a deployment that does not use it, and the eager
+ * alternative would also make this module unimportable in a unit test.
+ *
+ * Every data, storage and write port is handed out wrapped in `timedPort`, so each
+ * call logs its duration (`src/lib/timing.ts`) without any adapter knowing.
+ */
+
+/** Providers with a working implementation today. */
+export const SUPPORTED_DATABASE_PROVIDERS = ["supabase"] as const;
+export const SUPPORTED_STORAGE_PROVIDERS = ["supabase"] as const;
+export const SUPPORTED_AUTH_PROVIDERS = ["supabase"] as const;
+export const SUPPORTED_MAIL_PROVIDERS = ["resend"] as const;
+
+export type DatabaseProvider = (typeof SUPPORTED_DATABASE_PROVIDERS)[number];
+export type StorageProvider = (typeof SUPPORTED_STORAGE_PROVIDERS)[number];
+export type AuthProvider = (typeof SUPPORTED_AUTH_PROVIDERS)[number];
+export type MailProvider = (typeof SUPPORTED_MAIL_PROVIDERS)[number];
+
+/**
+ * Raised when a variable names a provider that has no adapter.
+ *
+ * Deliberately loud. Silently falling back to the default would let a
+ * deployment believe it is pointed at one backend while it reads from another.
+ */
+export class UnknownProviderError extends Error {
+  constructor(kind: string, requested: string, supported: readonly string[]) {
+    super(
+      `Unknown ${kind} provider "${requested}". Supported: ${supported.join(", ")}. ` +
+        `Set the matching environment variable to one of these, or add an adapter.`,
+    );
+    this.name = "UnknownProviderError";
+  }
+}
+
+function resolve<T extends string>(kind: string, variable: string, supported: readonly T[]): T {
+  const requested = optionalEnv(variable, supported[0]).trim().toLowerCase();
+  const match = supported.find((candidate) => candidate === requested);
+  if (!match) throw new UnknownProviderError(kind, requested, supported);
+  return match;
+}
+
+export function databaseProvider(): DatabaseProvider {
+  return resolve("database", "DB_PROVIDER", SUPPORTED_DATABASE_PROVIDERS);
+}
+
+export function storageProvider(): StorageProvider {
+  return resolve("storage", "STORAGE_PROVIDER", SUPPORTED_STORAGE_PROVIDERS);
+}
+
+export function authProvider(): AuthProvider {
+  return resolve("auth", "AUTH_PROVIDER", SUPPORTED_AUTH_PROVIDERS);
+}
+
+export function mailProvider(): MailProvider {
+  return resolve("mail", "MAIL_PROVIDER", SUPPORTED_MAIL_PROVIDERS);
+}
+
+/** The database port for this request. Server-side only. */
+export async function getDatabase(): Promise<DatabasePort> {
+  switch (databaseProvider()) {
+    case "supabase": {
+      const { createSupabaseDatabase } = await import("./supabase/database");
+      return timedPort("db", await createSupabaseDatabase());
+    }
+  }
+}
+
+/** The storage port for this request. Server-side only. */
+export async function getStorage(): Promise<StoragePort> {
+  switch (storageProvider()) {
+    case "supabase": {
+      const { createSupabaseStorage } = await import("./supabase/storage");
+      return timedPort("storage", await createSupabaseStorage());
+    }
+  }
+}
+
+/** The auth port for this request. Server-side only. */
+export async function getAuth(): Promise<AuthPort> {
+  switch (authProvider()) {
+    case "supabase": {
+      const { createSupabaseAuth } = await import("./supabase/auth");
+      return createSupabaseAuth();
+    }
+  }
+}
+
+/**
+ * The administrative write port for this request. Server-side only. Follows the
+ * database provider: the writes live in the same database as the reads.
+ */
+export async function getAdminWrites(): Promise<AdminWritePort> {
+  switch (databaseProvider()) {
+    case "supabase": {
+      const { createSupabaseAdminWrite } = await import("./supabase/admin-write");
+      return timedPort("write", await createSupabaseAdminWrite());
+    }
+  }
+}
+
+/**
+ * Failed sign-in and invitation attempts, for the attempt limits (14zcqntnqp6). Server-side
+ * only. Follows the database provider: the attempts are stored there.
+ */
+export async function getAttemptLimit(): Promise<AttemptLimitPort> {
+  switch (databaseProvider()) {
+    case "supabase": {
+      const { createSupabaseAttemptLimit } = await import("./supabase/attempt-limit");
+      return timedPort("attempts", createSupabaseAttemptLimit());
+    }
+  }
+}
+
+/**
+ * Accepting an invitation, for a visitor with no account yet. Server-side only.
+ * Follows the auth provider: it makes the account there.
+ */
+export async function getOnboarding(): Promise<OnboardingPort> {
+  switch (authProvider()) {
+    case "supabase": {
+      const { createSupabaseOnboarding } = await import("./supabase/onboarding");
+      return createSupabaseOnboarding();
+    }
+  }
+}
+
+/**
+ * Blocking and allowing sign-in, for deactivating a member. Server-side only.
+ * Follows the auth provider: the login lives there.
+ */
+export async function getAccountAccess(): Promise<AccountAccessPort> {
+  switch (authProvider()) {
+    case "supabase": {
+      const { createSupabaseAccountAccess } = await import("./supabase/account-access");
+      return timedPort("account", await createSupabaseAccountAccess());
+    }
+  }
+}
+
+/** The mail port. Server-side only. */
+export async function getMail(): Promise<MailPort> {
+  switch (mailProvider()) {
+    case "resend": {
+      const { createResendMail } = await import("./resend/mail");
+      return createResendMail();
+    }
+  }
+}

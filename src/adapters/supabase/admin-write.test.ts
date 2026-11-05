@@ -1,0 +1,88 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { describe, expect, it } from "vitest";
+import { AdminWriteError } from "@/ports";
+import { SupabaseAdminWriteAdapter } from "./admin-write";
+
+/** A client whose every function call fails with `code`. */
+function failingWith(code: string) {
+  const client = {
+    rpc: async () => ({ data: null, error: { code, message: "refused", hint: "" } }),
+  } as unknown as SupabaseClient;
+  return new SupabaseAdminWriteAdapter(client);
+}
+
+async function reasonOf(code: string) {
+  const error = await failingWith(code)
+    .recordExport("00000000-0000-4000-8000-000000000001", {})
+    .catch((cause: unknown) => cause);
+  expect(error).toBeInstanceOf(AdminWriteError);
+  return (error as AdminWriteError).reason;
+}
+
+describe("SupabaseAdminWriteAdapter — a refusal's reason", () => {
+  it.each([
+    ["42501", "forbidden"],
+    ["23505", "conflict"],
+    ["P0002", "not_found"],
+    // An export filed under an organization that does not exist (14zcqntjw7c).
+    ["23503", "not_found"],
+    ["23514", "invalid"],
+    ["22023", "invalid"],
+    ["08006", "failed"],
+  ])("%s is %s", async (code, reason) => {
+    expect(await reasonOf(code)).toBe(reason);
+  });
+
+  it("offboardMember calls console_offboard_member with mapped reassignments", async () => {
+    let calledFn = "";
+    let calledArgs: unknown = null;
+    const client = {
+      rpc: async (fn: string, args: unknown) => {
+        calledFn = fn;
+        calledArgs = args;
+        return { data: null, error: null };
+      },
+    } as unknown as SupabaseClient;
+
+    const adapter = new SupabaseAdminWriteAdapter(client);
+    await adapter.offboardMember("00000000-0000-4000-8000-000000000001", [
+      {
+        patientId: "90000000-0000-4000-8000-000000000001",
+        toUserId: "00000000-0000-4000-8000-000000000002",
+      },
+    ]);
+
+    expect(calledFn).toBe("console_offboard_member");
+    expect(calledArgs).toEqual({
+      p_user: "00000000-0000-4000-8000-000000000001",
+      p_reassignments: [
+        {
+          patient_id: "90000000-0000-4000-8000-000000000001",
+          to_user_id: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+  });
+});
+
+describe("SupabaseAdminWriteAdapter — recording an authenticator reset (14zcqntjnt0)", () => {
+  it("calls the audited function for the member, as the signed-in super admin", async () => {
+    const calls: [string, unknown][] = [];
+    const client = {
+      rpc: async (fn: string, args: unknown) => {
+        calls.push([fn, args]);
+        return { data: null, error: null };
+      },
+    } as unknown as SupabaseClient;
+    await new SupabaseAdminWriteAdapter(client).recordAuthenticatorReset("user-1");
+    expect(calls).toEqual([["console_record_authenticator_reset", { p_user: "user-1" }]]);
+  });
+
+  it("a refusal is an AdminWriteError, so no reset follows", async () => {
+    const error = await failingWith("42501")
+      .recordAuthenticatorReset("user-1")
+      .catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(AdminWriteError);
+    expect((error as AdminWriteError).reason).toBe("forbidden");
+  });
+});

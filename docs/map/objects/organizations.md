@@ -1,0 +1,163 @@
+---
+verified: 2026-11-05
+commit: 7e94643
+---
+
+# Organizations
+
+Laboratories, who belongs to them, which patients they own, and the audit log of every
+console write. Schema: `supabase/migrations/admin/0001_organizations.sql`.
+
+## Why this shape
+
+A laboratory owns its patient records; the medtech is the author, not the owner (D11). So
+ownership hangs off the organization, and access follows membership — never a profile
+flag a user could keep after leaving. The shapes mirror Better Auth's organization plugin
+(`organization`, `member`) so a later provider move maps cleanly (D7).
+
+**Leaving keeps the author.** A medtech or organization admin who leaves is deactivated —
+their membership's `status` — never deleted. Their `profiles` row stays, and every patient,
+session and sample they recorded still points at it (`created_by`, `user_id`), so the
+record keeps naming its author after they are gone. Deleting their login is safe as well,
+once the app's `0011_profile_outlives_login.sql` is applied: `profiles.id` no longer
+cascades from `auth.users`, the login's `profiles.account_id` is cleared instead, and the
+profile, its membership and its audit entries keep naming them. Before `0011`, deleting a
+login took the profile with it, or failed outright while records referenced it. Deleting
+the `profiles` row itself is never offboarding.
+
+This is the first schema this repo owns (D4). It follows the migration convention: its own
+sequence under `supabase/migrations/admin/`, **additive only**, nothing the app owns is
+altered or dropped. `bun run test:db` proves the app still registers patients afterwards.
+
+## Shape
+
+| Object                                                                  | Line                   | What it holds                                                                                |
+| ----------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
+| `organizations`                                                         | `:36`                  | name (cleaned, unique ignoring case; below), `active` / `deactivated`                        |
+| `organization_members`                                                  | `:52`                  | keyed by `user_id` — **one organization per user** (D10); `role` is `org_admin` or `medtech` |
+| `patient_organizations`                                                 | `:67`                  | keyed by `patient_id` — the owning laboratory; filled for new patients by `admin/0002`       |
+| `admin_audit_log`                                                       | `:79`                  | actor, action, target, organization, details; **append-only**                                |
+| `console_org_admin_org(uid)`                                            | `:137`                 | the organization a user administers, or null; null if either side is deactivated             |
+| `console_member_org(uid)`                                               | `:154`                 | the organization a user belongs to, in any role; null if either side is deactivated          |
+| `console_write_audit(…)`                                                | `:176`                 | internal; no client may call it                                                              |
+| `console_create_organization` / `_rename_` / `_set_organization_status` | `:262`, `:286`, `:319` | super-admin writes, each auditing itself                                                     |
+
+Line numbers are in `supabase/migrations/admin/0001_organizations.sql`. `admin/0016` replaces
+the create and rename functions, with the same signatures, to clean the name first.
+
+**Reads** are RLS policies (`:209` on): a super admin reads everything; an org admin reads
+their own organization, its members, its patient links and its audit entries; every user
+reads their own membership and their own organization's name.
+
+**Writes** have no table policy at all. Every write is a security-definer function that
+checks the caller, changes the row and appends the audit entry in one transaction — so a
+write without its audit entry cannot happen, and no client can forge one. The console
+checks the same rule first in `canManageOrganizations` (`src/domain/organizations.ts:55`);
+the function is the second line, never the only one.
+
+**The audit log is append-only for everyone.** No role has an UPDATE or DELETE policy, and
+a trigger (`:103`) refuses both — and TRUNCATE — even for the table owner. The single
+exception is the foreign key's own `on delete set null` when an actor's profile is removed,
+because refusing it would stop user deletion working, which an additive migration must not
+change. `actor_label` keeps who it was. Since the app's `0011`, deleting a login leaves the
+profile, so the entries keep their `actor_id`.
+
+**Members join by invitation** (`admin/0005`, `docs/map/processes/invitations.md`): a super
+admin invites an organization's admins, an org admin its medtechs, and accepting inserts the
+membership the invitation names. `organization_invitations` is read like the members: a super
+admin all, an org admin their organization's; its token hash by nobody.
+
+**Deactivating a member** (`admin/0006`, `admin/0009`, `docs/map/processes/people-access.md`)
+sets their membership's status and bans their login; nothing is deleted. An active medtech
+leaves by **offboarding** (`admin/0017`): their org admin or a super admin hands each patient
+they alone cover to an active colleague and deactivates them in one transaction. Only a super
+admin deactivates an org admin, never the laboratory's last active one, and nobody is
+deactivated while they are a patient's only active member.
+
+**Deactivating a laboratory** (`console_set_organization_status`) ends access for everyone in
+it, and the console then blocks the sign-in of each member left with no access anywhere
+(`admin/0021`, `src/app/(dashboard)/organizations/actions.ts:116-131`); reactivating it
+restores those who have access again (`docs/map/processes/people-access.md`).
+
+**Resetting an org admin's authenticator app** (`admin/0018`,
+`docs/map/processes/second-factor.md`): super admins only, never their own; recorded as
+`member.authenticator_reset` under the member's laboratory before the reset happens at the auth
+provider.
+
+**Assigning patients** (`admin/0007`, `admin/0008`, `docs/map/processes/patient-assignment.md`):
+an org admin links their laboratory's patients to its active members — org admins included,
+since a role is a permission level and not a job — through audited functions;
+`patient_users` itself still has no write policy.
+
+**Backfill** (`:363`): one "Starting laboratory" receives every existing non-admin user as a
+medtech and every existing patient, so nothing is orphaned when scoping arrives. Super
+admins are members of nothing; they see everything.
+
+## A name is cleaned (14zcqntjw7v, admin/0016)
+
+The unique index `organizations_name_unique` is on `lower(btrim(name))`: two laboratories
+cannot share a name, so a patient is not filed in the wrong one of two look-alikes.
+Invisible characters used to get round it ("Cebu Lab" and "Cebu Lab" with a zero-width
+space). Now a name is cleaned before it is checked and stored:
+
+1. Unicode NFKC: full-width letters and compatibility spaces become plain ones.
+2. Default-ignorable code points (zero-width characters, byte-order mark, bidirectional
+   marks, soft hyphen, variation selectors, Hangul fillers, tag characters) and control
+   characters are removed.
+3. Tabs, line breaks and every other Unicode space become one space; the ends are trimmed.
+
+`console_clean_name` (`supabase/migrations/admin/0016_organization_name_cleanup.sql:38`) does
+it in the database, and `console_create_organization` (`:86`) and
+`console_rename_organization` (`:110`) store its result, so a look-alike hits the unchanged
+unique index as `23505`: "Another organization already has that name." The check constraint
+`organizations_name_clean` (`:84`) refuses any stored name that is not its own cleaned form,
+whatever writes it. The console cleans the same way first (`cleanName`,
+`src/domain/organizations.ts:81`, used by `normaliseOrganizationName`), so the form checks
+what the database keeps; `supabase/tests/admin_0016_organization_name_cleanup.test.ts`
+checks the two agree character for character. Lengths (2 to 120) count characters of the
+cleaned name.
+
+The migration changes no row. If a stored name is not clean, it stops before applying
+anything and names the laboratory to rename; on 2026-10-15 the live database's one name
+was clean.
+
+## In the console
+
+- Org-admin detection: `orgAdminMembership` (`src/adapters/supabase/auth.ts:112`) reads
+  the user's own membership; only an active `org_admin` in an active organization counts.
+- Writes go through `AdminWritePort` (`src/ports/admin-write.ts`), implemented by one RPC
+  call per method (`src/adapters/supabase/admin-write.ts:44`), with SQLSTATEs mapped to
+  reasons a page can explain (`:26`).
+- Pages: `/organizations` and `/organizations/[id]`, super admins only
+  (`requirePageAccess(["super_admin"])`). Server actions re-check the rule before writing
+  (`src/app/(dashboard)/organizations/actions.ts:28`). A malformed organization id is a 404
+  on the page and "no longer exists" from an action, never a database error.
+
+## If you change this
+
+**Hits**
+
+- Everything that scopes by organization: the gate, `admin/0002` scoping, the audit page.
+- Who keeps their sign-in (`admin/0021`) and who may write field data (the app's
+  `supabase/migrations/0018_writes_need_active_lab_member.sql`): both read an active
+  membership in an active laboratory, the rule of `console_member_org`.
+- The app, if a change ever touches an app-owned object — which must instead go to the app
+  repo as its own migration.
+- `supabase/tests/admin_0001_organizations.test.sql`,
+  `supabase/tests/admin_0016_organization_name_cleanup.test.ts`.
+- The name cleaning: `console_clean_name` and `cleanName` must change together, or a name
+  the form accepts is stored differently. Training snapshot names use `cleanName` too
+  (through `normaliseOrganizationName`).
+
+**Does not hit**
+
+- Clinical data. No function here writes a patient, session, sample or detection.
+
+## Reading the log
+
+`/audit` and `admin/0003` (exports) are described in `docs/map/processes/audit-trail.md`.
+
+## See
+
+`supabase/migrations/admin/0001_organizations.sql`, `src/domain/organizations.ts`,
+`src/ports/admin-write.ts`, `supabase/tests/`.

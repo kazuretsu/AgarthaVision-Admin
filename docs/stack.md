@@ -1,0 +1,60 @@
+# Stack
+
+As-built. Versions are what `bun.lock` resolved, not what a range permits.
+
+| Layer                            | Choice                                              | Version                     |
+| -------------------------------- | --------------------------------------------------- | --------------------------- |
+| Runtime / package manager        | Bun                                                 | 1.3.11                      |
+| Framework                        | Next.js (App Router)                                | 16.3.3                      |
+| UI runtime                       | React / React DOM                                   | 19.2.8                      |
+| Language                         | TypeScript (`strict`)                               | 5.9.3                       |
+| Styling                          | Tailwind CSS                                        | 4.3.3                       |
+| UI primitives                    | Base UI (`@base-ui/react`)                          | 1.8.0                       |
+| Theme switching                  | `next-themes`                                       | 0.4.6                       |
+| Icons                            | `lucide-react`                                      | 1.49.0                      |
+| Database + auth + storage client | `@supabase/supabase-js`                             | 2.112.4                     |
+| Zip (training data download)     | `fflate`                                            | 0.8.2                       |
+| Map (prevalence map)             | `maplibre-gl`                                       | 6.11.2                      |
+| Server-side session cookies      | `@supabase/ssr`                                     | 0.12.5                      |
+| Tests                            | Vitest; SQL tests through Bun's built-in SQL client | 4.1.11; `@types/bun` 1.3.11 |
+| Lint                             | ESLint + `eslint-config-next`                       | 9.x / 16.3.3                |
+| Format                           | Prettier                                            | 3.9.6                       |
+| Hooks                            | Husky + lint-staged + commitlint                    | 9.1.7 / 17.4.1 / 21.2.2     |
+
+## Notes
+
+- **Node 22** is the runtime under Bun for the Next.js build.
+- **Next 16 renamed `middleware.ts` to `proxy.ts`.** The unauthenticated bounce lives in
+  `proxy.ts` at the repo root of `src/`.
+- **MapLibre for the prevalence map, nothing else.** No basemap, no tile provider, no API key:
+  the boundaries are static files in `public/geo/`, and MapLibre's worker is served from
+  `public/vendor/maplibre-gl/<version>/` (`scripts/vendor-maplibre.ts`), because MapLibre 6
+  starts it from a URL beside its own module, which a bundled chunk is not.
+- **No charting library.** The weekly trend and the species bars are
+  hand-crafted inline SVG, mirroring the Android client's design rule. One less dependency
+  and no runtime bundle cost.
+- **shadcn on Base UI (D1).** `src/components/ui/` holds shadcn components on Base UI
+  primitives, not Radix — no Radix package is installed. New ones come from the shadcn CLI
+  (`components.json`, style `base-nova`); the files are ours once added and are adapted in
+  place (constraint #15, `docs/map/objects/ui-components.md`). `cn()` in
+  `src/lib/utils.ts` merges classes with `clsx` + `tailwind-merge`, and variants use
+  `class-variance-authority`.
+- **Light and dark themes.** `next-themes` toggles a `dark` class on `<html>`; the semantic
+  tokens in `src/app/globals.css` swap under it, so components need no `dark:` classes of
+  their own.
+- **No web font is fetched at build time.** The font stack asks for Inter and falls back to
+  the system UI face, so the production build has no network dependency.
+
+## Deferred by explicit decision
+
+Not missing — decided against for this pass, and recorded so nobody re-litigates them
+silently.
+
+| Deferred                  | Instead, this pass                             | Why                                                                                                                                       |
+| ------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Better Auth               | Supabase Auth behind `src/ports/auth.ts`       | One identity provider already exists upstream; the port is the seam that makes the swap cheap later.                                      |
+| Drizzle ORM               | Hand-written queries in the Supabase adapter   | The console issues a small, fixed set of read queries. An ORM would add a schema-ownership claim this repo must not make (constraint #7). |
+| S3 storage adapter        | Supabase Storage behind `src/ports/storage.ts` | Sample bytes already live in the `samples` bucket.                                                                                        |
+| A second database adapter | Supabase only                                  | The registry's unknown-provider path is tested, so the second adapter is an addition, not a refactor.                                     |
+| PDF export                | CSV and JSON                                   | Column fidelity for the research matrix matters more than layout this pass.                                                               |
+| Geospatial mapping of GPS | The prevalence map, by PSGC area               | GPS columns are gone upstream; the map keys on the patient's PSGC barangay code (`docs/map/processes/prevalence-map.md`).                 |

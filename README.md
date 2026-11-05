@@ -1,19 +1,19 @@
 # AgarthaVision Admin Console
 
-Web console for the `admin` role of **AgarthaVision**, a soil-transmitted helminth (STH)
+Web console for the administrators of **AgarthaVision**, a soil-transmitted helminth (STH)
 diagnostic system. The Android client is the medical technologist's capture and
-verification tool; this console is the surveillance and reporting surface that the
-Android app does not implement.
+verification tool; this console is the surface for the people who run the system.
 
-Two surfaces:
+- **Records** — patient → session (one smear) → sample (one field), with each session's
+  per-species LPF range and eggs counted exactly as the app reports them.
+- **Dashboard** — smears examined, positive smears and rate, a weekly trend and the species
+  mix of positive smears, for a chosen period.
+- **Research export** — one row per smear in LPF terms, CSV or JSON, with no names or
+  birthdates.
 
-- **Administrative dashboard** — summary cards, EPG trend over time by species, parasite
-  distribution, EPG summary, and the light / moderate / heavy severity split.
-- **Detailed records** — every processed sample across all users, with date-range and
-  advanced filters, exported as a research matrix (CSV and JSON).
-
-Only human-in-the-loop validated records count toward reports. Pending, failed, and
-unverified inference output is excluded from official aggregation.
+Every figure follows the app's rule: a detection the medtech rejected never counts, and a
+sample deleted as a duplicate appears nowhere. There is no EPG: Philippine medtechs read a
+direct smear, not a Kato-Katz thick smear.
 
 ## Getting started
 

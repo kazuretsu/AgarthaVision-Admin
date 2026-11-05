@@ -1,0 +1,239 @@
+import { describe, expect, it } from "vitest";
+import { auditActionLabel, auditActionsFor, describeAuditEntry, type AuditEntry } from "./audit";
+
+function entry(overrides: Partial<AuditEntry>): AuditEntry {
+  return {
+    id: 1,
+    at: "2026-09-30T00:00:00Z",
+    actorId: "u",
+    actorLabel: "Sam",
+    action: "organization.create",
+    targetType: "organization",
+    targetId: "o",
+    organizationId: "o",
+    organizationName: "Lab A",
+    details: {},
+    ...overrides,
+  };
+}
+
+describe("describeAuditEntry", () => {
+  it("says what was created and renamed", () => {
+    expect(describeAuditEntry(entry({ details: { name: "Lab A" } }))).toBe("Created Lab A");
+    expect(
+      describeAuditEntry(
+        entry({ action: "organization.rename", details: { from: "Lab A", to: "Lab Alpha" } }),
+      ),
+    ).toBe("Renamed Lab A to Lab Alpha");
+  });
+
+  it("describes an export with its size, format and period", () => {
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "export.research",
+          details: { rows: 12, format: "csv", from: "2026-09-01", to: "2026-09-30" },
+        }),
+      ),
+    ).toBe("Exported 12 smears as CSV, 2026-09-01 to 2026-09-30");
+    expect(
+      describeAuditEntry(
+        entry({ action: "export.research", details: { rows: 1, format: "json" } }),
+      ),
+    ).toBe("Exported 1 smear as JSON, all time");
+  });
+
+  it("shows an unknown action as recorded rather than hiding it", () => {
+    expect(describeAuditEntry(entry({ action: "member.invite" }))).toBe("member.invite");
+    expect(auditActionLabel("member.invite")).toBe("member.invite");
+  });
+});
+
+describe("invitation entries", () => {
+  it("say who was invited, as what, and where", () => {
+    const details = { email: "ana@example.test", role: "medtech" };
+    expect(describeAuditEntry(entry({ action: "invitation.create", details }))).toBe(
+      "Invited ana@example.test as a medtech to Lab A",
+    );
+    expect(
+      describeAuditEntry(
+        entry({ action: "invitation.accept", details: { ...details, role: "org_admin" } }),
+      ),
+    ).toBe("ana@example.test joined Lab A as an organization admin");
+    expect(describeAuditEntry(entry({ action: "invitation.resend", details }))).toBe(
+      "Re-sent the invitation to ana@example.test",
+    );
+    expect(describeAuditEntry(entry({ action: "invitation.revoke", details }))).toBe(
+      "Revoked the invitation to ana@example.test",
+    );
+  });
+
+  it("are filterable actions on the audit page", () => {
+    for (const action of ["create", "resend", "revoke", "accept"]) {
+      expect(auditActionLabel(`invitation.${action}`)).not.toBe(`invitation.${action}`);
+    }
+  });
+});
+
+describe("member entries", () => {
+  it("name the medtech and the laboratory", () => {
+    expect(
+      describeAuditEntry(entry({ action: "member.deactivate", details: { name: "Tess Tech" } })),
+    ).toBe("Deactivated Tess Tech in Lab A");
+    expect(
+      describeAuditEntry(entry({ action: "member.reactivate", details: { name: "Tess Tech" } })),
+    ).toBe("Reactivated Tess Tech in Lab A");
+    expect(
+      describeAuditEntry(
+        entry({ action: "member.deactivate", details: { name: "Olga", role: "org_admin" } }),
+      ),
+    ).toBe("Deactivated Olga (organization admin) in Lab A");
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.offboard",
+          details: { name: "Tess Tech", reassigned_patients: 2 },
+        }),
+      ),
+    ).toBe("Offboarded Tess Tech in Lab A and handed over 2 patients");
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.offboard",
+          details: { name: "Tess Tech", reassigned_patients: 1 },
+        }),
+      ),
+    ).toBe("Offboarded Tess Tech in Lab A and handed over 1 patient");
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.offboard",
+          details: { name: "Tess Tech", reassigned_patients: 0 },
+        }),
+      ),
+    ).toBe("Offboarded Tess Tech in Lab A");
+  });
+
+  it("name whose authenticator app a super admin reset (14zcqntjnt0)", () => {
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "member.authenticator_reset",
+          details: { name: "Olga", role: "org_admin" },
+        }),
+      ),
+    ).toBe("Reset the authenticator app of Olga (organization admin) in Lab A");
+  });
+});
+
+describe("assignment entries", () => {
+  it("name the patient by record id only, and the medtech, from admin/0007 entries", () => {
+    const base = { targetId: "70000000-0000-4000-8000-000000000001", details: { medtech: "Ana" } };
+    expect(describeAuditEntry(entry({ ...base, action: "assignment.add" }))).toBe(
+      "Assigned patient 70000000 to Ana",
+    );
+    expect(describeAuditEntry(entry({ ...base, action: "assignment.remove" }))).toBe(
+      "Removed patient 70000000 from Ana",
+    );
+  });
+
+  it("name the member, org admins included, from entries written since admin/0008", () => {
+    const base = {
+      targetId: "70000000-0000-4000-8000-000000000001",
+      details: { member: "Olga Admin", role: "org_admin" },
+    };
+    expect(describeAuditEntry(entry({ ...base, action: "assignment.add" }))).toBe(
+      "Assigned patient 70000000 to Olga Admin",
+    );
+    expect(describeAuditEntry(entry({ ...base, details: {}, action: "assignment.remove" }))).toBe(
+      "Removed patient 70000000 from someone",
+    );
+  });
+
+  it("name a training snapshot and its size", () => {
+    const base = { targetType: "training_snapshot", organizationId: null, organizationName: null };
+    expect(
+      describeAuditEntry(
+        entry({
+          ...base,
+          action: "training.snapshot.create",
+          details: { name: "Baseline", frames: 120, boxes: 1 },
+        }),
+      ),
+    ).toBe("Created training snapshot “Baseline” (120 frames, 1 box)");
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "training.snapshot.download", details: { frames: 1 } }),
+      ),
+    ).toBe("Downloaded a training snapshot (1 frame)");
+  });
+
+  it("name who was invited, granted or revoked as a super admin (admin/0019)", () => {
+    const base = { organizationId: null, organizationName: null };
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "super_admin.invite", details: { email: "a@example.test" } }),
+      ),
+    ).toBe("Invited a@example.test as a super admin");
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "super_admin.grant", details: { email: "a@example.test" } }),
+      ),
+    ).toBe("a@example.test accepted an invitation and became a super admin");
+    expect(
+      describeAuditEntry(
+        entry({ ...base, action: "super_admin.revoke", details: { name: "Ana" } }),
+      ),
+    ).toBe("Revoked Ana's super admin access");
+  });
+});
+
+describe("describeAuditEntry for sign-in following access (admin/0021)", () => {
+  it("says whose sign-in changed and why", () => {
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "account.sign_in_blocked",
+          details: { name: "Ana", cause: "organization.deactivate" },
+        }),
+      ),
+    ).toBe(
+      "Blocked Ana's sign-in, in the console and the mobile app: their laboratory was deactivated",
+    );
+    expect(
+      describeAuditEntry(
+        entry({
+          action: "account.sign_in_restored",
+          details: { name: "Ana", cause: "organization.reactivate" },
+        }),
+      ),
+    ).toBe("Restored Ana's sign-in: their laboratory was reactivated");
+    expect(
+      describeAuditEntry(entry({ action: "account.sign_in_blocked", details: { cause: "other" } })),
+    ).toBe("Blocked someone's sign-in, in the console and the mobile app");
+  });
+});
+
+describe("describeAuditEntry for an admin's own profile (admin/0020)", () => {
+  it("names the old and new name, and never anything about a password", () => {
+    expect(
+      describeAuditEntry(
+        entry({ action: "profile.rename", details: { name: "Ana Reyes", previous_name: "ana" } }),
+      ),
+    ).toBe("Changed their name from ana to Ana Reyes");
+    expect(describeAuditEntry(entry({ action: "profile.password_change", details: {} }))).toBe(
+      "Changed their password and signed out their other sessions",
+    );
+  });
+});
+
+describe("auditActionsFor", () => {
+  it("offers an org admin no action they can never see", () => {
+    const orgAdmin = auditActionsFor(false).map(([action]) => action);
+    expect(orgAdmin).not.toContain("training.snapshot.create");
+    expect(orgAdmin).not.toContain("super_admin.revoke");
+    expect(orgAdmin).toContain("member.deactivate");
+    expect(orgAdmin).toContain("profile.password_change");
+    expect(auditActionsFor(true).map(([action]) => action)).toContain("training.snapshot.download");
+  });
+});
