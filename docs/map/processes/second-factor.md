@@ -105,7 +105,7 @@ still opens what the app can reach.**
 A super admin opens an org admin's page (`/people/[userId]?org=…`). The "Two-step sign-in"
 card reads whether an app is set up (`hasAuthenticator`, service role,
 `src/adapters/supabase/account-access.ts`) and offers "Reset authenticator app" behind a
-confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:372`):
+confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:326`):
 
 1. checks `canResetSecondFactor` (`src/domain/second-factor.ts`): super admins only, for an
    org admin with a login, never themselves;
