@@ -9,6 +9,7 @@ import {
   normaliseOwnName,
   passwordGapMessage,
   passwordGaps,
+  PROFILE_NAME_MAX,
   readSecondFactorCode,
   SECOND_FACTOR_CODE_FIELD,
 } from "@/domain";
@@ -150,7 +151,7 @@ export async function renameSelf(
     await (await getAdminWrites()).setOwnName(checked.name);
   } catch (cause) {
     if (cause instanceof AdminWriteError && cause.reason === "invalid") {
-      return { error: "Enter a name of at most 120 characters.", done: null };
+      return { error: `Enter a name of at most ${PROFILE_NAME_MAX} characters.`, done: null };
     }
     if (cause instanceof AdminWriteError && cause.reason === "forbidden") redirect("/dashboard");
     return { error: "Your name could not be saved. Try again in a moment.", done: null };

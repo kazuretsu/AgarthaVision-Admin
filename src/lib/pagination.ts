@@ -3,6 +3,9 @@
  * (`?page=2`) and turned into a 0-based row offset for the read.
  */
 
+/** Rows per list page. Well under PostgREST's 1000-row response cap. */
+export const LIST_PAGE_SIZE = 50;
+
 /** A `?page=` value as a page number: a positive integer, else 1. */
 export function parsePage(value: string): number {
   if (!/^[0-9]{1,6}$/.test(value)) return 1;
