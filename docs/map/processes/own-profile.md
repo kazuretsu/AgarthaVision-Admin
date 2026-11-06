@@ -1,6 +1,6 @@
 ---
-verified: 2026-11-05
-commit: 7e94643
+verified: 2026-11-06
+commit: ef77214
 ---
 
 # Own profile: name and password (14zcqntr35e)
@@ -22,8 +22,12 @@ beside two-step sign-in (`docs/map/processes/second-factor.md`).
    (email, read-only; name) and a Password card above the two-step card, from
    `src/components/settings/ProfileForms.tsx`.
 2. **Name.** `renameSelf` (`settings/actions.ts`) tidies it with `normaliseOwnName`
-   (`src/domain/profile.ts`: trimmed, spaces collapsed, 1–120 characters), checks the caller is
-   a console user, then `AdminWritePort.setOwnName` → `console_set_own_name` (`admin/0020`).
+   (`src/domain/profile.ts:10-19`), checks the caller is a console user, then calls
+   `AdminWritePort.setOwnName` → `console_set_own_name` (`admin/0020`). The name is trimmed,
+   spaces are collapsed, and the result must contain at least one character. The form,
+   validation and write-refusal message all use `PROFILE_NAME_MAX` for the 120-character
+   upper limit (`src/components/settings/ProfileForms.tsx:37-43`,
+   `src/app/(dashboard)/settings/actions.ts:154`).
    The function writes the **caller's own row only** (it takes no person), refuses anyone but a
    super admin or an active org admin (42501), and records `profile.rename` with the old and new
    name. The same name again writes nothing. The layout is revalidated so the sidebar shows it.
@@ -69,7 +73,7 @@ beside two-step sign-in (`docs/map/processes/second-factor.md`).
   entry; the page says so.
 - The console's attempt limits (`docs/map/processes/admin-gate.md`): a wrong current password
   here is not counted. Only Supabase Auth's own rate limit applies, shown as "Too many
-  attempts. Wait a few minutes, then try again." (`src/app/(dashboard)/settings/actions.ts:166`).
+  attempts. Wait a few minutes, then try again." (`src/app/(dashboard)/settings/actions.ts:167`).
 
 ## Consumes / produces
 

@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [refactor] Forms and lists share named limits
+
+Laboratory and snapshot names, invitee names, and profile names use their respective
+120-character domain constants in the forms and server checks (14zcqnttqud). People search
+uses one 120-character limit for the query and input. The patient list, People list, and
+person page share the same 50-row page size in `src/lib/pagination.ts`.
+
 ## [refactor] Member status and offboarding share sign-in rollback
 
 Deactivation, reactivation, and offboarding use `withSignInChange` to set sign-in before

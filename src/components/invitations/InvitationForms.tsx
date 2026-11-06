@@ -7,6 +7,7 @@ import {
   revokeInvitation,
 } from "@/app/(dashboard)/invitations/actions";
 import { EMPTY_INVITATION_FORM } from "@/app/(dashboard)/invitations/state";
+import { INVITEE_NAME_MAX } from "@/domain/invitations";
 import type { MembershipRole } from "@/domain/organizations";
 import {
   AlertDialog,
@@ -73,7 +74,7 @@ export function InviteForm({
           <Input
             id="invite-name"
             name="fullName"
-            maxLength={120}
+            maxLength={INVITEE_NAME_MAX}
             autoComplete="off"
             defaultValue={state.values?.fullName ?? ""}
           />

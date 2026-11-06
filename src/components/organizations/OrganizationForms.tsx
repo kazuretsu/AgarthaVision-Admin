@@ -7,7 +7,7 @@ import {
   setOrganizationStatus,
 } from "@/app/(dashboard)/organizations/actions";
 import { EMPTY_ORGANIZATION_FORM } from "@/app/(dashboard)/organizations/state";
-import type { OrganizationStatus } from "@/domain/organizations";
+import { ORGANIZATION_NAME_MAX, type OrganizationStatus } from "@/domain/organizations";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -48,7 +48,7 @@ export function CreateOrganizationForm() {
             name="name"
             required
             minLength={2}
-            maxLength={120}
+            maxLength={ORGANIZATION_NAME_MAX}
             placeholder="e.g. Cebu City Health Laboratory"
           />
         </label>
@@ -69,7 +69,13 @@ export function RenameOrganizationForm({ id, name }: { id: string; name: string 
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex min-w-64 flex-1 flex-col gap-1.5">
           <span className="text-[12px] font-medium text-stone-deep">Name</span>
-          <Input name="name" defaultValue={name} required minLength={2} maxLength={120} />
+          <Input
+            name="name"
+            defaultValue={name}
+            required
+            minLength={2}
+            maxLength={ORGANIZATION_NAME_MAX}
+          />
         </label>
         <Button type="submit" variant="outline" disabled={pending}>
           {pending ? "Saving…" : "Rename"}

@@ -1,6 +1,6 @@
 ---
 verified: 2026-11-06
-commit: 602768f
+commit: ef77214
 ---
 
 # People and member access
@@ -27,8 +27,11 @@ permanently to `/people` and `/people/[id]`, query string kept (`next.config.ts:
   `medtech`, `sort`, `dir`, `page`). The list is small per laboratory, so it is read whole and
   filtered (`filterPeopleByRole`, `:103`), searched, sorted (`sortPeople`, `:145`; by name,
   role, status, joined or patients — org admins first by role; `email` still sorts for old
-  links; blanks last either way, ties by name then email) and cut into pages of 50 in the
-  page. A page past the end shows the last page.
+  links; blanks last either way, ties by name then email). The search input and URL query
+  both use the 120-character `PEOPLE_SEARCH_MAX`
+  (`src/app/(dashboard)/people/(list)/page.tsx:179`, `:226`). The People list, patient list and
+  person detail use the same `LIST_PAGE_SIZE` of 50 (`src/lib/pagination.ts:7`). A People
+  page past the end shows the last page.
 - **Actions** are only the ones the viewer may take (below): **Offboard** on an active medtech,
   the only way one leaves (`MemberStatusForm`, `src/components/people/MemberStatusForm.tsx:47`);
   **Deactivate** on an active org admin, for a super admin; **Reactivate** on a deactivated
@@ -51,7 +54,7 @@ Someone of another laboratory is a 404. For a viewer who could deactivate an act
 also reads which of their patients only they cover (`listSoleCoverPatients`, through
 `console_member_sole_cover`, `supabase/migrations/admin/0009_org_admin_status.sql:61`, patient
 ids only) and marks them "Only active member", with a note to choose Offboard, which hands
-them over and deactivates in one step (`src/app/(dashboard)/people/[userId]/page.tsx:106-152`).
+them over and deactivates in one step (`src/app/(dashboard)/people/[userId]/page.tsx:103-150`).
 
 ## Who may deactivate whom (`admin/0009`, 14zcqntkd0x)
 
