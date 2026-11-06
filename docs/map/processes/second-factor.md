@@ -142,7 +142,7 @@ session, or an audit entry and a reset.
 - Every admin without an app: one auth-server call per request (above).
 - The "Turn on two-step sign-in" notice (`docs/map/processes/notices.md`), which shows from
   the actor's `secondFactorOn`; set-up and turn-off revalidate the whole layout for it
-  (`src/app/(dashboard)/settings/actions.ts:88`, `:121`).
+  (`src/app/(dashboard)/settings/actions.ts:89`, `:122`).
 - A provider swap: the rule (`secondFactorStep`, `secondFactorAdmits`, `canResetSecondFactor`)
   and the `/verify` and `/settings` pages stay; the adapter must report "this session passed a second factor" and "this account
   has an app", and must refuse a second app to a session that has not passed.

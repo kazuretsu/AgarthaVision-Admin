@@ -8,6 +8,7 @@ import {
   withdrawSuperAdminInvitation,
 } from "@/app/(dashboard)/super-admins/actions";
 import { EMPTY_INVITATION_FORM } from "@/app/(dashboard)/invitations/state";
+import { INVITEE_NAME_MAX } from "@/domain/invitations";
 import { SUPER_ADMIN_INVITATION_HOURS } from "@/domain/super-admins";
 import { Feedback } from "@/components/invitations/InvitationForms";
 import {
@@ -50,7 +51,7 @@ export function SuperAdminInviteForm() {
           <Input
             id="super-invite-name"
             name="fullName"
-            maxLength={120}
+            maxLength={INVITEE_NAME_MAX}
             autoComplete="off"
             defaultValue={state.values?.fullName ?? ""}
           />

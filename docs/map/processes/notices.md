@@ -39,7 +39,7 @@ to carry more notices later (maintenance windows, a deactivated laboratory).
    paths and the paths under them (`shownOn`; `usePathname`, since the layout does not re-render on a client navigation). Close
    writes the cookie with `Max-Age` = the snooze and removes the notice at once.
 5. **When the fact changes.** Turning an authenticator app on or off on `/settings` revalidates
-   the whole layout (`src/app/(dashboard)/settings/actions.ts:88`, `:121`). Turned on, the
+   the whole layout (`src/app/(dashboard)/settings/actions.ts:89`, `:122`). Turned on, the
    notice is gone on the next page. Turned off, it does not come back at once: the code entered
    to turn it off reissued this session's token as `aal2`, and the gate reads `aal2` as "has an
    app" (step 2) until the token next refreshes, about an hour by default. The same applies after

@@ -5,6 +5,7 @@ import { createTrainingSnapshot } from "@/app/(dashboard)/training-data/actions"
 import { EMPTY_TRAINING_SNAPSHOT_FORM } from "@/app/(dashboard)/training-data/state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ORGANIZATION_NAME_MAX } from "@/domain/organizations";
 
 /**
  * Names and freezes the previewed frames. Posts the preview's own query, so the
@@ -25,7 +26,7 @@ export function CreateSnapshotForm({ query, disabled }: { query: string; disable
             name="name"
             required
             minLength={2}
-            maxLength={120}
+            maxLength={ORGANIZATION_NAME_MAX}
             placeholder="e.g. All labs, October 2026"
             defaultValue={state.name}
             disabled={disabled}
