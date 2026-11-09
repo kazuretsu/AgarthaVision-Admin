@@ -9,7 +9,7 @@ import {
 } from "@/domain";
 import type { DatabasePort } from "@/ports/db";
 import { formatDate, personName } from "@/lib/format";
-import { pageCount, pageLinks, pageOffset, pageRange } from "@/lib/pagination";
+import { LIST_PAGE_SIZE, pageCount, pageLinks, pageOffset, pageRange } from "@/lib/pagination";
 import { LinkPending } from "@/components/loading/LinkPending";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,9 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-/** Patients per page. Well under PostgREST's 1000-row response cap. */
-const PAGE_SIZE = 50;
 
 /** What the list shows: the search, the laboratory chosen, and the page. */
 export interface PatientListQuery {
@@ -85,16 +82,16 @@ export async function PatientList({ db, query }: { db: DatabasePort; query: Pati
     disclosure,
     search,
     barangayCode: barangay || undefined,
-    offset: pageOffset(page, PAGE_SIZE),
-    limit: PAGE_SIZE,
+    offset: pageOffset(page, LIST_PAGE_SIZE),
+    limit: LIST_PAGE_SIZE,
   });
 
   // A page past the end (a stale link, or a search narrowed since) goes to the last one.
   // The list's loading state has already started the response, so this redirect lands
   // in the browser rather than as a 307 (docs/map/effects/CONTEXT.md).
-  const pages = pageCount(patients.total, PAGE_SIZE);
+  const pages = pageCount(patients.total, LIST_PAGE_SIZE);
   if (patients.items.length === 0 && page > pages) redirect(listHref(query, pages));
-  const shown = pageRange(page, PAGE_SIZE, patients.total);
+  const shown = pageRange(page, LIST_PAGE_SIZE, patients.total);
 
   const now = new Date();
 

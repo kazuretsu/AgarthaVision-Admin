@@ -105,7 +105,7 @@ still opens what the app can reach.**
 A super admin opens an org admin's page (`/people/[userId]?org=…`). The "Two-step sign-in"
 card reads whether an app is set up (`hasAuthenticator`, service role,
 `src/adapters/supabase/account-access.ts`) and offers "Reset authenticator app" behind a
-confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:372`):
+confirmation. `resetAuthenticator` (`src/app/(dashboard)/people/actions.ts:326`):
 
 1. checks `canResetSecondFactor` (`src/domain/second-factor.ts`): super admins only, for an
    org admin with a login, never themselves;
@@ -142,7 +142,7 @@ session, or an audit entry and a reset.
 - Every admin without an app: one auth-server call per request (above).
 - The "Turn on two-step sign-in" notice (`docs/map/processes/notices.md`), which shows from
   the actor's `secondFactorOn`; set-up and turn-off revalidate the whole layout for it
-  (`src/app/(dashboard)/settings/actions.ts:88`, `:121`).
+  (`src/app/(dashboard)/settings/actions.ts:89`, `:122`).
 - A provider swap: the rule (`secondFactorStep`, `secondFactorAdmits`, `canResetSecondFactor`)
   and the `/verify` and `/settings` pages stay; the adapter must report "this session passed a second factor" and "this account
   has an app", and must refuse a second app to a session that has not passed.

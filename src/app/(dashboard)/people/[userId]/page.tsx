@@ -16,7 +16,7 @@ import { DatabaseReadError } from "@/ports/db";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { formatDate, personName } from "@/lib/format";
-import { pageCount, pageLinks, pageOffset, parsePage } from "@/lib/pagination";
+import { LIST_PAGE_SIZE, pageCount, pageLinks, pageOffset, parsePage } from "@/lib/pagination";
 import { Breadcrumbs } from "@/components/records/Breadcrumbs";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { Fact } from "@/components/records/Fact";
@@ -57,8 +57,6 @@ import {
  */
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 50;
-
 function param(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
 }
@@ -89,12 +87,10 @@ async function AssignedPatients({
       : Promise.resolve(new Set<string>()),
   ]);
 
-  const pages = pageCount(patients.length, PAGE_SIZE);
+  const pages = pageCount(patients.length, LIST_PAGE_SIZE);
   const page = Math.min(requestedPage, pages);
-  const shown = patients.slice(
-    pageOffset(page, PAGE_SIZE),
-    pageOffset(page, PAGE_SIZE) + PAGE_SIZE,
-  );
+  const offset = pageOffset(page, LIST_PAGE_SIZE);
+  const shown = patients.slice(offset, offset + LIST_PAGE_SIZE);
   const pageHref = (n: number) =>
     `/people/${userId}?${new URLSearchParams({
       ...(orgQuery ? { org: orgQuery } : {}),

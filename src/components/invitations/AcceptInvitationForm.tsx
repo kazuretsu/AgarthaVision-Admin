@@ -5,7 +5,7 @@ import { acceptInvitation } from "@/app/(auth)/invite/[token]/actions";
 import { EMPTY_ACCEPT_STATE } from "@/app/(auth)/invite/[token]/state";
 import { HumanCheck, useHumanCheck } from "@/components/auth/HumanCheck";
 import { NewPasswordFields } from "@/components/auth/NewPasswordFields";
-import { invitedToConsole, type InvitedRole } from "@/domain/invitations";
+import { INVITEE_NAME_MAX, invitedToConsole, type InvitedRole } from "@/domain/invitations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +50,7 @@ export function AcceptInvitationForm({
           id="accept-name"
           name="fullName"
           defaultValue={state.fullName ?? fullName ?? ""}
-          maxLength={120}
+          maxLength={INVITEE_NAME_MAX}
           autoComplete="name"
           required
         />

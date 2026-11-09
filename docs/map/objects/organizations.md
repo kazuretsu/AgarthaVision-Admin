@@ -1,6 +1,6 @@
 ---
-verified: 2026-11-05
-commit: 7e94643
+verified: 2026-11-06
+commit: ef77214
 ---
 
 # Organizations
@@ -115,7 +115,9 @@ whatever writes it. The console cleans the same way first (`cleanName`,
 `src/domain/organizations.ts:81`, used by `normaliseOrganizationName`), so the form checks
 what the database keeps; `supabase/tests/admin_0016_organization_name_cleanup.test.ts`
 checks the two agree character for character. Lengths (2 to 120) count characters of the
-cleaned name.
+cleaned name. The laboratory and training snapshot name fields share the
+`ORGANIZATION_NAME_MAX` used by `normaliseOrganizationName`
+(`src/domain/organizations.ts:59-60`, `src/app/(dashboard)/training-data/actions.ts:46-47`).
 
 The migration changes no row. If a stored name is not clean, it stops before applying
 anything and names the laboratory to rename; on 2026-10-15 the live database's one name

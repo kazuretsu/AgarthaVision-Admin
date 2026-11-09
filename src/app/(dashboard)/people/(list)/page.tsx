@@ -20,7 +20,7 @@ import {
 } from "@/domain";
 import { MissingEnvironmentError } from "@/lib/env";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
-import { pageCount, pageOffset, parsePage } from "@/lib/pagination";
+import { LIST_PAGE_SIZE, pageCount, pageOffset, parsePage } from "@/lib/pagination";
 import { Busy, TableSkeleton } from "@/components/loading/PageSkeletons";
 import { DataUnavailable } from "@/components/records/DataUnavailable";
 import { UnknownOrganizationNotice } from "@/components/organizations/UnknownOrganizationNotice";
@@ -45,7 +45,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
  */
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 50;
+const PEOPLE_SEARCH_MAX = 120;
 
 function param(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
@@ -89,9 +89,10 @@ async function People({
     query.sort,
     query.dir,
   );
-  const pages = pageCount(rows.length, PAGE_SIZE);
+  const pages = pageCount(rows.length, LIST_PAGE_SIZE);
   const page = Math.min(query.page, pages);
-  const shown = rows.slice(pageOffset(page, PAGE_SIZE), pageOffset(page, PAGE_SIZE) + PAGE_SIZE);
+  const offset = pageOffset(page, LIST_PAGE_SIZE);
+  const shown = rows.slice(offset, offset + LIST_PAGE_SIZE);
   const history = invitations.filter((invitation) => {
     const state = invitationState(invitation, now);
     return state === "accepted" || state === "revoked";
@@ -175,7 +176,7 @@ export default async function PeoplePage({
 
   const query: PeopleQuery = {
     org: actor.access.kind === "super_admin" ? organizationId : "",
-    q: param(params.q).slice(0, 120),
+    q: param(params.q).slice(0, PEOPLE_SEARCH_MAX),
     role: parsePeopleRole(param(params.role)),
     sort: parsePeopleSort(param(params.sort)),
     dir: parseSortDirection(param(params.dir)),
@@ -219,7 +220,12 @@ export default async function PeoplePage({
         ) : null}
         <label className="flex min-w-64 flex-1 flex-col gap-1">
           <span className="text-[12px] font-medium text-stone-deep">Search</span>
-          <Input name="q" defaultValue={query.q} maxLength={120} placeholder="Name or email" />
+          <Input
+            name="q"
+            defaultValue={query.q}
+            maxLength={PEOPLE_SEARCH_MAX}
+            placeholder="Name or email"
+          />
         </label>
         <label className="flex min-w-48 flex-col gap-1">
           <span className="text-[12px] font-medium text-stone-deep">Role</span>

@@ -1,6 +1,6 @@
 ---
-verified: 2026-11-05
-commit: 7e94643
+verified: 2026-11-06
+commit: ef77214
 ---
 
 # Invitations
@@ -24,6 +24,9 @@ organization (`targetOrganization`, `src/app/(dashboard)/invitations/actions.ts`
 function refuses one that is not theirs. A super admin, an org admin's org-admin invitation
 included, re-sends and revokes anything; an org admin only medtech invitations into their
 own organization (`canManageInvitation`, `:63`; `console_can_manage_invitation`, `0005:78`).
+The invitation and acceptance forms share the same 120-character `INVITEE_NAME_MAX` as
+`normaliseInvitee` and the acceptance action (`src/domain/invitations.ts:76-90`,
+`src/app/(auth)/invite/[token]/actions.ts:55-58`).
 
 ## The link
 
