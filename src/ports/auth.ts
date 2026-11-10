@@ -43,6 +43,29 @@ export interface Credentials {
   humanCheckToken?: string;
 }
 
+/** A request to email a password-reset link (14zcqntjnt9). */
+export interface PasswordResetEmailRequest {
+  email: string;
+  /** The full `/reset-password` URL the email link returns to. */
+  redirectTo: string;
+  /**
+   * The single-use token from the form's human check (Cloudflare Turnstile, 14zcqntnqpc), or
+   * none when the check is not configured.
+   */
+  humanCheckToken?: string;
+}
+
+/**
+ * A single-use recovery credential from the emailed reset link together with the new password
+ * (14zcqntjnt9). Either `code` (PKCE redirect from `{{ .ConfirmationURL }}`) or `tokenHash`
+ * (custom `token_hash` template) carries the one-time proof.
+ */
+export interface PasswordResetRequest {
+  code?: string;
+  tokenHash?: string;
+  password: string;
+}
+
 /** A new authenticator app, waiting for its first code (14zcqntjnt0). */
 export interface SecondFactorSetUp {
   /** Which set-up the first code confirms. Not a secret: it is useless without the session. */
@@ -125,6 +148,22 @@ export interface AuthPort {
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
 
   /**
+   * Asks the provider to send a single-use password-reset link when an active account exists
+   * for `email` (14zcqntjnt9). Throws {@link HumanCheckFailedError} when the human check did
+   * not pass; never reveals whether the address has an account or is deactivated.
+   */
+  requestPasswordReset(request: PasswordResetEmailRequest): Promise<void>;
+
+  /**
+   * Consumes a single-use password-reset link, sets the new password for an active account
+   * (admin or medtech), and leaves the browser signed out so the person signs in fresh — and
+   * an admin with an authenticator app still passes `/verify` (14zcqntjnt9). Throws
+   * {@link PasswordResetError} when the link is expired, already used, for a deactivated
+   * account, or when the new password is refused.
+   */
+  resetPassword(request: PasswordResetRequest): Promise<void>;
+
+  /**
    * Ends this browser's session only (14zcqntnqpd). The account's other sessions, the mobile
    * app's included, carry on: only losing access, or a password change, ends those.
    */
@@ -194,6 +233,31 @@ export class PasswordChangeError extends Error {
   ) {
     super(`The password change failed: ${reason}.`);
     this.name = "PasswordChangeError";
+    this.cause = cause;
+  }
+}
+
+/** Why a password reset from an emailed link was refused (14zcqntjnt9). */
+export type PasswordResetFailure =
+  /** The link is missing, expired, already used, or for a deactivated account. */
+  | "invalid_link"
+  /** The new password is the current one. */
+  | "same_password"
+  /** The new password misses the provider's rules. */
+  | "weak_password"
+  /** Too many attempts; the provider is making them wait. */
+  | "rate_limited"
+  /** Anything else. */
+  | "failed";
+
+/** The provider refused or failed a password reset (14zcqntjnt9). Nothing was changed. */
+export class PasswordResetError extends Error {
+  constructor(
+    public readonly reason: PasswordResetFailure,
+    cause?: unknown,
+  ) {
+    super(`The password reset failed: ${reason}.`);
+    this.name = "PasswordResetError";
     this.cause = cause;
   }
 }

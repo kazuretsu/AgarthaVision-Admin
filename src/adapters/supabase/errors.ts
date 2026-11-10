@@ -1,4 +1,8 @@
-import type { PasswordChangeFailure, SecondFactorFailure } from "@/ports/auth";
+import type {
+  PasswordChangeFailure,
+  PasswordResetFailure,
+  SecondFactorFailure,
+} from "@/ports/auth";
 
 /** PostgREST's and Postgres's "no such function": a migration not applied yet. */
 const FUNCTION_NOT_FOUND = new Set(["PGRST202", "42883"]);
@@ -44,5 +48,29 @@ export function passwordChangeFailure(
   const known = PASSWORD_CHANGE_REFUSALS[error?.code ?? ""];
   if (known) return known;
   if (error?.status === 429) return "rate_limited";
+  return "failed";
+}
+
+/** Supabase Auth's codes for an expired, already-used or invalid recovery link (14zcqntjnt9). */
+const PASSWORD_RESET_INVALID_LINK = new Set([
+  "otp_expired",
+  "flow_state_not_found",
+  "flow_state_expired",
+  "bad_code_verifier",
+  "validation_failed",
+  "user_banned",
+  "user_not_found",
+  "session_not_found",
+]);
+
+/** What a refused password reset means, from Supabase Auth's error code and status (14zcqntjnt9). */
+export function passwordResetFailure(
+  error: { code?: string; status?: number } | null | undefined,
+): PasswordResetFailure {
+  const code = error?.code ?? "";
+  if (code === "same_password") return "same_password";
+  if (code === "weak_password") return "weak_password";
+  if (error?.status === 429 || code === "over_request_rate_limit") return "rate_limited";
+  if (PASSWORD_RESET_INVALID_LINK.has(code)) return "invalid_link";
   return "failed";
 }

@@ -12,21 +12,25 @@ import {
   NotAuthenticatedError,
   NotAuthorizedError,
   PasswordChangeError,
+  PasswordResetError,
   SecondFactorError,
   SecondFactorRequiredError,
   type AuthPort,
   type AuthenticatedUser,
   type ConsoleActor,
   type Credentials,
+  type PasswordResetEmailRequest,
+  type PasswordResetRequest,
   type SecondFactorSetUp,
 } from "@/ports/auth";
 import { timed } from "@/lib/timing";
-import { createRequestClient } from "./client";
+import { createRequestClient, createServiceClient } from "./client";
 import {
   humanCheckOptions,
   isFunctionNotFound,
   isHumanCheckRefusal,
   passwordChangeFailure,
+  passwordResetFailure,
   secondFactorFailure,
 } from "./errors";
 
@@ -82,6 +86,8 @@ interface ActorFacts {
   fullName: string | null;
   isSuperAdmin: boolean;
   membership: OrgAdminMembership | null;
+  /** An active membership (`org_admin` or `medtech`) in an active organization (14zcqntjnt9). */
+  isActiveMember: boolean;
 }
 
 interface ConsoleActorRow {
@@ -121,8 +127,27 @@ function orgAdminMembership(
   return { organizationId, organizationName };
 }
 
+/**
+ * Whether a membership row grants active account standing (for an org admin or a medtech) in
+ * an active organization (14zcqntjnt9). A deactivated member or a member of a deactivated
+ * organization has none.
+ */
+function activeMembership(
+  organizationId: string | null,
+  role: string | null,
+  status: string | null,
+  organizationStatus: string | null,
+): boolean {
+  if (!organizationId) return false;
+  if (role !== "org_admin" && role !== "medtech") return false;
+  return status === "active" && organizationStatus === "active";
+}
+
 export class SupabaseAuthAdapter implements AuthPort {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(
+    private readonly client: SupabaseClient,
+    private readonly service: () => SupabaseClient = createServiceClient,
+  ) {}
 
   /** The verified caller, or null when there is no valid session. */
   private async identity(): Promise<Identity | null> {
@@ -149,13 +174,21 @@ export class SupabaseAuthAdapter implements AuthPort {
     if (error) throw new AuthUnavailableError(error);
     // A read that found no row is no access at all.
     const row = (data as ConsoleActorRow[] | null)?.[0] ?? null;
-    if (!row) return { fullName: null, isSuperAdmin: false, membership: null };
+    if (!row) {
+      return { fullName: null, isSuperAdmin: false, membership: null, isActiveMember: false };
+    }
     return {
       fullName: row.full_name,
       isSuperAdmin: row.is_super_admin === true,
       membership: orgAdminMembership(
         row.organization_id,
         row.organization_name,
+        row.member_role,
+        row.member_status,
+        row.organization_status,
+      ),
+      isActiveMember: activeMembership(
+        row.organization_id,
         row.member_role,
         row.member_status,
         row.organization_status,
@@ -178,7 +211,14 @@ export class SupabaseAuthAdapter implements AuthPort {
     if (superAdmin.error) throw new AuthUnavailableError(superAdmin.error);
     const name = profile.error ? null : (profile.data as ProfileNameRow | null);
     const isSuperAdmin = superAdmin.data === true;
-    if (isSuperAdmin) return { fullName: name?.full_name ?? null, isSuperAdmin, membership: null };
+    if (isSuperAdmin) {
+      return {
+        fullName: name?.full_name ?? null,
+        isSuperAdmin,
+        membership: null,
+        isActiveMember: false,
+      };
+    }
 
     const { data, error } = await this.client
       .from("organization_members")
@@ -199,6 +239,14 @@ export class SupabaseAuthAdapter implements AuthPort {
             row.organizations?.status ?? null,
           )
         : null,
+      isActiveMember: row
+        ? activeMembership(
+            row.organization_id,
+            row.role,
+            row.status,
+            row.organizations?.status ?? null,
+          )
+        : false,
     };
   }
 
@@ -366,6 +414,69 @@ export class SupabaseAuthAdapter implements AuthPort {
       current_password: currentPassword,
     });
     if (error) throw new PasswordChangeError(passwordChangeFailure(error), error);
+  }
+
+  async requestPasswordReset({
+    email,
+    redirectTo,
+    humanCheckToken,
+  }: PasswordResetEmailRequest): Promise<void> {
+    const { error } = await this.client.auth.resetPasswordForEmail(email, {
+      redirectTo,
+      ...humanCheckOptions(humanCheckToken),
+    });
+    if (isHumanCheckRefusal(error)) throw new HumanCheckFailedError(error);
+    // Any other provider error (a banned account, an unknown address, or a mailer rate limit)
+    // is logged for operators and never returned to the visitor, so the page always shows the
+    // same message whether or not an account exists (14zcqntjnt9).
+    if (error) {
+      console.error("[auth] password reset email failed", error);
+    }
+  }
+
+  async resetPassword({ code, tokenHash, password }: PasswordResetRequest): Promise<void> {
+    const verified = tokenHash
+      ? await this.client.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
+      : code
+        ? await this.client.auth.exchangeCodeForSession(code)
+        : null;
+    if (!verified) throw new PasswordResetError("invalid_link");
+    if (verified.error || !verified.data.user) {
+      const reason =
+        verified.error?.status === 429 || verified.error?.code === "over_request_rate_limit"
+          ? "rate_limited"
+          : "invalid_link";
+      throw new PasswordResetError(reason, verified.error);
+    }
+
+    const userId = verified.data.user.id;
+    try {
+      const facts = await this.facts(userId).catch((cause) => {
+        throw new PasswordResetError("failed", cause);
+      });
+      // Deactivated accounts (and members of deactivated organizations) cannot reset their
+      // password or regain access, even with a link issued before deactivation (14zcqntjnt9).
+      if (!facts.isSuperAdmin && !facts.isActiveMember) {
+        throw new PasswordResetError("invalid_link");
+      }
+
+      const { error } = await this.client.auth.updateUser({ password });
+      if (error?.code === "insufficient_aal") {
+        // Supabase Auth's recovery session is `aal1`, so `updateUser` refuses an account with
+        // a confirmed authenticator app (`insufficient_aal`). Having verified the single-use
+        // recovery link and active standing above, set the new password via the service client
+        // without touching the authenticator app, and end the `aal1` session in `finally` so
+        // the admin must sign in and pass `/verify` (14zcqntjnt9).
+        const adminUpdate = await this.service().auth.admin.updateUserById(userId, { password });
+        if (adminUpdate.error) {
+          throw new PasswordResetError(passwordResetFailure(adminUpdate.error), adminUpdate.error);
+        }
+      } else if (error) {
+        throw new PasswordResetError(passwordResetFailure(error), error);
+      }
+    } finally {
+      await this.client.auth.signOut({ scope: "local" });
+    }
   }
 
   /**

@@ -28,7 +28,7 @@ database policy calls, so the console and the database never disagree — and th
 membership and organization (`docs/map/objects/organizations.md`). `super_admins` itself is
 closed to every client. `profiles.role` is retired and the console never reads it. Only an
 active `org_admin` membership in an active organization counts (`orgAdminMembership`,
-`src/adapters/supabase/auth.ts:112`), so revoking a grant or deactivating a membership or an
+`src/adapters/supabase/auth.ts:118`), so revoking a grant or deactivating a membership or an
 organization locks the person out on their next uncached page.
 
 ## Steps
@@ -39,27 +39,27 @@ organization locks the person out on their next uncached page.
    the refresh-and-set-cookie cycle a Server Component cannot do. It sends
    `Server-Timing: session;dur=…`. It then applies the console's session limits (below).
    **It never reads a role — it is not the authorisation point.**
-2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:128`) calls `getClaims()`,
+2. **Verify identity.** `identity` (`src/adapters/supabase/auth.ts:153`) calls `getClaims()`,
    which checks the JWT's signature and expiry against the project's published signing key
    (ECC P-256, fetched once from `/auth/v1/.well-known/jwks.json` and cached ten minutes per
    server instance): **no auth-server round trip**. A legacy shared-secret project falls back
    to asking the server. Never `getSession()`, which only decodes a cookie the browser can
    set.
-3. **Resolve the facts, in one call.** `facts` (`:141`) calls `console_actor()`: name,
+3. **Resolve the facts, in one call.** `facts` (`:166`) calls `console_actor()`: name,
    super-admin grant and membership. No row is no access at all. An **error** is not an
-   answer: it throws `AuthUnavailableError` (`:149`, below). If the function is not
-   installed yet (`PGRST202`/`42883`, `:147`), `factsWithoutActor` (`:173`) runs the three
+   answer: it throws `AuthUnavailableError` (`:174`, below). If the function is not
+   installed yet (`PGRST202`/`42883`, `:172`), `factsWithoutActor` (`:206`) runs the three
    reads it replaced (profile name and `is_admin()` in parallel, then the membership), so a
    deployment ahead of its migration keeps working; a failed `is_admin()` or membership
-   read throws the same way (`:178`, `:188`), a failed profile read only loses the name.
-4. **Resolve access.** `toActor` (`:220`) applies `resolveConsoleAccess`. No access throws
+   read throws the same way (`:211`, `:228`), a failed profile read only loses the name.
+4. **Resolve access.** `toActor` (`:268`) applies `resolveConsoleAccess`. No access throws
    `NotAuthorizedError`.
-5. **Check the second step (14zcqntjnt0, 14zcqntr31c).** `requireConsoleActor` (`:235`) then
+5. **Check the second step (14zcqntjnt0, 14zcqntr31c).** `requireConsoleActor` (`:283`) then
    admits a verified token that says `aal2` (the session passed an authenticator code) at no
    further cost. Short of it, it asks the auth server whether the account has an app: with one,
    `SecondFactorRequiredError`; without, the session is admitted on its password, since
    setting an app up is each admin's choice. Access comes first, so a medtech is told where to
-   go and never asked for a code. The actor it returns carries `secondFactorOn` (`:243-248`):
+   go and never asked for a code. The actor it returns carries `secondFactorOn` (`:291-296`):
    true for an `aal2` token without asking, else whether the account has an app. The notices
    strip reads it (`docs/map/processes/notices.md`).
    `SecondFactorRequiredError` is a kind of `NotAuthenticatedError`: any caller that does not
@@ -229,11 +229,13 @@ window just moves past old failures, so nothing is ever deleted.
 
 ## Outside the gate
 
-`/login`, `/verify` and `/invite/[token]` (with `/invite/joined`) render outside
-`(dashboard)/`. `/verify` reads the second step through the auth port itself and renders
-nothing of the console. The
-invitation page is open to anyone holding a link; the token is the permission, and what it
-can do is described in `docs/map/processes/invitations.md`.
+`/login`, `/forgot-password`, `/reset-password`, `/verify` and `/invite/[token]` (with
+`/invite/joined`) render outside `(dashboard)/`. `/verify` reads the second step through the
+auth port itself and renders nothing of the console. `/forgot-password` and `/reset-password`
+recover a forgotten password by email for both console admins and medtechs without leaving the
+browser signed in (`docs/map/processes/own-profile.md`). The invitation page is open to anyone
+holding a link; the token is the permission, and what it can do is described in
+`docs/map/processes/invitations.md`.
 
 ## Consumes / produces
 

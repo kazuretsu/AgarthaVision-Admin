@@ -2,6 +2,21 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Forgot password on the console
+
+`/login` now links to `/forgot-password` so console admins and medtechs can recover a forgotten
+password by email without a super admin (14zcqntjnt9). Submitting an email (with the Turnstile
+human check) asks Supabase Auth to send a single-use, expiring recovery link to
+`/reset-password` and always shows the same confirmation whether or not an account exists or is
+active. `/reset-password` checks the new password against the full password policy before
+consuming the link's PKCE `code` or `token_hash`, verifies through `console_actor()` that the
+account is an active super admin or an active member (`org_admin` or `medtech`) of an active
+organization, updates the password (falling back to the service client when an MFA-enabled
+admin's `aal1` recovery session receives `insufficient_aal`), and signs out the temporary
+recovery session so deactivated accounts never regain access, medtechs sign in to the mobile
+app, and admins still pass `/verify` (MFA) at sign-in (`AuthPort.requestPasswordReset`,
+`AuthPort.resetPassword`, `docs/map/processes/admin-gate.md`, `docs/map/processes/own-profile.md`).
+
 ## [refactor] Forms and lists share named limits
 
 Laboratory and snapshot names, invitee names, and profile names use their respective
