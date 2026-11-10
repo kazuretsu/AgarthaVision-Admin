@@ -1,7 +1,60 @@
 import { describe, expect, it } from "vitest";
-import { checkPasswordChange, normaliseOwnName, PROFILE_NAME_MAX } from "./profile";
+import {
+  checkPasswordChange,
+  checkPasswordReset,
+  normaliseOwnName,
+  normaliseResetEmail,
+  PROFILE_NAME_MAX,
+} from "./profile";
 
 const STRONG = "Correct-Horse-9";
+
+describe("normaliseResetEmail", () => {
+  it("trims and lower-cases a valid email address", () => {
+    expect(normaliseResetEmail("  MedTech@Example.Test ")).toEqual({
+      ok: true,
+      email: "medtech@example.test",
+    });
+  });
+
+  it("refuses blank or malformed addresses", () => {
+    expect(normaliseResetEmail("   ")).toEqual({
+      ok: false,
+      error: "Enter a valid email address.",
+    });
+    expect(normaliseResetEmail("not-an-email")).toEqual({
+      ok: false,
+      error: "Enter a valid email address.",
+    });
+  });
+});
+
+describe("checkPasswordReset", () => {
+  it("accepts a strong new password that matches its confirmation", () => {
+    expect(checkPasswordReset(STRONG, STRONG)).toEqual({ ok: true });
+  });
+
+  it("asks for a new password when blank", () => {
+    expect(checkPasswordReset("", "")).toEqual({
+      ok: false,
+      error: "Enter a new password.",
+    });
+  });
+
+  it("refuses a confirmation that does not match", () => {
+    expect(checkPasswordReset(STRONG, `${STRONG}!`)).toEqual({
+      ok: false,
+      error: "The two passwords do not match.",
+    });
+  });
+
+  it("names the rules a new password misses", () => {
+    expect(checkPasswordReset("short", "short")).toEqual({
+      ok: false,
+      error: "Use at least 12 characters, add an uppercase letter, add a number and add a symbol.",
+    });
+  });
+});
 
 describe("normaliseOwnName", () => {
   it("trims and collapses spaces", () => {

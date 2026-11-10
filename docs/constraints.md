@@ -19,21 +19,22 @@ vendor import statements; the only construction site for a provider is
 ### 2. Server-only secrets
 
 The service-role key is read on the server, at request time, and never reaches the browser.
-One function reads it, `createServiceClient()`, and three callers use it: accepting an
+One function reads it, `createServiceClient()`, and four callers use it: accepting an
 invitation, to make the invited person's account (`auth.admin.createUser`) after the link
 has been checked; deactivating or reactivating a person — a medtech, or an org admin
-(super admins only) — to ban or unban their login after the rule has been checked; and
-counting failed sign-in and invitation attempts (`console_sign_in_attempts`, admin/0022), a
-table no browser may touch. Every read and every other write, image signing included,
-runs as the signed-in user. The Resend key is server-only too, read when an email is sent.
-Only `NEXT_PUBLIC_`-prefixed variables may appear in client components. Env access goes
-through the accessor helpers, which throw a named error when a variable is missing —
-never at module load.
+(super admins only) — to ban or unban their login after the rule has been checked; resetting a
+password when an MFA-enabled admin's verified single-use recovery link receives
+`insufficient_aal` from `updateUser`; and counting failed sign-in and invitation attempts
+(`console_sign_in_attempts`, admin/0022), a table no browser may touch. Every read and every
+other write, image signing included, runs as the signed-in user. The Resend key is server-only
+too, read when an email is sent. Only `NEXT_PUBLIC_`-prefixed variables may appear in client
+components. Env access goes through the accessor helpers, which throw a named error when a
+variable is missing — never at module load.
 
 **Enforced at:** `src/lib/env.ts` (lazy accessors, no top-level throw);
 `src/adapters/supabase/client.ts` (the request-scoped client, and `createServiceClient`,
-whose only callers are `src/adapters/supabase/onboarding.ts`, `account-access.ts` and
-`attempt-limit.ts`);
+whose only callers are `src/adapters/supabase/onboarding.ts`, `account-access.ts`, `auth.ts`
+and `attempt-limit.ts`);
 `.env.example` documents which variables are public and which are not.
 
 ### 3. Admin-only routes

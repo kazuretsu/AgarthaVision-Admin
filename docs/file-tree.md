@@ -74,10 +74,13 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── app/
     │   ├── layout.tsx         Root shell and metadata.
     │   ├── globals.css        Design tokens. The only file holding raw hex.
-    │   ├── page.tsx           Redirects to /dashboard; the gate decides from there.
+    │   ├── page.tsx           Redirects to /dashboard (or forwards recovery query params to
+    │   │                      /reset-password); the gate decides from there.
     │   ├── error.tsx          The boundary above the gate: an outage (the gate could not read
     │   │                      access) answers 500 with the outage message and no shell.
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
+    │   ├── (auth)/forgot-password/ Request a password-reset email (always shows the same notice).
+    │   ├── (auth)/reset-password/  Set a new password from a single-use recovery link.
     │   ├── (auth)/verify/     The authenticator code, for an admin who has an app (14zcqntjnt0).
     │   ├── (auth)/invite/     [token]/ accept page and action (outside the gate); joined/.
     │   └── (dashboard)/       Everything behind the console gate.
@@ -125,13 +128,13 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   │                      request-session (the proxy's refresh, sign-in time, local sign-out),
     │   │                      attempt-limit (failed sign-in attempts, service role),
     │   │                      errors (a migration not applied yet; the human-check token and refusal;
-    │   │                      a refused password change).
+    │   │                      a refused password change or reset).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
-    │   ├── auth/              HumanCheck: Cloudflare Turnstile on the sign-in and invitation forms.
+    │   ├── auth/              HumanCheck: Cloudflare Turnstile on the sign-in, forgot-password and invitation forms.
     │   │                      SecondFactor: setting up an authenticator app, entering its code.
-    │   │                      PasswordInput (eye button) and NewPasswordFields (rules checklist).
+    │   │                      PasswordInput (eye button), NewPasswordFields (rules checklist), ResetPasswordForm.
     │   ├── settings/          The name and password forms on /settings.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter,
     │   │                      and the notice for an `org` that names no organization.
