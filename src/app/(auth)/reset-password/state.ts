@@ -16,4 +16,3 @@ export const EMPTY_RESET_PASSWORD_STATE: ResetPasswordState = {
   linkInvalid: false,
   error: null,
 };
-

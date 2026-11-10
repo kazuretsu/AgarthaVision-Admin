@@ -14,4 +14,3 @@ export const EMPTY_FORGOT_PASSWORD_STATE: ForgotPasswordState = {
   sent: false,
   error: null,
 };
-

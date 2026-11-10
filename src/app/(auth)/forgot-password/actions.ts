@@ -47,4 +47,3 @@ export async function requestPasswordReset(
 
   return { sent: true, error: null };
 }
-
