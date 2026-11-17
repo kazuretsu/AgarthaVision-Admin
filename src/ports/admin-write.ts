@@ -41,6 +41,10 @@ export interface AdminWritePort {
   /** Creates an organization and returns its id. */
   createOrganization(name: string): Promise<string>;
   renameOrganization(organizationId: string, name: string): Promise<void>;
+  /** Changes the active organization admin's own laboratory only. */
+  renameMyLaboratory(name: string): Promise<void>;
+  /** Replaces that laboratory's PNG logo. Null removes it. */
+  setMyLaboratoryLogo(logoBase64: string | null): Promise<void>;
   /** Deactivates or reactivates. Nothing is deleted either way. */
   setOrganizationStatus(organizationId: string, status: OrganizationStatus): Promise<void>;
 

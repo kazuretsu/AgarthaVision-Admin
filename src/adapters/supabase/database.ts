@@ -29,6 +29,7 @@ import type {
 import { sortMembers, type PrevalenceView } from "@/domain";
 import type {
   Invitation,
+  LaboratoryBranding,
   SuperAdmin,
   SuperAdminInvitation,
   MemberPatient,
@@ -867,6 +868,13 @@ export class SupabaseDatabaseAdapter implements DatabasePort {
         })),
       ),
     };
+  }
+
+  async getMyLaboratoryBranding(): Promise<LaboratoryBranding | null> {
+    const { data, error } = await this.client.rpc("get_my_laboratory_branding");
+    if (error) throw new DatabaseReadError("getMyLaboratoryBranding", error);
+    const row = (data as { name: string; logo_base64: string | null }[] | null)?.[0];
+    return row ? { name: row.name, logoBase64: row.logo_base64 } : null;
   }
 
   async listInvitations(organizationId: string): Promise<Invitation[]> {
