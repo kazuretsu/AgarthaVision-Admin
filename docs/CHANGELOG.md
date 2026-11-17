@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Laboratory name and logo in Settings
+
+Organization admins can rename their own laboratory and add, replace, or remove
+its PNG logo (14zcqntx3v7). Admin migration 0024 adds the audited writes and a
+read for active members that returns their own laboratory's name and optional logo
+for offline use in the app (`docs/map/objects/organizations.md`).
+
 ## [feat] Forgot password on the console
 
 `/login` now links to `/forgot-password` so console admins and medtechs can recover a forgotten

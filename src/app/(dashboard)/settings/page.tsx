@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getAuth } from "@/adapters/registry";
+import { getAuth, getDatabase } from "@/adapters/registry";
+import type { LaboratoryBranding } from "@/domain/organizations";
 import { AuthUnavailableError, NotAuthenticatedError, NotAuthorizedError } from "@/ports/auth";
 import { ANY_CONSOLE_USER, requirePageAccess } from "@/lib/console-access";
 import { markUnavailable } from "@/lib/unavailable";
 import { AuthenticatorSetUp, AuthenticatorTurnOff } from "@/components/auth/SecondFactor";
+import { LaboratoryBrandingForms } from "@/components/settings/LaboratoryBrandingForms";
 import { NameForm, PasswordForm } from "@/components/settings/ProfileForms";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +22,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Settings · AgarthaVision Admin" };
 
 export default async function SettingsPage() {
-  const { user } = await requirePageAccess(ANY_CONSOLE_USER);
+  const { access, user } = await requirePageAccess(ANY_CONSOLE_USER);
 
   let hasAuthenticator: boolean;
   try {
@@ -52,6 +54,10 @@ export default async function SettingsPage() {
           <NameForm email={user.email} fullName={user.fullName} />
         </CardContent>
       </Card>
+
+      {access.kind === "org_admin" ? (
+        <LaboratoryBrandingCard name={access.organizationName} />
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -90,5 +96,35 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+async function LaboratoryBrandingCard({ name }: { name: string }) {
+  let branding: LaboratoryBranding | null = null;
+  try {
+    branding = await (await getDatabase()).getMyLaboratoryBranding();
+  } catch (cause) {
+    console.error("Could not read laboratory branding", cause);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Laboratory branding</CardTitle>
+        <CardDescription>The name and logo shown to your laboratory members.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {branding ? (
+          <LaboratoryBrandingForms {...branding} />
+        ) : (
+          <div className="flex flex-col gap-1">
+            <p className="text-[14px] font-medium text-stone-ink">{name}</p>
+            <p role="status" className="text-[13px] text-stone-mid">
+              Laboratory branding could not be loaded. Try again later.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

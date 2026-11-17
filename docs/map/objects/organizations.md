@@ -1,6 +1,6 @@
 ---
-verified: 2026-11-06
-commit: ef77214
+verified: 2026-11-17
+commit: 5c48b83
 ---
 
 # Organizations
@@ -124,6 +124,17 @@ anything and names the laboratory to rename; on 2026-10-15 the live database's o
 was clean.
 
 ## In the console
+
+Organization admins can change their laboratory's name and add, replace, or remove its
+logo in **Settings**. The server validates the name using the existing organization
+name rules. Logos must be PNG, at most 512 pixels on each side, and at most 128 KiB.
+A laboratory without a logo shows only its name.
+
+`supabase/migrations/admin/0024_laboratory_branding.sql` keeps the logo in a private
+table keyed by laboratory. `get_my_laboratory_branding` returns the name and optional
+logo to an active member of an active laboratory. It gets the laboratory from the
+caller's membership. `set_my_laboratory_logo` and `rename_my_laboratory` require an
+active organization admin and write the audit entry in the same transaction.
 
 - Org-admin detection: `orgAdminMembership` (`src/adapters/supabase/auth.ts:112`) reads
   the user's own membership; only an active `org_admin` in an active organization counts.
