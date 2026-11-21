@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [fix] Accepting an invitation needs a name
+
+The acceptance action refuses a blank or spaces-only name with "Enter your name." before any
+account is made or signed in, for laboratory and super-admin invitations alike (14zcqnty5p2).
+The form's `required` was only the browser's check, and a blank name left the new profile on
+the app's placeholder, `Pending Profile Setup` (app migration 0019). The database accept
+functions are unchanged (`docs/map/processes/invitations.md`).
+
 ## [feat] Laboratory name and logo in Settings
 
 Organization admins can rename their own laboratory and add, replace, or remove
