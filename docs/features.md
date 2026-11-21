@@ -160,7 +160,8 @@ Nobody signs up. A super admin invites an organization's admins from its page
 (`/organizations/[id]`); an org admin invites their laboratory's medtechs from `/people`.
 The inviter enters an email and, optionally, a name; the role and the organization follow
 from who is inviting. The invitee gets an email from the console's domain (Resend) with a
-link that works for 7 days and opens `/invite/<token>`, where they set their own password.
+link that works for 7 days and opens `/invite/<token>`, where they enter their name (required)
+and set their own password.
 No password is ever emailed. An org admin then lands in the console; a medtech is told to
 sign in to the Android app with the same email and password.
 

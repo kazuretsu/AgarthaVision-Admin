@@ -51,8 +51,12 @@ export async function acceptInvitation(
   const humanCheckToken = readHumanCheckToken(formData.get(HUMAN_CHECK_FIELD));
 
   // Checked before the account is made: a refusal after it would leave a login that
-  // joined nothing.
-  if (fullName && fullName.length > INVITEE_NAME_MAX) {
+  // joined nothing. The form's `required` is only the browser's check, and a blank name here
+  // would leave the profile on the app's placeholder, "Pending Profile Setup" (app 0019).
+  if (!fullName) {
+    return { error: "Enter your name.", fullName: typedName };
+  }
+  if (fullName.length > INVITEE_NAME_MAX) {
     return {
       error: `A name can have at most ${INVITEE_NAME_MAX} characters.`,
       fullName: typedName,
