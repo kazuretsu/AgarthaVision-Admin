@@ -154,6 +154,17 @@ locks the laboratory's org admins out until reactivated. Every change is written
 audit log in the same transaction by the database, which checks the caller again. Existing
 users and patients start in one "Starting laboratory". Org admins and medtechs get a 404.
 
+### Report check from a QR code (14zcqnty9bj)
+
+Every report the app prints carries a QR code that opens `/verify/report`, a public page:
+no sign-in. For a link that matches a stored report it shows that the report is in
+AgarthaVision's records, the laboratory, the report type, when it was generated, the fields
+examined, the eggs confirmed and each species with its LPF range, so the reader can compare
+them with the paper. An altered link says the report cannot be confirmed and shows nothing
+else; an unknown one says no report matches, and that a report made offline appears once the
+phone has synced. It names no patient and no medtech. Five failed checks from one IP within
+15 minutes are refused (`admin/0025`, `docs/map/processes/report-check.md`).
+
 ### Invitations
 
 Nobody signs up. A super admin invites an organization's admins from its page

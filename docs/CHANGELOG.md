@@ -2,6 +2,18 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Check a report from its QR code
+
+`/verify/report` is a public page for the QR code the app prints on every session and patient
+report (14zcqnty9bj, mobile 86d4a6jzt). For a link that matches a stored report it shows that
+the report is in AgarthaVision's records, the laboratory, the report type, when it was
+generated, the fields examined, the eggs confirmed and each species' LPF range, so the reader
+can compare them with the paper. An altered link cannot be confirmed and shows nothing else;
+an unknown or malformed one says no report matches. No patient or medtech identity is shown.
+**Admin migration 0025 is applied by hand:** `console_check_report`, granted to `anon` and
+`authenticated`, and the `report_check` attempt kind; five failed checks from one IP within 15
+minutes are refused (`docs/map/processes/report-check.md`).
+
 ## [fix] Accepting an invitation needs a name
 
 The acceptance action refuses a blank or spaces-only name with "Enter your name." before any

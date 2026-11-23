@@ -6,6 +6,7 @@ import type {
   DatabasePort,
   MailPort,
   OnboardingPort,
+  ReportCheckPort,
   StoragePort,
 } from "@/ports";
 import { optionalEnv } from "@/lib/env";
@@ -115,6 +116,19 @@ export async function getAdminWrites(): Promise<AdminWritePort> {
     case "supabase": {
       const { createSupabaseAdminWrite } = await import("./supabase/admin-write");
       return timedPort("write", await createSupabaseAdminWrite());
+    }
+  }
+}
+
+/**
+ * The public report check behind a report's QR code (14zcqnty9bj). Server-side only. Follows
+ * the database provider: the check is a database function over the stored reports.
+ */
+export async function getReportCheck(): Promise<ReportCheckPort> {
+  switch (databaseProvider()) {
+    case "supabase": {
+      const { createSupabaseReportCheck } = await import("./supabase/report-check");
+      return timedPort("report-check", await createSupabaseReportCheck());
     }
   }
 }

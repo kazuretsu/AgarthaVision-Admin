@@ -49,6 +49,10 @@ Access is read server-side on every request; a cookie, a JWT claim or `user_meta
 never the authority, and neither is the retired `profiles.role`. The console asks the same
 `is_admin()` every database policy asks, so the two never disagree about who is a super
 admin. Hiding a sidebar link is presentation, not protection.
+Outside the gate, by design: the sign-in, password-recovery and invitation pages, and the
+public report check behind a report's QR code (`/verify/report`,
+`docs/map/processes/report-check.md`), which reads one report by id through
+`console_check_report` (`admin/0025`) and shows no identity (#14).
 
 **Enforced at:** `src/domain/access.ts` (`resolveConsoleAccess`, the rule itself);
 `src/app/(dashboard)/layout.tsx` (server-side gate before any child renders);

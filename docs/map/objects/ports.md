@@ -7,7 +7,8 @@ commit: 7e94643
 
 The interfaces every feature depends on: `DatabasePort`, `AdminWritePort`, `StoragePort`,
 `AuthPort`, and, for invitations and medtech access, `OnboardingPort`, `MailPort` and
-`AccountAccessPort`; for the sign-in attempt limits, `AttemptLimitPort`.
+`AccountAccessPort`; for the sign-in attempt limits, `AttemptLimitPort`; for the public report
+check behind a report's QR code, `ReportCheckPort`.
 
 ## Why this shape
 
@@ -36,6 +37,7 @@ express the intent.
 | `RequestSessionPort` | `session` (id, sign-in time), `endSession` (this browser only), `response` — for the proxy, which opens it from the Supabase adapter directly, not through the registry                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `src/ports/request-session.ts` |
 | `AccountAccessPort`  | `setSignInAllowed` — block or allow a login, deleting nothing; `hasAuthenticator`, `resetAuthenticator` — a login's authenticator app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `src/ports/account-access.ts`  |
 | `AttemptLimitPort`   | `countFailures` (since the window's start), `recordFailure` — failed sign-in and invitation attempts, server only; callers go through `withAttemptLimit`, which fails open                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `src/ports/attempt-limit.ts`   |
+| `ReportCheckPort`    | `checkReport` — one report's QR link against the stored record, through `console_check_report` (admin/0025) on the visitor's own client; returns confirmed findings, mismatch or not found, never identity                                                                                                                                                                                                                                                                                                                                                                                                                                        | `src/ports/report-check.ts`    |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:243`), `MigrationNotAppliedError`
