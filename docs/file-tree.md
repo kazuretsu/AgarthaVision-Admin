@@ -83,6 +83,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── (auth)/reset-password/  Set a new password from a single-use recovery link.
     │   ├── (auth)/verify/     The authenticator code, for an admin who has an app (14zcqntjnt0).
     │   ├── (auth)/invite/     [token]/ accept page and action (outside the gate); joined/.
+    │   ├── (public)/verify/report/ The public report check behind a report's QR code (outside the gate).
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page;
@@ -119,7 +120,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
     │                          mail, account-access, request-session (the proxy's view of a
-    │                          session), attempt-limit (failed sign-ins). No vendor types.
+    │                          session), attempt-limit (failed sign-ins), report-check (a report's
+    │                          QR link). No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
@@ -127,6 +129,7 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   │                      onboarding (accepting an invitation), account-access (bans),
     │   │                      request-session (the proxy's refresh, sign-in time, local sign-out),
     │   │                      attempt-limit (failed sign-in attempts, service role),
+    │   │                      report-check (one report's QR link, visitor's own client),
     │   │                      errors (a migration not applied yet; the human-check token and refusal;
     │   │                      a refused password change or reset).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
@@ -154,12 +157,14 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
     │   ├── training/          Training data filter, preview, create form, snapshots table.
     │   ├── map/               PrevalenceMap (MapLibre), its legend, the areas table.
+    │   ├── report-check/      ReportCheckView: what /verify/report shows for each answer.
     │   ├── theme-provider.tsx next-themes, class-based.
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
         ├── session-activity.ts The signed last-activity cookie for the idle limit.
         ├── attempt-limit.ts   Runs a sign-in or invitation attempt under the attempt limits.
+        ├── report-check.ts    Checks a report's QR link for /verify/report, under the attempt limits.
         ├── second-factor-messages.ts What /verify and /settings say when a code is refused.
         ├── timing.ts          One log line per access check, read or write, with its ms.
         ├── sign-in-follows-access.ts Blocks or restores sign-in after an access change.

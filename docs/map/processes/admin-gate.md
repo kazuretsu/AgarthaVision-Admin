@@ -207,7 +207,9 @@ provider is called** once, within the last 15 minutes, there are:
 
 - 5 wrong passwords for one email, on the sign-in form and the invitation page together;
 - 20 from one client IP, for any emails;
-- 5 on one invitation link (`docs/map/processes/invitations.md`).
+- 5 on one invitation link (`docs/map/processes/invitations.md`);
+- 5 failed report checks from one IP, counted apart from the 20 above
+  (`report_check`, `docs/map/processes/report-check.md`).
 
 The refusal is "Too many attempts. Try again in 15 minutes.", the same whether or not the
 email has an account. Only a wrong password counts (`AuthenticationFailedError`): a refused
@@ -235,7 +237,9 @@ auth port itself and renders nothing of the console. `/forgot-password` and `/re
 recover a forgotten password by email for both console admins and medtechs without leaving the
 browser signed in (`docs/map/processes/own-profile.md`). The invitation page is open to anyone
 holding a link; the token is the permission, and what it can do is described in
-`docs/map/processes/invitations.md`.
+`docs/map/processes/invitations.md`. `/verify/report` (`src/app/(public)/verify/report/page.tsx`)
+is open to anyone holding a report's QR link and shows one report's stored findings and no
+identity (`docs/map/processes/report-check.md`).
 
 ## Consumes / produces
 

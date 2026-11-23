@@ -7,8 +7,8 @@
  * Pure: counting is the port's job (`AttemptLimitPort`), acting on the answer the caller's.
  */
 
-/** Which form an attempt came from. */
-export type AttemptKind = "sign_in" | "invitation";
+/** Which form an attempt came from; `report_check` is a failed QR report check (14zcqnty9bj). */
+export type AttemptKind = "sign_in" | "invitation" | "report_check";
 
 /** What one attempt is counted under. */
 export interface AttemptKeys {
