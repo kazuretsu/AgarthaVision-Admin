@@ -23,3 +23,8 @@ export async function consoleOrigin(): Promise<string> {
 export function invitationLink(origin: string, token: string): string {
   return `${origin}/invite/${token}`;
 }
+
+/** The page a password reset link returns to (14zcqntjnt9). */
+export function passwordResetLink(origin: string): string {
+  return `${origin}/reset-password`;
+}

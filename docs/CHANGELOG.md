@@ -2,6 +2,48 @@
 
 Newest first. One entry per commit that changes behavior or contract.
 
+## [feat] Check a report from its QR code
+
+`/verify/report` is a public page for the QR code the app prints on every session and patient
+report (14zcqnty9bj, mobile 86d4a6jzt). For a link that matches a stored report it shows that
+the report is in AgarthaVision's records, the laboratory, the report type, when it was
+generated, the fields examined, the eggs confirmed and each species' LPF range, so the reader
+can compare them with the paper. An altered link cannot be confirmed and shows nothing else;
+an unknown or malformed one says no report matches. No patient or medtech identity is shown.
+**Admin migration 0025 is applied by hand:** `console_check_report`, granted to `anon` and
+`authenticated`, and the `report_check` attempt kind; five failed checks from one IP within 15
+minutes are refused (`docs/map/processes/report-check.md`).
+
+## [fix] Accepting an invitation needs a name
+
+The acceptance action refuses a blank or spaces-only name with "Enter your name." before any
+account is made or signed in, for laboratory and super-admin invitations alike (14zcqnty5p2).
+The form's `required` was only the browser's check, and a blank name left the new profile on
+the app's placeholder, `Pending Profile Setup` (app migration 0019). The database accept
+functions are unchanged (`docs/map/processes/invitations.md`).
+
+## [feat] Laboratory name and logo in Settings
+
+Organization admins can rename their own laboratory and add, replace, or remove
+its PNG logo (14zcqntx3v7). Admin migration 0024 adds the audited writes and a
+read for active members that returns their own laboratory's name and optional logo
+for offline use in the app (`docs/map/objects/organizations.md`).
+
+## [feat] Forgot password on the console
+
+`/login` now links to `/forgot-password` so console admins and medtechs can recover a forgotten
+password by email without a super admin (14zcqntjnt9). Submitting an email (with the Turnstile
+human check) asks Supabase Auth to send a single-use, expiring recovery link to
+`/reset-password` and always shows the same confirmation whether or not an account exists or is
+active. `/reset-password` checks the new password against the full password policy before
+consuming the link's PKCE `code` or `token_hash`, verifies through `console_actor()` that the
+account is an active super admin or an active member (`org_admin` or `medtech`) of an active
+organization, updates the password (falling back to the service client when an MFA-enabled
+admin's `aal1` recovery session receives `insufficient_aal`), and signs out the temporary
+recovery session so deactivated accounts never regain access, medtechs sign in to the mobile
+app, and admins still pass `/verify` (MFA) at sign-in (`AuthPort.requestPasswordReset`,
+`AuthPort.resetPassword`, `docs/map/processes/admin-gate.md`, `docs/map/processes/own-profile.md`).
+
 ## [refactor] Forms and lists share named limits
 
 Laboratory and snapshot names, invitee names, and profile names use their respective

@@ -31,6 +31,7 @@ export const AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   "organization.backfill": "Placed existing records in the starting organization",
   "organization.create": "Created an organization",
   "organization.rename": "Renamed an organization",
+  "organization.logo_change": "Changed a laboratory logo",
   "organization.deactivate": "Deactivated an organization",
   "organization.reactivate": "Reactivated an organization",
   "export.research": "Downloaded a research export",
@@ -103,6 +104,12 @@ export function describeAuditEntry(entry: AuditEntry): string {
       return `Created ${text(d.name) ?? "an organization"}`;
     case "organization.rename":
       return `Renamed ${text(d.from) ?? "an organization"} to ${text(d.to) ?? "a new name"}`;
+    case "organization.logo_change": {
+      const laboratory = entry.organizationName ?? "the laboratory";
+      if (d.has_logo === true) return `Updated the logo for ${laboratory}`;
+      if (d.has_logo === false) return `Removed the logo for ${laboratory}`;
+      return auditActionLabel(entry.action);
+    }
     case "organization.deactivate":
       return `Deactivated ${entry.organizationName ?? "an organization"}`;
     case "organization.reactivate":

@@ -6,6 +6,7 @@ import {
   HumanCheckFailedError,
   NotAuthenticatedError,
   NotAuthorizedError,
+  PasswordResetError,
   SecondFactorError,
   SecondFactorRequiredError,
 } from "@/ports/auth";
@@ -569,5 +570,173 @@ describe("SupabaseAuthAdapter — signing out (14zcqntnqpd)", () => {
     } as unknown as SupabaseClient;
     await new SupabaseAuthAdapter(client).signOut();
     expect(scopes).toEqual([{ scope: "local" }]);
+  });
+});
+
+describe("SupabaseAuthAdapter — password recovery (14zcqntjnt9)", () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+
+  function resetClient(options: {
+    actorRow?: Record<string, unknown>;
+    resetEmailError?: unknown;
+    exchangeError?: { code?: string; status?: number } | null;
+    verifyOtpError?: { code?: string; status?: number } | null;
+    updateError?: { code?: string; status?: number } | null;
+    adminUpdateError?: { code?: string; status?: number } | null;
+  }) {
+    const { client, calls } = gateClient({
+      actor: row(options.actorRow ?? orgAdmin),
+    });
+    const resetCalls: unknown[] = [];
+    const updates: unknown[] = [];
+    const adminUpdates: unknown[] = [];
+    const signOuts: unknown[] = [];
+
+    Object.assign(client.auth, {
+      resetPasswordForEmail: (email: string, opts: unknown) => {
+        resetCalls.push({ email, opts });
+        return Promise.resolve({ data: {}, error: options.resetEmailError ?? null });
+      },
+      exchangeCodeForSession: (code: string) => {
+        calls.push(`auth.exchangeCode.${code}`);
+        if (options.exchangeError) {
+          return Promise.resolve({ data: { user: null }, error: options.exchangeError });
+        }
+        return Promise.resolve({ data: { user: { id: USER_ID } }, error: null });
+      },
+      verifyOtp: (params: { token_hash: string; type: string }) => {
+        calls.push(`auth.verifyOtp.${params.type}.${params.token_hash}`);
+        if (options.verifyOtpError) {
+          return Promise.resolve({ data: { user: null }, error: options.verifyOtpError });
+        }
+        return Promise.resolve({ data: { user: { id: USER_ID } }, error: null });
+      },
+      updateUser: (attrs: unknown) => {
+        updates.push(attrs);
+        return Promise.resolve({
+          data: { user: { id: USER_ID } },
+          error: options.updateError ?? null,
+        });
+      },
+      signOut: (opts?: unknown) => {
+        signOuts.push(opts);
+        return Promise.resolve({ error: null });
+      },
+    });
+
+    const serviceClient = {
+      auth: {
+        admin: {
+          updateUserById: (id: string, attrs: unknown) => {
+            adminUpdates.push({ id, attrs });
+            return Promise.resolve({
+              data: { user: { id } },
+              error: options.adminUpdateError ?? null,
+            });
+          },
+        },
+      },
+    } as unknown as SupabaseClient;
+
+    return {
+      adapter: new SupabaseAuthAdapter(client, () => serviceClient),
+      calls,
+      resetCalls,
+      updates,
+      adminUpdates,
+      signOuts,
+    };
+  }
+
+  it("sends the reset link with redirectTo and captchaToken, and never leaks account state", async () => {
+    const { adapter, resetCalls } = resetClient({
+      resetEmailError: { code: "user_banned", status: 400 },
+    });
+    await expect(
+      adapter.requestPasswordReset({
+        email: "medtech@example.test",
+        redirectTo: "https://console.example.test/reset-password",
+        humanCheckToken: "0.turnstile",
+      }),
+    ).resolves.toBeUndefined();
+    expect(resetCalls).toEqual([
+      {
+        email: "medtech@example.test",
+        opts: {
+          redirectTo: "https://console.example.test/reset-password",
+          captchaToken: "0.turnstile",
+        },
+      },
+    ]);
+  });
+
+  it("raises HumanCheckFailedError when the security check fails on forgot-password", async () => {
+    const { adapter } = resetClient({
+      resetEmailError: { code: "captcha_failed", status: 400 },
+    });
+    await expect(
+      adapter.requestPasswordReset({
+        email: "medtech@example.test",
+        redirectTo: "https://console.example.test/reset-password",
+      }),
+    ).rejects.toBeInstanceOf(HumanCheckFailedError);
+  });
+
+  it("lets an active medtech reset their password via a PKCE code and signs out the recovery session", async () => {
+    const { adapter, calls, updates, signOuts } = resetClient({
+      actorRow: { ...orgAdmin, member_role: "medtech" },
+    });
+    await adapter.resetPassword({ code: "pkce-code-1", password: "New-Password-9!" });
+    expect(calls).toEqual(["auth.exchangeCode.pkce-code-1", "rpc.console_actor"]);
+    expect(updates).toEqual([{ password: "New-Password-9!" }]);
+    expect(signOuts).toEqual([{ scope: "local" }]);
+  });
+
+  it("supports token_hash recovery links as well as PKCE codes", async () => {
+    const { adapter, calls, updates, signOuts } = resetClient({
+      actorRow: { is_super_admin: true },
+    });
+    await adapter.resetPassword({ tokenHash: "hash-1", password: "New-Password-9!" });
+    expect(calls).toEqual(["auth.verifyOtp.recovery.hash-1", "rpc.console_actor"]);
+    expect(updates).toEqual([{ password: "New-Password-9!" }]);
+    expect(signOuts).toEqual([{ scope: "local" }]);
+  });
+
+  it("resets an MFA-enabled admin's password when updateUser returns insufficient_aal, and signs out so MFA is required at sign-in", async () => {
+    const { adapter, updates, adminUpdates, signOuts } = resetClient({
+      actorRow: { is_super_admin: true },
+      updateError: { code: "insufficient_aal", status: 403 },
+    });
+    await adapter.resetPassword({ code: "pkce-code-2", password: "New-Password-9!" });
+    expect(updates).toEqual([{ password: "New-Password-9!" }]);
+    expect(adminUpdates).toEqual([{ id: USER_ID, attrs: { password: "New-Password-9!" } }]);
+    expect(signOuts).toEqual([{ scope: "local" }]);
+  });
+
+  it.each([
+    ["a deactivated member", { ...orgAdmin, member_status: "deactivated" }],
+    ["a member of a deactivated organization", { ...orgAdmin, organization_status: "deactivated" }],
+    ["an account with no grant and no membership", {}],
+  ])("refuses %s without updating the password and signs out", async (_label, actorRow) => {
+    const { adapter, updates, adminUpdates, signOuts } = resetClient({ actorRow });
+    const refusal = await adapter
+      .resetPassword({ code: "pkce-code-3", password: "New-Password-9!" })
+      .catch((e) => e);
+    expect(refusal).toBeInstanceOf(PasswordResetError);
+    expect((refusal as PasswordResetError).reason).toBe("invalid_link");
+    expect(updates).toEqual([]);
+    expect(adminUpdates).toEqual([]);
+    expect(signOuts).toEqual([{ scope: "local" }]);
+  });
+
+  it("refuses an expired or already-used recovery code with invalid_link", async () => {
+    const { adapter } = resetClient({
+      exchangeError: { code: "otp_expired", status: 403 },
+    });
+    const refusal = await adapter
+      .resetPassword({ code: "expired-code", password: "New-Password-9!" })
+      .catch((e) => e);
+    expect(refusal).toBeInstanceOf(PasswordResetError);
+    expect((refusal as PasswordResetError).reason).toBe("invalid_link");
   });
 });

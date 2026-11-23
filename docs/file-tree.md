@@ -74,12 +74,16 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     ├── app/
     │   ├── layout.tsx         Root shell and metadata.
     │   ├── globals.css        Design tokens. The only file holding raw hex.
-    │   ├── page.tsx           Redirects to /dashboard; the gate decides from there.
+    │   ├── page.tsx           Redirects to /dashboard (or forwards recovery query params to
+    │   │                      /reset-password); the gate decides from there.
     │   ├── error.tsx          The boundary above the gate: an outage (the gate could not read
     │   │                      access) answers 500 with the outage message and no shell.
     │   ├── (auth)/login/      Sign-in form, server action, and its form state.
+    │   ├── (auth)/forgot-password/ Request a password-reset email (always shows the same notice).
+    │   ├── (auth)/reset-password/  Set a new password from a single-use recovery link.
     │   ├── (auth)/verify/     The authenticator code, for an admin who has an app (14zcqntjnt0).
     │   ├── (auth)/invite/     [token]/ accept page and action (outside the gate); joined/.
+    │   ├── (public)/verify/report/ The public report check behind a report's QR code (outside the gate).
     │   └── (dashboard)/       Everything behind the console gate.
     │       ├── layout.tsx     The gate and the shell. Guards every page in this segment.
     │       ├── error.tsx      Error boundary: a failed read shows a retry, not a bare page;
@@ -116,7 +120,8 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │                          No I/O.
     ├── ports/                 Pure interfaces: db (read), admin-write, storage, auth, onboarding,
     │                          mail, account-access, request-session (the proxy's view of a
-    │                          session), attempt-limit (failed sign-ins). No vendor types.
+    │                          session), attempt-limit (failed sign-ins), report-check (a report's
+    │                          QR link). No vendor types.
     ├── adapters/
     │   ├── registry.ts        Env-driven provider selection. The only construction site.
     │   ├── supabase/          client (and the one service client), env, database (paged reads in
@@ -124,14 +129,15 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   │                      onboarding (accepting an invitation), account-access (bans),
     │   │                      request-session (the proxy's refresh, sign-in time, local sign-out),
     │   │                      attempt-limit (failed sign-in attempts, service role),
+    │   │                      report-check (one report's QR link, visitor's own client),
     │   │                      errors (a migration not applied yet; the human-check token and refusal;
-    │   │                      a refused password change).
+    │   │                      a refused password change or reset).
     │   └── resend/            mail: the invitation email, over Resend's HTTP API.
     ├── components/            Presentational. Import ports, never adapters.
     │   ├── ui/                shadcn components on Base UI, added with the CLI (#15); shadcn.test.ts.
-    │   ├── auth/              HumanCheck: Cloudflare Turnstile on the sign-in and invitation forms.
+    │   ├── auth/              HumanCheck: Cloudflare Turnstile on the sign-in, forgot-password and invitation forms.
     │   │                      SecondFactor: setting up an authenticator app, entering its code.
-    │   │                      PasswordInput (eye button) and NewPasswordFields (rules checklist).
+    │   │                      PasswordInput (eye button), NewPasswordFields (rules checklist), ResetPasswordForm.
     │   ├── settings/          The name and password forms on /settings.
     │   ├── organizations/     Create, rename and deactivate forms; the super admin's org filter,
     │   │                      and the notice for an `org` that names no organization.
@@ -151,12 +157,14 @@ Annotated. Generated directories (`.next/`, `node_modules/`, `coverage/`) are om
     │   ├── dashboard/         Stat card, weekly trend chart (inline SVG), species mix.
     │   ├── training/          Training data filter, preview, create form, snapshots table.
     │   ├── map/               PrevalenceMap (MapLibre), its legend, the areas table.
+    │   ├── report-check/      ReportCheckView: what /verify/report shows for each answer.
     │   ├── theme-provider.tsx next-themes, class-based.
     └── lib/
         ├── env.ts             Request-time accessors. Nothing throws at module load.
         ├── console-access.ts  requirePageAccess / requireRouteAccess, one lookup per request.
         ├── session-activity.ts The signed last-activity cookie for the idle limit.
         ├── attempt-limit.ts   Runs a sign-in or invitation attempt under the attempt limits.
+        ├── report-check.ts    Checks a report's QR link for /verify/report, under the attempt limits.
         ├── second-factor-messages.ts What /verify and /settings say when a code is refused.
         ├── timing.ts          One log line per access check, read or write, with its ms.
         ├── sign-in-follows-access.ts Blocks or restores sign-in after an access change.

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, startTransition, useActionState } from "react";
+import Link from "next/link";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { HumanCheck, useHumanCheck } from "@/components/auth/HumanCheck";
 import { SessionEndedNotice } from "@/components/auth/SessionEndedNotice";
@@ -64,7 +65,15 @@ export default function LoginPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-[12px] font-medium text-teal hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <PasswordInput
                 id="password"
                 name="password"

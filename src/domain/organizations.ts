@@ -59,6 +59,15 @@ export function canManageOrganizations(access: ConsoleAccess): boolean {
 export const ORGANIZATION_NAME_MIN = 2;
 export const ORGANIZATION_NAME_MAX = 120;
 
+/** The image limits are also enforced by the database. */
+export const LABORATORY_LOGO_MAX_KIB = 128;
+export const LABORATORY_LOGO_MAX_DIMENSION = 512;
+
+export interface LaboratoryBranding {
+  name: string;
+  logoBase64: string | null;
+}
+
 /**
  * Unicode's default-ignorable code points (zero-width spaces and joiners, the byte-order
  * mark, bidirectional marks and isolates, soft hyphen, variation selectors, Hangul

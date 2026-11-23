@@ -66,6 +66,14 @@ export class SupabaseAdminWriteAdapter implements AdminWritePort {
     await this.call("console_rename_organization", { p_id: organizationId, p_name: name });
   }
 
+  async renameMyLaboratory(name: string): Promise<void> {
+    await this.call("rename_my_laboratory", { p_name: name });
+  }
+
+  async setMyLaboratoryLogo(logoBase64: string | null): Promise<void> {
+    await this.call("set_my_laboratory_logo", { p_logo_base64: logoBase64 });
+  }
+
   async setOrganizationStatus(organizationId: string, status: OrganizationStatus): Promise<void> {
     await this.call("console_set_organization_status", { p_id: organizationId, p_status: status });
   }

@@ -43,6 +43,16 @@ describe("describeAuditEntry", () => {
     ).toBe("Exported 1 smear as JSON, all time");
   });
 
+  it("distinguishes a saved laboratory logo from a removal", () => {
+    const action = "organization.logo_change";
+    expect(describeAuditEntry(entry({ action, details: { has_logo: true } }))).toBe(
+      "Updated the logo for Lab A",
+    );
+    expect(describeAuditEntry(entry({ action, details: { has_logo: false } }))).toBe(
+      "Removed the logo for Lab A",
+    );
+  });
+
   it("shows an unknown action as recorded rather than hiding it", () => {
     expect(describeAuditEntry(entry({ action: "member.invite" }))).toBe("member.invite");
     expect(auditActionLabel("member.invite")).toBe("member.invite");

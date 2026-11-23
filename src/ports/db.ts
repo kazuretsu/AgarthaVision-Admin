@@ -6,6 +6,7 @@ import type {
   AuditActor,
   AuditEntry,
   Invitation,
+  LaboratoryBranding,
   MemberPatient,
   OrganizationDetail,
   PatientAssignment,
@@ -157,6 +158,9 @@ export interface DatabasePort {
 
   /** One organization with its members; `null` when absent or hidden. */
   getOrganization(organizationId: string): Promise<OrganizationDetail | null>;
+
+  /** The active caller's own laboratory, without accepting an organization ID. */
+  getMyLaboratoryBranding(): Promise<LaboratoryBranding | null>;
 
   /** An organization's invitations, newest first, at most {@link INVITATION_LIST_LIMIT}. */
   listInvitations(organizationId: string): Promise<Invitation[]>;

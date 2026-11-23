@@ -22,7 +22,7 @@ beside two-step sign-in (`docs/map/processes/second-factor.md`).
    (email, read-only; name) and a Password card above the two-step card, from
    `src/components/settings/ProfileForms.tsx`.
 2. **Name.** `renameSelf` (`settings/actions.ts`) tidies it with `normaliseOwnName`
-   (`src/domain/profile.ts:10-19`), checks the caller is a console user, then calls
+   (`src/domain/profile.ts:17-26`), checks the caller is a console user, then calls
    `AdminWritePort.setOwnName` → `console_set_own_name` (`admin/0020`). The name is trimmed,
    spaces are collapsed, and the result must contain at least one character. The form,
    validation and write-refusal message all use `PROFILE_NAME_MAX` for the 120-character
@@ -33,14 +33,26 @@ beside two-step sign-in (`docs/map/processes/second-factor.md`).
    name. The same name again writes nothing. The layout is revalidated so the sidebar shows it.
 3. **Password.** Current password, then the new one twice, each with an eye button
    (`src/components/auth/PasswordInput.tsx`) and the rules checklist
-   (`src/components/auth/NewPasswordFields.tsx`, shared with the invitation form).
-   `checkPasswordChange` (`src/domain/profile.ts`) checks the fields, the rules in full and that
-   the new one differs. **Before sending, a dialog warns** that every other session, the mobile
-   app's included, will be signed out. `AuthPort.changePassword` sends one `updateUser` with
-   `password` and `current_password`: Supabase Auth checks the current password and the rules,
-   sets the new one and ends the account's other sessions in one transaction, keeping this
-   one. After it accepts, `console_record_own_password_change` records `profile.password_change`
-   with no details.
+   (`src/components/auth/NewPasswordFields.tsx`, shared with the invitation and reset-password
+   forms). `checkPasswordChange` (`src/domain/profile.ts:65-77`, built on `checkPasswordReset`,
+   `:44-57`) checks the fields, the rules in full and that the new one differs. **Before
+   sending, a dialog warns** that every other session, the mobile app's included, will be
+   signed out. `AuthPort.changePassword` sends one `updateUser` with `password` and
+   `current_password`: Supabase Auth checks the current password and the rules, sets the new
+   one and ends the account's other sessions in one transaction, keeping this one. After it
+   accepts, `console_record_own_password_change` records `profile.password_change` with no
+   details.
+4. **Forgot password (14zcqntjnt9).** `/login` links to `/forgot-password`, which checks the
+   email shape with `normaliseResetEmail` (`src/domain/profile.ts:32-38`) and calls
+   `AuthPort.requestPasswordReset` (`src/adapters/supabase/auth.ts:419-435`) with the Turnstile
+   token and `/reset-password` as `redirectTo`. It always shows the same confirmation whether or
+   not an active account exists. `/reset-password` validates the new password with
+   `checkPasswordReset` before consuming the single-use `code` or `token_hash` in
+   `AuthPort.resetPassword` (`:437-480`), verifies through `console_actor()` that the user is an
+   active super admin or an active member (`org_admin` or `medtech`) in an active organization,
+   sets the password (using the service client when an MFA-enabled admin's `aal1` recovery
+   session receives `insufficient_aal`), and signs out the recovery session so admins still pass
+   `/verify` on sign-in and medtechs sign in to the mobile app.
 
 ## Guarantees
 
@@ -68,7 +80,6 @@ beside two-step sign-in (`docs/map/processes/second-factor.md`).
 ## Not covered
 
 - The email address: changing it means confirming the new address; not offered.
-- A forgotten password: no reset-by-email flow in the console yet.
 - If recording fails after Supabase accepted the change, the password is changed without its
   entry; the page says so.
 - The console's attempt limits (`docs/map/processes/admin-gate.md`): a wrong current password
@@ -77,17 +88,17 @@ beside two-step sign-in (`docs/map/processes/second-factor.md`).
 
 ## Consumes / produces
 
-Consumes `AuthPort.changePassword`, `AdminWritePort.setOwnName`,
-`AdminWritePort.recordOwnPasswordChange`. Produces `profiles.full_name`, `profile.rename` and
-`profile.password_change` audit entries.
+Consumes `AuthPort.changePassword`, `AuthPort.requestPasswordReset`, `AuthPort.resetPassword`,
+`AdminWritePort.setOwnName`, `AdminWritePort.recordOwnPasswordChange`. Produces
+`profiles.full_name`, `profile.rename` and `profile.password_change` audit entries.
 
 ## If you change this
 
 **Hits**
 
 - `src/domain/password-policy.ts` and Supabase's password rules (change both together).
-- The invitation form, which shares `NewPasswordFields` and `PasswordInput`; `/login`, which
-  uses `PasswordInput`.
+- The invitation and `/reset-password` forms, which share `NewPasswordFields` and
+  `PasswordInput`; `/login`, which uses `PasswordInput`.
 - `admin/0020`.
 
 **Does not hit**

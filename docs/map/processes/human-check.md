@@ -21,20 +21,23 @@ protection is on, Supabase refuses any sign-in without a valid token, from any c
 
 1. **Widget.** `src/components/auth/HumanCheck.tsx` loads Turnstile's script
    (`challenges.cloudflare.com/turnstile/v0/api.js?render=explicit`) and renders the widget
-   in the form, labelled `sign-in` (`/login`) or `accept-invitation` (`/invite/[token]`). Its
-   token lives in React state and posts in the hidden `humanCheckToken` field. Submit stays
-   disabled until there is a token. Not a shadcn component: like the prevalence map, it wraps
-   a third-party widget the registry has nothing for.
+   in the form, labelled `sign-in` (`/login`), `forgot-password` (`/forgot-password`) or
+   `accept-invitation` (`/invite/[token]`). Its token lives in React state and posts in the
+   hidden `humanCheckToken` field. Submit stays disabled until there is a token. Not a shadcn
+   component: like the prevalence map, it wraps a third-party widget the registry has nothing
+   for.
 2. **One token per attempt.** The form calls `consume()` as it submits: the posted form data
    already holds the token, and the widget is reset so the next attempt gets a new one.
 3. **Server.** `readHumanCheckToken` (`src/domain/human-check.ts`) passes on a non-empty
    string of at most 2048 characters, else nothing. `signIn` puts it in `Credentials`;
-   `acceptInvitation` puts it in `AcceptInvitationRequest`.
+   `requestPasswordReset` puts it in `PasswordResetEmailRequest`; `acceptInvitation` puts it in
+   `AcceptInvitationRequest`.
 4. **Provider.** The Supabase adapters send it as `options.captchaToken` on
-   `signInWithPassword` (`humanCheckOptions`, `src/adapters/supabase/errors.ts`). Supabase
-   checks it with Cloudflare. A refusal (`captcha_failed`) is `HumanCheckFailedError` at
-   sign-in and `human_check_failed` on the invitation page; neither says anything about the
-   password. On the invitation page the check is verified at the sign-in step, after
+   `signInWithPassword` and `resetPasswordForEmail` (`humanCheckOptions`,
+   `src/adapters/supabase/errors.ts`). Supabase checks it with Cloudflare. A refusal
+   (`captcha_failed`) is `HumanCheckFailedError` at sign-in and forgot-password, and
+   `human_check_failed` on the invitation page; none says anything about the password or whether
+   an account exists. On the invitation page the check is verified at the sign-in step, after
    `auth.admin.createUser` (the service role is not subject to it): a refused check leaves an
    account that joined nothing, and the next attempt finds it and signs in. An existing
    account whose sign-in was blocked has the block lifted for the attempt and put back when

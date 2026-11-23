@@ -43,7 +43,7 @@ laboratories and reads every laboratory's records de-identified (D19).
    invitee, checks the token, expiry and email, refuses a laboratory member
    (`already_member`), inserts their `super_admins` row with `granted_by` the inviter, fills
    their name and marks the invitation accepted. **No laboratory membership.** They go straight
-   on to `/dashboard` as a super admin (`src/app/(auth)/invite/[token]/actions.ts:109`); like
+   on to `/dashboard` as a super admin (`src/app/(auth)/invite/[token]/actions.ts:113`); like
    any admin, they may set up an authenticator app on `/settings`, and are asked for its code
    only once they have one (`docs/map/processes/second-factor.md`).
 5. **Revoke.** `RevokeSuperAdminForm` behind a confirmation; `revokeSuperAdmin` checks

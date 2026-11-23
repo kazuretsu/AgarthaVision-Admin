@@ -57,11 +57,12 @@ the default. Adapters are imported lazily.
 
 The Supabase adapters implement the database, storage, auth and onboarding ports, and a
 Resend adapter the mail port. Database reads and storage signing run through the visitor's
-own session so RLS decides visibility. The service-role key is used for four things: making an
+own session so RLS decides visibility. The service-role key is used for five things: making an
 invited person's account when they accept, banning or unbanning a member's login (a medtech's
-or an org admin's), removing an org admin's authenticator app when a super admin resets it, and
-counting failed sign-in and invitation attempts (`src/adapters/supabase/onboarding.ts`,
-`account-access.ts`, `attempt-limit.ts`).
+or an org admin's), removing an org admin's authenticator app when a super admin resets it,
+setting the new password on a verified password-reset link when an MFA-enabled admin's `aal1`
+recovery session gets `insufficient_aal`, and counting failed sign-in and invitation attempts
+(`src/adapters/supabase/onboarding.ts`, `account-access.ts`, `auth.ts`, `attempt-limit.ts`).
 
 ### Authentication and the admin gate
 
@@ -124,11 +125,23 @@ gone for good once an app is set up (`docs/map/processes/notices.md`).
 ### Own name and password (14zcqntr35e)
 
 On `/settings` each super admin and org admin changes the name the console shows for them, and
-their password after entering the current one. Every password field (`/settings`, `/login`, the
-invitation form) has an eye button to show what was typed. A new password shows the rules as
-they are met. Before a password change, a dialog warns that it signs out every other session,
-including the mobile app; this one stays signed in. Both are recorded in the audit trail, never
-the password (`admin/0020`, `docs/map/processes/own-profile.md`).
+their password after entering the current one. Every password field (`/settings`, `/login`,
+`/reset-password`, the invitation form) has an eye button to show what was typed. A new password
+shows the rules as they are met. Before a password change, a dialog warns that it signs out
+every other session, including the mobile app; this one stays signed in. Both are recorded in
+the audit trail, never the password (`admin/0020`, `docs/map/processes/own-profile.md`).
+
+### Forgot password (14zcqntjnt9)
+
+"Forgot password?" on `/login` opens `/forgot-password`: enter an email (with the Turnstile
+human check) to receive a single-use, expiring reset link that opens `/reset-password` and sets
+a new password under the full password rules. Submitting an email always shows the same "If an
+account exists for that email, we sent a password reset link" message, whether or not an account
+exists or is active. Works for both console admins (who then sign in at `/login` and still pass
+`/verify` when an authenticator app is enabled) and medtechs (who sign in to the AgarthaVision
+mobile app with the new password). Deactivated accounts and members of deactivated laboratories
+cannot use a reset link to regain access (`docs/map/processes/admin-gate.md`,
+`docs/map/processes/own-profile.md`).
 
 ### Organizations
 
@@ -141,13 +154,25 @@ locks the laboratory's org admins out until reactivated. Every change is written
 audit log in the same transaction by the database, which checks the caller again. Existing
 users and patients start in one "Starting laboratory". Org admins and medtechs get a 404.
 
+### Report check from a QR code (14zcqnty9bj)
+
+Every report the app prints carries a QR code that opens `/verify/report`, a public page:
+no sign-in. For a link that matches a stored report it shows that the report is in
+AgarthaVision's records, the laboratory, the report type, when it was generated, the fields
+examined, the eggs confirmed and each species with its LPF range, so the reader can compare
+them with the paper. An altered link says the report cannot be confirmed and shows nothing
+else; an unknown one says no report matches, and that a report made offline appears once the
+phone has synced. It names no patient and no medtech. Five failed checks from one IP within
+15 minutes are refused (`admin/0025`, `docs/map/processes/report-check.md`).
+
 ### Invitations
 
 Nobody signs up. A super admin invites an organization's admins from its page
 (`/organizations/[id]`); an org admin invites their laboratory's medtechs from `/people`.
 The inviter enters an email and, optionally, a name; the role and the organization follow
 from who is inviting. The invitee gets an email from the console's domain (Resend) with a
-link that works for 7 days and opens `/invite/<token>`, where they set their own password.
+link that works for 7 days and opens `/invite/<token>`, where they enter their name (required)
+and set their own password.
 No password is ever emailed. An org admin then lands in the console; a medtech is told to
 sign in to the Android app with the same email and password.
 

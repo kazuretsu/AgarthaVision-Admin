@@ -29,9 +29,18 @@ import {
 /** Where a page request with an ended session goes; `/login` reads the flag and says so. */
 const SESSION_ENDED_PATH = "/login?session=ended";
 
-/** Pages that work without a session, so an ended one is cleared and they carry on. */
-function signedOutPage(pathname: string): boolean {
-  return pathname === "/login" || pathname.startsWith("/invite");
+/**
+ * Pages that work without a session, so an ended one is cleared and they carry on. The
+ * report check behind a report's QR code is one (14zcqnty9bj).
+ */
+export function signedOutPage(pathname: string): boolean {
+  return (
+    pathname === "/login" ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/reset-password") ||
+    pathname.startsWith("/invite") ||
+    pathname === "/verify/report"
+  );
 }
 
 /**

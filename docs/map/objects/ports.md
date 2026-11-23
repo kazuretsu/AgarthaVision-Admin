@@ -7,7 +7,8 @@ commit: 7e94643
 
 The interfaces every feature depends on: `DatabasePort`, `AdminWritePort`, `StoragePort`,
 `AuthPort`, and, for invitations and medtech access, `OnboardingPort`, `MailPort` and
-`AccountAccessPort`; for the sign-in attempt limits, `AttemptLimitPort`.
+`AccountAccessPort`; for the sign-in attempt limits, `AttemptLimitPort`; for the public report
+check behind a report's QR code, `ReportCheckPort`.
 
 ## Why this shape
 
@@ -30,19 +31,21 @@ express the intent.
 | `DatabasePort`       | the clinical reads (`listPatients`, `getPatientRecord`, `getSessionRecord`, `getSampleRecord`, `listSmears`, `dashboardTotals`, `areaPrevalence`); the administrative reads (`listOrganizations`, `getOrganization`, `listInvitations`, `getInvitation`, `listPeople`, `listPatientAssignments`, `listMemberPatients`, `listSoleCoverPatients`, `listSuperAdmins`, `listSuperAdminInvitations`, `getSuperAdminInvitation`, `listAuditEntries`, `getProfile`, `listAuditActors`); and the training reads (`trainingFrames`, `trainingSupportsUnboxed`, `trainingModelVersions`, `listTrainingSnapshots`, `getTrainingSnapshot`), super admins only | `src/ports/db.ts:110`          |
 | `AdminWritePort`     | `createOrganization`, `renameOrganization`, `setOrganizationStatus`, `recordExport`, `invite`, `resendInvitation`, `revokeInvitation`, `inviteSuperAdmin`, `resendSuperAdminInvitation`, `revokeSuperAdminInvitation`, `revokeSuperAdmin`, `setMemberStatus`, `recordAuthenticatorReset`, `assignPatient`, `unassignPatient`, `replaceAssignment`, `offboardMember`, `createTrainingSnapshot`, `recordTrainingDownload` — each audited, `recordSignInChange`, `setOwnName`, `recordOwnPasswordChange`                                                                                                                                             | `src/ports/admin-write.ts:40`  |
 | `StoragePort`        | `createSignedUrl`, `download` (a training zip's images, as the signed-in user)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `src/ports/storage.ts:22`      |
-| `AuthPort`           | `getCurrentUser`, `requireConsoleActor`, `secondFactorStatus`, `beginSecondFactorSetUp`, `confirmSecondFactorSetUp`, `verifySecondFactor`, `turnOffSecondFactor`, `changePassword`, `signInWithPassword`, `signOut`                                                                                                                                                                                                                                                                                                                                                                                                                               | `src/ports/auth.ts`            |
+| `AuthPort`           | `getCurrentUser`, `requireConsoleActor`, `secondFactorStatus`, `beginSecondFactorSetUp`, `confirmSecondFactorSetUp`, `verifySecondFactor`, `turnOffSecondFactor`, `changePassword`, `requestPasswordReset`, `resetPassword`, `signInWithPassword`, `signOut`                                                                                                                                                                                                                                                                                                                                                                                      | `src/ports/auth.ts`            |
 | `OnboardingPort`     | `findInvitation`, `acceptInvitation` — for a visitor with no account yet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `src/ports/onboarding.ts`      |
 | `MailPort`           | `send`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `src/ports/mail.ts`            |
 | `RequestSessionPort` | `session` (id, sign-in time), `endSession` (this browser only), `response` — for the proxy, which opens it from the Supabase adapter directly, not through the registry                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `src/ports/request-session.ts` |
 | `AccountAccessPort`  | `setSignInAllowed` — block or allow a login, deleting nothing; `hasAuthenticator`, `resetAuthenticator` — a login's authenticator app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `src/ports/account-access.ts`  |
 | `AttemptLimitPort`   | `countFailures` (since the window's start), `recordFailure` — failed sign-in and invitation attempts, server only; callers go through `withAttemptLimit`, which fails open                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `src/ports/attempt-limit.ts`   |
+| `ReportCheckPort`    | `checkReport` — one report's QR link against the stored record, through `console_check_report` (admin/0025) on the visitor's own client; returns confirmed findings, mismatch or not found, never identity                                                                                                                                                                                                                                                                                                                                                                                                                                        | `src/ports/report-check.ts`    |
 
 Each port ships its own error types, so a caller handles a failure without knowing which
 provider raised it: `DatabaseReadError` (`src/ports/db.ts:243`), `MigrationNotAppliedError`
 (`src/ports/db.ts:252`, naming the admin migration to apply), `StorageAccessError`
 (`src/ports/storage.ts:38`), and `NotAuthenticatedError` / `NotAuthorizedError` /
 `AuthenticationFailedError` / `HumanCheckFailedError` / `SecondFactorRequiredError` (a kind of
-`NotAuthenticatedError`) / `SecondFactorError` / `PasswordChangeError` / `AuthUnavailableError`
+`NotAuthenticatedError`) / `SecondFactorError` / `PasswordChangeError` / `PasswordResetError` /
+`AuthUnavailableError`
 (`src/ports/auth.ts`), `AdminWriteError` (`src/ports/admin-write.ts:160`: a `reason` —
 `forbidden`, `conflict`, `not_found`, `invalid` or `failed` — and a `hint` naming which case
 it was), `AccountAccessError` (`src/ports/account-access.ts:23`), `AcceptInvitationError` and
@@ -56,11 +59,13 @@ code, and one without an app on its password; the second-step members serve `/ve
 app's included, carry on (14zcqntnqpd, `docs/map/processes/admin-gate.md`).
 
 `changePassword` checks the current password and ends every other session of the account,
-keeping this one; `setOwnName` and `recordOwnPasswordChange` act on the caller only
-(`docs/map/processes/own-profile.md`).
+keeping this one; `requestPasswordReset` and `resetPassword` handle forgotten-password recovery
+by email for active admins and medtechs while leaving the browser signed out; `setOwnName` and
+`recordOwnPasswordChange` act on the caller only (`docs/map/processes/own-profile.md`).
 
-`Credentials` and `AcceptInvitationRequest` carry an optional `humanCheckToken`: the form's
-single-use Turnstile token, which the provider verifies (`docs/map/processes/human-check.md`).
+`Credentials`, `PasswordResetEmailRequest` and `AcceptInvitationRequest` carry an optional
+`humanCheckToken`: the form's single-use Turnstile token, which the provider verifies
+(`docs/map/processes/human-check.md`).
 
 `ConsoleActor.secondFactorOn` says whether the account has an authenticator app, as the gate
 already learned it, at no extra call (`docs/map/processes/notices.md`).

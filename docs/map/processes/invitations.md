@@ -1,6 +1,6 @@
 ---
-verified: 2026-11-06
-commit: ef77214
+verified: 2026-11-21
+commit: 51a093d
 ---
 
 # Invitations
@@ -26,7 +26,11 @@ included, re-sends and revokes anything; an org admin only medtech invitations i
 own organization (`canManageInvitation`, `:63`; `console_can_manage_invitation`, `0005:78`).
 The invitation and acceptance forms share the same 120-character `INVITEE_NAME_MAX` as
 `normaliseInvitee` and the acceptance action (`src/domain/invitations.ts:76-90`,
-`src/app/(auth)/invite/[token]/actions.ts:55-58`).
+`src/app/(auth)/invite/[token]/actions.ts:59-64`). The inviter's name is optional; the
+invitee's is not. The acceptance action refuses a blank or spaces-only name with "Enter your
+name." before anything else is tried (`actions.ts:56-58`, 14zcqnty5p2): the form's `required`
+is only the browser's check, and accepting is what replaces the app's placeholder name,
+`Pending Profile Setup`, that `handle_new_user()` gives every new login (app migration 0019).
 
 ## The link
 
@@ -61,8 +65,8 @@ referrer.
 `SupabaseOnboardingAdapter.acceptInvitation` (`src/adapters/supabase/onboarding.ts:121`):
 
 1. Re-reads the link; only `pending` goes on. The action has already checked the password
-   (both fields match, at most 72 bytes) and the name's length, so nothing it can refuse is
-   left for after the account exists.
+   (both fields match, at most 72 bytes) and the name (present, at most 120 characters), so
+   nothing it can refuse is left for after the account exists.
 2. `auth.admin.createUser` with the **invitation's** email, the chosen password and
    `email_confirm: true` (`:126`) — one of the console's uses of the service-role key
    (`createServiceClient`, `src/adapters/supabase/client.ts:54`). No `user_metadata` is
@@ -96,7 +100,7 @@ minutes, the next attempt is refused before the account is touched or the provid
 with no password tried.
 
 An org admin (or a super admin, below) goes straight on to `/dashboard`
-(`src/app/(auth)/invite/[token]/actions.ts:109`): two-step sign-in is each admin's choice, set
+(`src/app/(auth)/invite/[token]/actions.ts:113`): two-step sign-in is each admin's choice, set
 up on `/settings` (14zcqntr31c, `docs/map/processes/second-factor.md`). A medtech is signed out
 and sent to `/invite/joined`, which tells them to sign in to the Android app.
 
